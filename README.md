@@ -367,6 +367,8 @@ Keep builds pinned to the committed dependency revisions. Do not use `git submod
 
 ## License
 
+UnrealLongju is an independent project. It is not affiliated with, endorsed by, sponsored by, or an official product of Gameforge or Ymir. Metin2 and any third-party names, logos, and trademarks remain the property of their respective owners.
+
 Copyright © 2026 Castellese Brian Vincenzo.
 
 This project is licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE). Noncommercial use, modification, and redistribution are subject to its terms, including the required notices. Commercial use, commercial distribution, and resale require a separate written commercial license from the copyright holder.
