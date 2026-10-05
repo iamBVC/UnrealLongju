@@ -4,14 +4,16 @@ English (`en`) is the source culture. Translations live in standard GNU PO files
 `Content/Localization/Game/<culture>/Game.po`. This workflow is offline by default: no game
 text, credentials, or source code is uploaded to a translation provider.
 
+Source review: 2026-10-05. Run the examples from the project root. Initialize the `Content` submodule first; localization data changes belong to that repository, while configuration changes belong to the parent. Set `UE_ROOT` for the Gather/Export/Import launchers when your engine is not `F:\Engine2`.
+
 ## Add A Language
 
 Use an IETF culture code:
 
 ```powershell
-.\AddLocalizationCulture.ps1 de
-.\AddLocalizationCulture.ps1 fr
-.\AddLocalizationCulture.ps1 pt-BR
+.\Scripts\AddLocalizationCulture.ps1 de
+.\Scripts\AddLocalizationCulture.ps1 fr
+.\Scripts\AddLocalizationCulture.ps1 pt-BR
 ```
 
 The script adds the culture to gathering, importing, packaging, and the in-game selector.

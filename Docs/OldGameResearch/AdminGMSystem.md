@@ -37,9 +37,8 @@ Sources studied:
 
 ## UE recreation decisions
 
-- Admin list: `admins` SQLite shard via `UMT2PersistenceManager` (entity type
-  `admin`, routed to the admins DB by `RouteEntityType`). Entity id = character
-  name lowercased, matching the old game's name-keyed GM map.
+- Source review: 2026-10-05. Legacy source paths above identify historical external datasets, not files included in this repository.
+- Admin list: the `admins` table in the coordinator's single `metin2.db`, accessed through the persistence backend. Character names are normalized for lookup. There is no separate admins database/shard or `RouteEntityType` routing path.
 - PIE sessions grant admin to everyone, replicating `test_server` behavior.
 - Only admins may execute `/` chat commands (server-side gate in
   `ServerExecuteChatCommand`).

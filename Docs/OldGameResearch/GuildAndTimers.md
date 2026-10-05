@@ -5,6 +5,8 @@ Built to close the quest-conversion gaps that needed real game features rather t
 
 ## Guild system
 
+Source review: 2026-10-05. The subsection below describes the older local `UMT2GuildSubsystem` path, not authoritative coordinator guild operations. Cluster guild state now lives in SQLite `guilds`, `guild_members`, and `guild_ranks`, with 15 editable ranks and `UMT2GuildComponent` player-facing state. The local JSON subsystem remains in source and must not be mistaken for the cluster store. See [Persistence Architecture](../PersistenceArchitecture.md).
+
 `UMT2GuildSubsystem` (GameInstance) owns every guild on the server. Guild records live in the
 subsystem, not on the player, so a guild keeps existing while its members are offline; a player's
 membership is mirrored onto `AMT2PlayerState` (`GuildId`/`GuildName`) so nameplates and the character
@@ -14,7 +16,7 @@ window keep working unchanged.
 - `FMT2GuildMember`: character id + name, level, rank, contributed experience. Members are keyed by
   **persistent character id**, not by name or a live pointer, so records survive logout and renames.
 - `EMT2GuildRank`: Member / Officer / Master. The old game had 15 configurable grades; only the three
-  that carry authority are modelled, which is everything the quests and UI ask about.
+  that carry authority were modelled in that older local API. This is not the current cluster/UI rank model.
 
 Operations return `EMT2GuildResult` (rather than a bare bool) so callers can report the real reason:
 create (level 40+, unique name), add/remove member, set rank, transfer mastery, disband, set notice,

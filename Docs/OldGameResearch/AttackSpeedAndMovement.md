@@ -30,6 +30,6 @@ Sources studied: `client_src/source/GameLib/ActorInstance.cpp`,
 
 - Attack montages (player and mob) are played with `PlayRate = AttackSpeed / 100` and the
   swing-repeat timer uses `AnimationLength / PlayRate`, so gear/buffs that add APPLY_ATT_SPEED
-  (e.g. Sword+0 = +22) visibly and mechanically speed up combat exactly like the old game.
+  (e.g. Sword+0 = +22) affect animation/cadence. Exact motion-window and legacy timing parity needs live validation; the formulas alone do not prove it.
 - `UMT2CombatStatsComponent::GetCalculatedStats().AttackSpeed` is the stat source (base 100 +
   equipment/affect bonuses).

@@ -35,6 +35,4 @@ monsters) and the HP gauge for monsters.
 a runtime-built row of small-thin-style buttons shown ONLY when the selected target is
 another player: Message, Trade, Duel, Party, Friend, Guild. The HP bar is hidden for player
 targets (old client only shows it once PVP damage flows). The buttons broadcast
-`OnPlayerActionRequested` (action name + target actor); the commerce / private message /
-duel / party / guild subsystems will bind to it when they are implemented - until then the
-click answers with an info chat line.
+`OnPlayerActionRequested` (action name + target actor). Source review (2026-10-05): Whisper opens the HUD conversation, Friend sends a messenger request, and Trade calls the controller's trade request. The remaining action path still shows a not-implemented chat line; the existence of party/guild/duel systems elsewhere does not prove that these target-board buttons are wired to them.

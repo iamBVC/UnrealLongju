@@ -59,15 +59,11 @@ Key mechanics:
 
 ## UE recreation
 
-- `AMT2Metin : AMT2Mob` (or a component on stone-type mobs): disable the AI controller like NPCs do
-  so it never chases/attacks, and override `CanBeKnockedBack()` to false.
-- Tick once per second on the server: compute HP%, walk the 70..10 ladder, fire each step once
-  (a simple `int32 LastFiredStep` beats the MaxSP hack).
-- On a step: play the mob's attack motion in place, then spawn N mobs in a ring around the stone
-  and point their AI at the player who is attacking (our `SetLastDamageInstigator` already tracks
-  that attacker), matching SelectStone's aggro handoff.
-- Spawn vnum: mob_proto AttackSpeed/MovingSpeed range (our importer already carries both fields).
-  Group tables aren't imported yet, so an initial version can spawn the vnum directly.
+- Source review: 2026-10-06. `AMT2MetinStone : AMT2Mob` exists; it is not a proposed `AMT2Metin` class. It disables movement, registers with the world simulation scheduler, and checks health changes authoritatively.
+- `ProcessStoneBehavior` walks every crossed threshold once using `LastFiredStep`; it can process several thresholds after a large hit. It plays the attack motion as a spawn tell.
+- Imported `MetinSpawnGroups` supply group entries, resolved through the VNUM registry and spawned around the stone. Group import is not wholly missing; direct VNUM spawning is not the documented current design.
+- Spawned mobs retain a weak stone link, and available AI targets the stone's attacker. Stone death removes its surviving wave without normal combat rewards; mob death banks half its experience on the stone.
+- Ring placement, group composition, animations, and scheduler cadence still need dataset-specific/live validation. This source review did not run a stone encounter.
 
 ## Stone <-> spawned mob linkage (char.cpp:4955-4990, char_battle.cpp:1488, 2734)
 

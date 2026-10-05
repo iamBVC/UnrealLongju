@@ -2,6 +2,8 @@
 
 ## Process Roles
 
+Source review: 2026-10-05. Parameter defaults come from `FMT2ServerRuntimeConfig` and `ParseCommandLine`; launcher overrides are not runtime defaults.
+
 `UnrealLongjuServer.exe` has three server runtime modes selected only through command-line parameters.
 
 - Map mode is the default dedicated-server mode. One process owns one loaded map and one channel.
@@ -51,7 +53,7 @@ This intentionally lets a player recover an account left online by a crashed cli
 
 Only coordinator mode opens the local `metin2.db`. Map servers proxy load/save requests over their authenticated coordinator connection. A map process has no database paths or credentials.
 
-The coordinator stores typed relational rows in only four tables: `accounts`, `players`, `items`, and `admins`. JSON is used only as the current internal transport envelope and is not stored in SQLite. Other domains remain unpersisted until their schemas are agreed.
+The coordinator stores accounts, players, items, admins, quest state/flags, guilds/members/ranks, and messenger friends/messages. JSON is the transport envelope; skills, quickslots, and affects use compact TEXT player columns. See [Persistence Architecture](PersistenceArchitecture.md) for the current eleven-table schema and the absence of automatic versioned migrations.
 
 ## Authentication And Network Security
 
@@ -67,7 +69,7 @@ Prefer `co_token_env`. Direct `co_token` is supported, but command-line secrets 
 ## Coordinator Parameters
 
 - `-Coordinator`: Enables coordinator mode.
-- `-co_bind=0.0.0.0`: Coordinator listen address.
+- `-co_bind=127.0.0.1`: Default coordinator listen address. Bind a reviewed private interface when peers run on other machines.
 - `-co_map=/Game/Maps/System/Coordinator`: Lightweight map used by the headless coordinator process.
 - `-co_port=11099`: Coordinator TCP port.
 - `-co_token=...` or `-co_token_env=NAME`: Shared server credential. Minimum 16 characters.
@@ -83,7 +85,7 @@ Prefer `co_token_env`. Direct `co_token` is supported, but command-line secrets 
 ## Map Server Parameters
 
 - `-map=/Game/Maps/map_name`: Package loaded by this process.
-- `-map_id=map_name`: Stable routing identity. Defaults to map package short name.
+- `-map_id=map_name`: Stable routing identity. Defaults to the unmodified map package short name; routing normalizes known legacy prefixes separately. Set it explicitly when cooked asset names differ from legacy IDs.
 - `-channel=1`: Channel number.
 - `-instance_id=...`: Optional stable process identity. A random GUID is generated when omitted.
 - `-public_ip=...`, `-port=11001`: Client-reachable endpoint. The default is `11000 + channel`.
@@ -98,12 +100,13 @@ Prefer `co_token_env`. Direct `co_token` is supported, but command-line secrets 
 - `-gateway_map=/Game/Maps/System/Gateway`: Lightweight login/selection map.
 - New characters start on `metin2_map_a1`, `metin2_map_b1`, or `metin2_map_c1` according to their empire.
 - `-public_ip=...`, `-port=11000`: Client-reachable Gateway endpoint.
-- `-max_players=2000`: Concurrent connection capacity.
+- `-max_players=1000`: Default concurrent connection capacity; launchers may override it.
 - `-co_ip=...`, `-co_port=11099` and coordinator token options.
 
-For uncooked local development, use the root `StartCoordinatorLocal.bat`, `StartGatewayLocal.bat`,
-`StartMapServerLocal.bat`, `Scripts\StartClientLocal.bat`, or `Scripts\StartAllLocal.bat` launchers. They use
-`UnrealEditor.exe -server/-game`; raw target executables require a staged cooked build.
+For uncooked development, `Scripts\StartAllLocal.bat` and `Scripts\StartClientLocal.bat` use
+`UnrealEditor.exe -server/-game`, but retain hard-coded engine/older map paths that need review.
+The formerly documented root per-role launchers are not present. Prefer `Scripts\StartAllDevelopment.bat`
+after packaging for the current map list. Game/server target executables need cooked/staged content.
 
 ## Cluster Administration
 

@@ -1,58 +1,33 @@
 # Skill Books (skill mastery progression)
 
-Sources: old server `game/src/char_skill.cpp` (`LearnSkillByBook`, `LearnGrandMasterSkill`),
-`game/src/char_item.cpp` (ITEM_TYPE_SKILLBOOK / USE_ABILITY use paths, vnum 50300).
+Source review: 2026-10-05. Original references: `game/src/char_skill.cpp`, `char_item.cpp`, and the grand-master training quest. See [QuestPortingStatus](QuestPortingStatus.md#grand-master-learning-pass) for recorded native API tests.
 
-## Skill level model (identical in the UE project already)
+## Mastery model
 
-Skill level 0-40, mastery derived from level (`MT2SkillMastery::FromLevel`):
-`0-19 Normal`, `20-29 Master (M1-M10)`, `30-39 Grand Master (G1-G10)`, `40 Perfect Master`.
-So **M1 = level 20 … M10 = level 29, G1 = level 30**. A skill reaches M1 through point-ups (the
-random 17→20 breakthrough in `LearnSkillByPoint`); books then take it M1 → G1.
+`MT2SkillMastery::FromLevel` derives mastery from level: 0–19 Normal, 20–29 Master, 30–39 Grand Master, 40 Perfect. Point-ups have a random 17–20 Master breakthrough. M1 is level 20; G1 is level 30.
 
-## Master book path (`LearnSkillByBook`, non-YMIR / international branch)
+The original international Master-book path spends EXP on accepted success/failure reads, rolls for progress, and requires 1–10 successful reads for M1→M2 through M10→G1. Original book cooldown and EXP policies are not identical to every earlier port stage.
 
-For a skill already at Master mastery:
+## Current Master-book path
 
-```
-need_bookcount = GetSkillLevel() - 20;      // M1(20)=0, M2(21)=1, ... M10(29)=9
-PointChange(POINT_EXP, -need_exp);          // exp is spent on EVERY read (success or fail)
-percent = 65;
-if (number(1,100) > percent) {              // 35% chance the read makes progress ("success")
-    if (read_count >= need_bookcount) { SkillLevelUp(); read_count = 0; }   // level up
-    else                              { read_count += 1; }                  // one step closer
-}
-// else: read failed, no progress (exp still spent)
-```
+`UMT2SkillComponent::CanReadSkillBook` requires a resolvable definition, Master mastery, sufficient EXP, and an expired deadline or the no-cooldown affect. `LearnSkillByBook` is authoritative.
 
-So **each read has a 35% success chance**, and going from **M(N) → M(N+1) needs N successful reads**
-(read_count climbs 0…N-1, then the next success levels up). That yields exactly:
-M1→M2 = 1, M2→M3 = 2, …, **M10→G1 = 10 successful reads** — the progression the design asks for.
+Current settings are `SkillBookExperienceCost`, `SkillBookCooldownSeconds`, and `SkillBookSuccessChance`. C++ defaults are 10,000 EXP, 86,400 seconds, and 0.35; project/config overrides may differ. The former documentation's **5% EXP cost and no cooldown** no longer describe this implementation.
 
-`read_count` is per-skill and persisted (old game: quest flag `traning_master_skill.<vnum>.read_count`).
-The old game also has a book cooldown (`SKILLBOOK_DELAY`) — the design here drops it (no cooldown).
+Every accepted read spends the configured flat EXP cost and writes a per-skill Unix deadline. Normal success/progress is probabilistic; the guaranteed-success effect changes that next read. Both no-cooldown and guaranteed-success one-shot effects are consumed on the next accepted read. Read counts/deadlines are captured in player skill persistence.
 
-Exp: the old game spends a flat `need_exp` (20000) per read; **this project spends 5% of current exp
-per read instead**, and denies the read when the player has no exp to spend.
+Right-clicking a book uses `ServerReadSkillBook`, resolves the target skill from imported item data, and checks eligibility before consumption. Grade/result chat comes from the authoritative result.
 
-## Grand Master path (`LearnGrandMasterSkill`, G1→G10)
+## Grand-master path
 
-Different tables (`aiGrandMasterSkillBookCountForLevelUp` etc.) with min/max read windows and a
-per-read 50%-ish roll gated by those windows. Out of scope for now (design only asked for M1 → G1).
+G1–G10/Perfect training is implemented; it is not merely an out-of-scope proposal.
 
-## Book item -> target skill (per-skill books)
+`CanTrainGrandMasterSkill` and the training backend check legacy proto type, ownership/group, mastery, ID limits, and special/exclusive skill rules. Configured denominator and minimum/maximum read tables govern attempts. Quest flags `training_grandmaster_skill.skill<Vnum>` hold cumulative counts; old save tallies have a compatibility migration.
 
-`char_item.cpp` ITEM_TYPE_SKILLBOOK: a specific book stores the skill vnum it upgrades in `item->GetValue(0)`
-(the generic soul book 50300 uses a socket instead). In the proto, e.g. book 50401 has VALUE0 = 1 = skill
-vnum 1. So each skill has its own book, keyed by **book Value0 = skill vnum**.
+The native `pc.learn_grand_master_skill` binding consumes the legacy book-bonus affect by adjusting the denominator and writes an 8–12-hour deadline. It does not itself enforce that deadline or consume the no-delay affect: the legacy calling quest owns those checks. Do not equate this native API with the Master-book guaranteed-success policy.
 
-## UE mapping
+The simplified native soulstone menu and the imported training quest still have fidelity/translation gaps. A real training backend does not make the full quest playable; consult the current conversion audit.
 
-- `UMT2SkillComponent::LearnSkillByBook(SkillVnum)` implements the master path: gate to Master mastery,
-  spend 5% exp, roll 35%, accumulate a per-skill read count, level up on `read_count >= level-20`.
-- Read counts live in a server-only map on the component and persist via the PlayerState skills array.
-- Reading is by **right-clicking the book in the inventory**: `AMT2PlayerCharacter::ServerReadSkillBook(slot)`
-  resolves the book's target skill from its `Values[0]`, consumes that book (only if the skill is eligible),
-  reads it, and posts a system chat line with the result and the skill's grade before/after
-  (e.g. `[Skill] Three-way Cut: read succeeded! M1 -> M2`).
-- Grade labels come from `MT2SkillMastery::LevelLabel` (M1..M10, G1..G10, P).
+## Validation boundary
+
+Recorded regression tests cover focused training/flag persistence behavior. This review did not rerun them, test live client UI, or establish full database/reconnect and cooked multiplayer parity.

@@ -10,13 +10,13 @@ Sources studied: the importer pipeline (`MT2MapTerrainBuilder.cpp`, `MT2MapTerra
   `WorldSizeX = MapSizeX * 128 * CellScale`, likewise for Y.
 - **Landscape actor** is spawned at `(0, -TotalWorldY, 0)` with positive XY scale, so its
   heightmap grid grows into that same quadrant.
-- **Objects** (`ConvertMetin2LocationToUnreal`): UE `(Position.X, Position.Y, Position.Z+bias)`
-  directly — these are the authoritative gameplay coordinates (server positions, spawns,
+- **Objects** (`ConvertMetin2LocationToUnreal`): UE `(WorldSizeX - Position.X, Position.Y, Position.Z+bias)` when map width is known; unknown-width placements retain X.
+  These are the authoritative gameplay coordinates (server positions, spawns,
   warps, persistence all use them), so everything else must match them.
 
 ## Axis convention (Metin2 → UE)
 
-- Metin2 **east** → UE **+X**
+- Source X maps to `WorldSizeX - X`, so increasing source X moves toward UE **−X**.
 - Metin2 **south** → UE **−Y**  (the landscape builder reverses the grid's Y row order to achieve this)
 - Height/Z → UE +Z (centered at 32768 in the r16 heightmap, `LandscapeZScale = 128`)
 
@@ -62,12 +62,8 @@ in lock-step; changing one without the other slides markers off their tiles.
   map-canvas geometric centre. The arrow is a separate widget, so a resized minimap would otherwise
   drift the zoom pivot off the player.
 
-## Still to verify / possible follow-ups (need visual confirmation)
+## Current source recheck and validation boundary
 
-- **Object and mob rotations**: mirroring X reflects headings, so a yaw θ should become `180 - θ`.
-  This is NOT applied yet (only locations were mirrored). If props or mobs face the wrong way
-  after re-import, mirror the yaw in `ConvertMetin2RotationToUnreal` (objects) and the spawn
-  parser's `Entry.Yaw` (mobs).
-- **Empire town spawns / warps** loaded from server data (`LoadTownSpawnLocations`) are not yet
-  X-mirrored; the default center spawn is mirror-invariant so it's fine, but empire-specific
-  spawn points may need the same `WorldSizeX - X` treatment.
+- Source review (2026-10-05): object rotations now reflect headings through `180 - source angle`, and spawn direction conversion also includes the reflection. The earlier "not applied" note is obsolete.
+- `LoadTownSpawnLocations` now mirrors X and scales its source coordinates by 100; warp resolution uses imported region origins and widths. See the [warp routing audit](QuestPortingStatus.md#warp-routing--empire-village-pass).
+- These source changes require reimport for serialized placements. This documentation review did not visually confirm every object, heading, town spawn, or minimap tile.

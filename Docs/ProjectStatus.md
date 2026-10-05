@@ -1,88 +1,60 @@
 # UnrealLongju Project Status
 
-Updated: 2026-08-12
+Source review: 2026-10-05. This inventory is based on current C++, configuration, scripts, and recorded porting audits. It is not a claim that every target or gameplay path was tested today.
 
-## Working Foundation
+## Development baseline
 
-- UE 5.7 project builds as Editor, Client, Server, and standalone Game targets.
-- MT2UE imports textures, static/skeletal meshes, animations, sounds, effects, landscapes, and map objects.
-- Imported assets use `T_`, `SM_`, `SK_`, `M_`, and `MI_` naming where applicable.
-- Landscape import reuses existing terrain and map objects instead of replacing imported assets.
-- Player framework uses standard UE GameMode, GameState, PlayerState, PlayerController, Character, Enhanced Input, replication, and GAS.
-- Reusable health, mana, stamina, movement speed, skills, status effects, equipment, combat, footsteps, and persistence components exist.
-- Race, sex, style, empire, hair, player mesh, movement, click movement, camera control, walk/run, stamina slowdown, and held attack input exist.
-- Generated player and mob Animation Blueprints use native animation instances and imported animations.
-- Mob definitions, Blueprints, Animation Blueprints, AI, movement, attacks, health, death, and rewards exist.
-- Imported mob proto values are split into reusable primary-stat and combat-stat components, mob lifecycle settings, and reward settings.
-- Player ST/DX/HT/IQ values use the same primary-stat component and are included in versioned persistence JSON.
-- Runtime mob and item lookup loads a saved VNUM registry from `/Game/Logic`; PIE and servers do not scan assets. Map spawn entries store only VNUMs.
-- MT2UE automatically rebuilds the saved registry after relevant Blueprint changes and rejects duplicate mob or item VNUMs.
-- Item definitions use a Blueprintable `UMT2ItemTemplate` hierarchy with specialized weapon, armor, consumable, material, equipment, and legacy-type classes.
-- Runtime `UMT2Item` objects store `TSubclassOf<UMT2ItemTemplate>`, count, bonuses, sockets, and an instance GUID. The item proto importer now updates 5,743 item Blueprint classes and the replicated inventory/equipment authority layer is active.
-- Equipped weapons snap to race-correct legacy hand bones and select the matching animation set. Body armor resolves race/sex skeletal meshes from the legacy MSM shape tables.
-- Equipment validation is server-authoritative and enforces item race, sex, level, STR, DEX, INT, and CON requirements before changing slots.
-- Backpack slots replicate only to their owner; worn equipment replicates to every relevant client so remote character visuals stay correct.
-- Inventory icons support full multi-cell click, right-click, tooltip, drag, and drop interaction. Chat opening uses deterministic text focus.
-- SQLite persistence has one coordinator-only normalized database, serialized access, WAL, integrity checks, migrations, an actor component, and a versioned transport contract.
-- Dedicated servers support distributed map and coordinator modes configured entirely by startup parameters.
-- Map servers register map/channel/public endpoint, report load, and proxy persistence to the coordinator. The coordinator alone owns DB credentials.
-- Coordinator routing, channel selection, authenticated heartbeats, and single-use transfer-ticket transport exist.
-- Gateway registration/login, normalized accounts and characters, server-held sessions, character creation/selection, readiness-aware admission, delayed persistent spawn, and map travel exist.
-- Client session state survives controller replacement and exposes connection, character selection, travel, failure, and in-world phases to Blueprint UI.
+- Windows x64, source-built Unreal Engine 5.7; the locally verified engine version is 5.7.4.
+- Editor, Client, Server, and standalone target definitions exist. Client/Server use a Unique build environment.
+- Project checkout: `F:\UnrealLongju`. Engine scripts commonly expect `F:\Engine2`; packaging supports `UE_ROOT`.
+- `Content/` is the [UnrealLongju-Content](https://github.com/iamBVC/UnrealLongju-Content) submodule. Clone/update recursively and review its asset rights notice. Availability of content in a local checkout is not proof of redistribution permission or fresh-clone completeness.
 
-## Current Mob Slice
+See the [setup guide](../README.md) for supported commands and configuration caveats.
 
-- `AMT2MobSpawnActor` is the level-owned map spawn manager. A component cannot exist by itself in a level, so the actor owns `UMT2MobSpawnComponent`.
-- Map import creates or updates one spawn actor tagged per map. Reimporting a map does not duplicate the actor.
-- Spawn entries contain only mob VNUMs. The runtime registry resolves each VNUM through its mob data asset and soft Blueprint class link; missing assets are logged and skipped.
-- Server `regen.txt`, `npc.txt`, `boss.txt`, and `stone.txt` are parsed. Direct mobs, groups, weighted group-groups, bounds, direction, count, chance, and respawn delay are represented.
-- The authoritative server spawns groups gradually, traces landscape height, tracks living group members, and respawns a group after all its members are gone.
-- Player unarmed attacks use GAS, a server pawn sweep, visibility validation, and the damage Gameplay Effect. Imported `attack` and `attack_1` clips play through `DefaultSlot` when available.
-- Damage records the last authoritative instigator, allowing mob death rewards to identify the killer.
-- Mob defense now reduces incoming basic-attack damage. Regeneration and resurrection VNUM behavior are owned by `UMT2MobLifecycleComponent`; resurrecting mobs grant experience but suppress item/gold drops like the original server.
+## Implemented foundations
 
-## Loot
+- Standard Unreal gameplay framework, Enhanced Input, replicated characters, GAS-backed resources, primary/combat stats, appearance, equipment, movement, and animation systems.
+- Import services for textures, static/skeletal meshes, character assets, animations, audio, effects, landscapes, map objects, mob/item/skill data, and quest conversion. Generic archive/script services and the separate skeleton domain remain skeleton implementations; skeletal mesh import has its own functional path.
+- Saved VNUM registry for mob/item lookup; quest discovery has a separate registry and active-quest manifest.
+- Map spawn actor/component, regen/group definitions, mob lifecycle, damage records, experience/loot distribution, and ground pickup/inventory interaction code.
+- Server-authoritative inventory/equipment, multi-page grid, sockets/bonuses, commerce/trade, skill learning/casting, critical/penetrating damage, and presentation components.
+- Gateway account/login/character flow, coordinator routing and persistence, map registration/heartbeats, admission tickets, and transfer code.
+- Coordinator SQLite persistence for characters, items, quests, guilds, and messenger state. Skills, quickslots, and affects use compact player TEXT fields. Schema creation exists; automatic versioned migration does not.
+- Coordinator guild core with 15 editable ranks, invitations, membership, guild chat, and owner-client UI state. Local JSON guild code also remains; do not confuse it with cluster authority.
+- Messenger friend requests, presence, stored cluster messages, separate whisper UI, and notifications. Coordinator-free fallback is session-local, not persistent.
+- Mount definition/component/item foundation, with progression and full presentation fidelity still separate work.
+- Imported area-attribute grids and authoritative BANPK safezones. Player chat reports `safezone area` / `unprotected area` on initial status and transitions. Water/block flags are preserved; water generation and attribute-based walkability are not implemented by the safezone slice.
 
-- Each generated `AMT2Mob` Blueprint stores its own editable `LootEntries` array directly on the class defaults.
-- Independent `drop` entries and weighted `kill` groups from `mob_drop_item.txt` are represented, including count, chance/weight, kill average, and rare-attribute chance.
-- Loot rolling supports independent drop chances and weighted kill groups without separate loot-table assets.
-- `UMT2MobLootComponent` rolls multiple items and broadcasts one reward bundle containing killer, experience, gold, and all item results.
-- Mob and map import workflows parse `mob_drop_item.txt` and update inline arrays on existing mob Blueprints. Item assets are intentionally not required yet.
+Code presence does not establish full original-game parity. Check system-specific documents and tests before enabling content in a release.
 
-## Persistence Boundary
+## Quest porting baseline
 
-- Static mob, item, skill, map, shop, spawn, and loot definitions belong in UE assets.
-- Accounts, characters, progression, currency, inventory instances, guild state, quests, social state, and mutable world state belong in normalized tables in coordinator `metin2.db`.
-- Ordinary mob instances and normal respawn timers are runtime state and are not persisted.
+The latest recorded import in [QuestPortingStatus](OldGameResearch/QuestPortingStatus.md) reports:
 
-## Guild Core
+| Measure | Recorded value |
+| --- | ---: |
+| Parsed scripts / refreshed Blueprints | 238 / 237 |
+| Imported triggers / generated nodes | 6,595 / 27,761 |
+| Unconverted statements | 482 |
+| Failed gates / unsupported triggers | 67 / 27 |
+| Total diagnostic entries | 576 |
 
-- The coordinator owns guild authority and stores normalized guild state in `guilds`, `guild_members`, and `guild_ranks` tables.
-- Core guild creation follows the old level-40, 200,000 Yang, 12-character-name rules and creates 15 editable ranks.
-- Guild membership survives map travel and works across map servers. Login/logout refreshes the roster's online, map, channel, and level data.
-- Invitations, acceptance, leave, kick, rank assignment, rank permission editing, disband, and guild chat are server-authoritative.
-- The four original rank permissions are represented: invite members, remove members, write notices, and use guild skills.
-- `%message` sends guild chat. The player target board's Guild action sends an invitation when the caller has permission.
-- `UMT2GuildWidget` and `UMT2GuildInviteDialogWidget` contain behavior only; their required `BindWidget` controls must be authored as child Widget Blueprints inside `MT2GameHUD`.
-- Guild wars, rankings, land, emblems, notices, donations, progression, treasury, and guild skills remain separate later slices.
+The recorded function-result-list validation passed 32 quest/safezone tests. These results are historical evidence from that pass, not tests rerun during this documentation review. Zero unconverted statements has **not** been achieved, and accepted bindings can still have fidelity gaps.
 
-## Next Priorities
+## Remaining priorities
 
-1. Validate imported map spawn coordinates, group composition, aggressive override, and respawn behavior in PIE and dedicated server.
-2. Build the login and character-selection widgets on the completed Gateway/session APIs, then run cooked multi-process integration tests.
-3. Replace reward-only loot output with replicated pickup actors, ownership protection, pickup interaction, and inventory insertion.
-4. Persist unique inventory/equipment item instances through the coordinator, including bonuses and sockets.
-5. Add critical/piercing hits, race bonuses, resistances, hit reactions, death credit, experience, and gold grants.
-6. Add weapon-specific combo animation sets, attack timing windows, target-facing, and server range checks at the damage frame.
-7. Finish inventory and taskbar UI with Blueprint-authored widget trees and native interaction logic.
-8. Add NPC interaction, shops, quests, portals, normalized inventory/guild repositories, and coordinator maintenance APIs.
+1. Continue quest control-flow/scoping, resumable expression/result-list propagation, table-field assignment, function values, and rejected trigger/gate work.
+2. Build real authoritative backends for unresolved dungeon/instance, cube, safebox/mall, pet, marriage, guild-war/building, and horse APIs rather than accepting placeholders.
+3. Audit already accepted quest bindings and unfinished quest triggers; conversion counts alone do not establish correctness.
+4. Implement water and walkability from area properties without weakening server authority.
+5. Validate current content in cooked client/server builds, multiplayer travel, persistence/reconnect, and complete quest playthroughs.
+6. Establish reproducible engine/dependency revisions, explicit database migration/backup procedures, and reviewed production security/release configuration.
 
-## Known Gaps
+## Important limitations
 
-- Spawn and loot import use the configured client source plus the current Italy server-data fallback path. This should become an editor setting before supporting multiple server datasets.
-- Group members currently spawn at independent random points inside the regen bounds; original leader-relative formation is not reproduced yet.
-- Loot rare-attribute chance is preserved but cannot be applied until unique item instances exist.
-- Missing mob VNUMs are retried on later spawn updates but only logged once per spawn component.
-- Automated importer tests and dedicated-server gameplay tests are still needed.
-- Distributed runtime smoke testing needs a cooked/staged server build. The direct uncooked Development Server executable currently crashes while loading its premade asset registry before GameInstance startup; coordinator code is not reached.
-- Client/Gateway traffic and Gateway/coordinator traffic are not encrypted. Production deployment requires TLS or a private VPN/VLAN.
+- Legacy datasets and map-name fallbacks are machine-specific in parts of the importer.
+- Some content conversions and runtime paths need visual, networked, and cooked validation.
+- The old uncooked Server startup crash report is historical; it was not reproduced or cleared by this documentation review. Use the documented editor or cooked/staged workflow and capture new evidence for current failures.
+- Cluster/client traffic is not secured merely by tokens. The internal TCP protocol is authenticated but unencrypted.
+- Engine source is not pinned to a commit in this repository.
+- Asset ownership, licensing, and distribution permission must be reviewed independently of the software license.

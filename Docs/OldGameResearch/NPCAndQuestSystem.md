@@ -77,8 +77,8 @@ window for silent event handlers.
 `ON_CLICK_SHOP` NPCs skip quests entirely: shop table (DB `shop`/`shop_item`) keyed by npc vnum,
 fixed item lists, buy/sell using dwIBuyItemPrice/dwISellItemPrice (already on our templates).
 
-## 4. Sizing
+## 4. Historical sizing
 
-~300 quest files per locale; most are small (a chat entry + a reward chain); a few (main story,
-guild systems, events) are hundreds of lines. All content text lives inline (or via
+Historical dataset estimate: ~300 quest files per locale; most are small (a chat entry + a reward chain); a few (main story,
+guild systems, events) are hundreds of lines. This is not the current importer count: the latest recorded audit parsed 238 scripts and refreshed 237 quest Blueprints; see [QuestPortingStatus](QuestPortingStatus.md). All content text lives inline (or via
 locale string keys, e.g. `gameforge.blacksmith._30_say` in newer packs).

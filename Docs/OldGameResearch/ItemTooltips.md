@@ -17,7 +17,7 @@ lines top-to-bottom. One dispatch (`if item.ITEM_TYPE_X == itemType`) per type.
 - `__AppendAffectInformation`: for each of the 3 applies, "STR +5" / "Movement Speed +10%" via an
   APPLY→locale map, colored by sign.
 - `AppendWearableInformation`: which races may wear it (from antiflags), white if wearable.
-- `__AppendMetinSlotInfo`: metin socket boxes (we have Sockets but no metin system yet).
+- `__AppendMetinSlotInfo`: Metin socket boxes. Runtime socket/stone operations exist; complete tooltip/legacy socket presentation should be checked against current item data rather than assumed absent.
 
 ## Per-type layout
 - WEAPON: limits, space, **Attack Power min-max** (Values[3]+[5] .. Values[4]+[5], green),

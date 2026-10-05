@@ -5,6 +5,8 @@ completion audit of every gameplay system. Engine used for validation: Unreal En
 
 ## Measured coverage
 
+Documentation review: 2026-10-06. The pass-by-pass sections below are a historical audit trail: each limitation and test count applies to that pass, and later sections can supersede it. Latest recorded baseline: 238 scripts, 237 Blueprints, 6,595 triggers, 27,761 nodes, 482 statements, 67 gates, and 27 unsupported triggers (576 entries). This review did not regenerate content or rerun tests.
+
 Fresh `MT2ImportQuests` run against
 `D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy/quest`:
 
@@ -921,7 +923,7 @@ Logs: `Saved/Logs/QuestFunctionResultsFinalTests.log`, `QuestFunctionResultsImpo
    report contains 164 entries mentioning `d.`; some are whole conditional bodies or function calls.
    Do not bind these to dummy flags or a global map and count them as ported.
 4. **Gameplay-backed quest API.** Dragon Soul qualification/refinement (`ds.*`), pets, marriage,
-   guild wars/buildings, forked-road events, horse stamina, grand-master skill training and
+   guild wars/buildings, forked-road events, horse stamina, remaining grand-master quest dependencies and
    safebox/mall operations still appear in the report. Each needs its corresponding gameplay system
    and ownership/authority checks rather than inert node implementations.
 5. **Audit already accepted runtime bindings.** Examples still returning placeholders include
@@ -939,7 +941,7 @@ general function values and multi-return. Ticket exchange also needs authoritati
 for `ride_ticket_change`. The separate cube-opening command still needs an existing gameplay/UI
 backend before it can be translated safely.
 
-## Safety and compatibility
+## Historical safety and compatibility notes
 
 Most pre-existing unconverted nodes return Continue: surrounding converted rewards/state changes
 may still run. In this pass, unsupported ipairs bodies and the item-copy transaction are explicitly
@@ -954,7 +956,7 @@ including timestamps (the existing 2038 limitation is not addressed here).
 `is_test_server()` still returns false in the current runtime, so normal-delay branches execute;
 there is not yet a configurable test-server mode.
 
-## Validation
+## Historical validation record
 
 - `UnrealLongjuEditor Win64 Development` build succeeded. Existing unrelated UI/landscape API
   deprecation warnings remain.

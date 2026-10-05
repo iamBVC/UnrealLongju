@@ -10,6 +10,8 @@ Sources studied:
 - Data: `my_dump/936skilltable.txt` (server proto as text), `my_dump/936skilldesc.txt`
   (client-side names/descriptions/formulas/icons).
 
+Source review: 2026-10-06. Sections 1–5 describe the external original game, not current port coverage. Current learning/casting is implemented in `UMT2SkillComponent` / `UMT2SkillCastComponent`; current book rules and grand-master backend are documented in [SkillBooks](SkillBooks.md) and [QuestPortingStatus](QuestPortingStatus.md). Earlier design recommendations below do not establish complete gameplay parity.
+
 ## 1. Data model
 
 ### Server proto (`CSkillProto`, loaded from skill_proto / skilltable)
@@ -155,15 +157,12 @@ drive the server damage.
 
 ## 6. Recreation notes for UE
 
-- Skill proto should become a data table keyed by vnum with: type/job, group, max level, level
+- The importer now produces `UMT2SkillDefinition` assets and skill sets, not merely a proposed data table. Definitions carry type/job, group, max level, level
   limit, prerequisite, up to 3 (point, formula) pairs, SP/duration/cooldown/master-bonus
   formulas, flags, affect flags, splash/target range, max hits, per-grade motion + icon.
-- The `k`-table (power % per level per job/group) is a separate small table; formulas need an
-  expression evaluator with the variable set of section 1.
-- Mastery = derived from level exactly as `SetSkillLevel` does; keep the random 17-20 / 30
-  breakthrough rolls for authenticity.
-- Skill-ups arrive as `/skillup <vnum>` commands, GM-level PLAYER (i.e. NOT admin-gated - our
-  chat-command admin gate must whitelist player-level commands like /skillup when we wire it).
+- Skill definitions carry `SkillPowerPercentByLevel` curves, and the runtime formula evaluator supplies supported variables. The original table is source data, not a promised separate runtime table.
+- Mastery is derived from level; point progression includes the 17–20 Master breakthrough. Master/Grand Master progression then uses the current book/training paths, not a blanket claim that all original breakthrough paths are reproduced.
+- The original `/skillup` was a player-level command. In this port `ServerExecuteChatCommand` remains admin-gated; ordinary skill progression uses skill RPC/component paths, not a promised command whitelist.
 - Affect application reuses our UMT2StatusEffectComponent (AddAffect(vnum, applyType, value,
   affectFlag, duration)) - same pipeline as item/affect systems already built.
 - Cooldown/SP checks belong both client-side (responsiveness, `OnCannotUseSkill` UX strings)

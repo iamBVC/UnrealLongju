@@ -1,45 +1,45 @@
 # Persistence Architecture
 
-## Authority
+Source review: 2026-10-05. This describes the checked-in implementation, not a new database/reconnect test.
 
-Only the coordinator process opens SQLite. Map servers proxy persistence requests through their authenticated coordinator connection, and clients never access database paths. Coordinator queries run on the UE thread pool and return on the game thread.
+## Authority and threading
 
-`UMT2PersistenceComponent` gives a persistent actor automatic load, dirty tracking, periodic save, and end-play save. Its current map-server/coordinator transport is versioned JSON, but JSON is never stored in SQLite. The coordinator parses the message and writes typed relational columns in one transaction. Stable IDs must come from authentication or the owning domain repository; transient UE actor names are not valid identities.
+Only coordinator mode opens the cluster SQLite database. Gateway and map processes proxy requests through their authenticated coordinator connection; clients never receive database paths or cluster credentials.
 
-## SQLite Databases
+`UMT2PersistenceComponent` handles actor load, dirty tracking, periodic save, and end-play save. Its versioned JSON transport is parsed by `FMT2PersistenceBackend` into SQLite columns and child rows. Stable character IDs come from authentication, not transient actor names.
 
-The coordinator creates exactly one active database, `metin2.db`, below `db_root`. SQLite does not support databases nested inside another database; domain separation is represented by normalized tables in that file.
+`UMT2PersistenceManager` async operations use the UE thread pool and deliver callbacks on the game thread. The local backend serializes database access with a mutex. Some coordinator guild/messenger handlers use the synchronous local backend directly; not every query is asynchronous.
 
-- `accounts`: login identity, password verifier, status, and failed-login lock state.
-- `players`: one row per character with the currently implemented scalar character state.
-- `items`: one row per occupied inventory or equipment slot.
-- `admins`: character admin authority.
+## Current schema
 
-There is no generic entity table and no JSON/blob state column. Player progression, assigned ST/DX/HT/IQ, available points, resources, appearance, location, currency, inventory, and equipment have explicit columns or item rows. WAL, foreign keys, busy timeout, integrity checks, transactions, and graceful checkpoints are configured automatically.
+One database, `metin2.db`, lives below `db_root`. The schema is embedded in [MT2PersistenceBackend.cpp](../Source/Metin2/Persistence/MT2PersistenceBackend.cpp).
 
-The runtime creates missing tables but performs no schema migration or database versioning. Schema changes are manual for now. `Saved/LocalServer/Database` contains only the active `metin2.db` and SQLite's temporary WAL/SHM files while the coordinator is running.
+| Tables | Stored state |
+| --- | --- |
+| `accounts` | Identity, password verifier, status, failed-login lock state. |
+| `players` | Character ownership, progression, appearance, stats, resources, currency, location, skill group, and compact skills/quickslots/affects fields. |
+| `items` | Inventory/equipment rows, slot, VNUM, count, five normal/two rare bonuses, and three sockets. |
+| `player_quests`, `player_quest_flags` | Quest state/journal fields and per-player flags. |
+| `admins` | Normalized character-name authority and enabled state. |
+| `guilds`, `guild_members`, `guild_ranks` | Coordinator guild records, membership, contributions, and editable ranks. |
+| `messenger_friends`, `messenger_messages` | Friend graph and stored private messages. |
 
-## Store In UE Assets
+The old four-table description is obsolete. JSON is a transport envelope, not a generic SQLite entity blob. Skills, quickslots, and affects currently use compact delimited TEXT fields on `players`; they are not fully normalized child tables. Item rows include a persisted instance identifier, but the runtime slot/quest-selection model still lacks the stable item identity required for complete legacy `item.select` parity.
 
-- Mob, item, skill, refine, object, effect, animation, and shop definitions.
-- Static drop-table definitions and spawn templates.
-- Map data, NPC placement, localization, and balancing constants.
-- Visual and audio asset references.
+WAL, foreign keys, busy timeout, integrity checks, transactions, and checkpoints are configured by the backend. Missing tables are created with `CREATE TABLE IF NOT EXISTS`. There is no automatic versioned schema migration: older tables are not upgraded merely by restarting. Back up data and plan explicit migrations when changing the schema.
 
-## Store In SQLite
+## Static definitions versus mutable state
 
-- Accounts and character ownership. Authentication remains a separate service boundary.
-- Character progression, appearance, currency, resources, assigned stats, available points, and position.
-- Current inventory/equipment item VNUM, count, and slot.
+UE content owns static mob/item/skill/refine/shop definitions, effects, animations, spawn templates, map metadata, balancing data, and localization.
 
-Skill levels, quick slots, active effects, item sockets/bonuses, guilds, quests, social state, logs, and mutable world state are intentionally not persisted until their schemas are agreed.
+SQLite owns supported mutable account/character, inventory/equipment, quest, guild, and messenger state. Do not infer persistence for every gameplay subsystem from the existence of these tables. Ordinary mobs and their normal respawn timers remain runtime state. Exceptional persistent world state needs an explicit domain schema.
 
-Ordinary mobs are not persisted. Persist only exceptional world state such as a scheduled boss respawn or an explicitly persistent spawned actor.
+The older `UMT2GuildSubsystem` still has a local `Saved/MT2Guilds.json` path; it is not the coordinator database or a second authoritative cluster store. Keep local/fallback behavior separate from coordinator-backed guild operations.
 
-## Operations
+## Operations and security
 
-The database must remain on coordinator-local storage. Back up a running database through a coordinator maintenance operation using SQLite backup or `VACUUM INTO`; do not copy the active database, WAL, or journal files independently. A later maintenance API will expose scheduled online backup and retention controls.
+Store the database on coordinator-local storage. Do not independently copy a live DB and its WAL/SHM files as a backup. Use a controlled offline backup or a reviewed SQLite online-backup procedure. The current maintenance path checkpoints the database; that is not a scheduled backup/retention service.
 
-The four-table schema is embedded in the runtime so cooked coordinator builds do not depend on loose SQL files.
+Passwords use per-account random salts and PBKDF2-HMAC-SHA256 with 210,000 iterations. Login sessions and character leases are memory-only. A valid new login revokes the prior account session; map heartbeats refresh leases for characters actually online.
 
-Account passwords use per-account random salts and PBKDF2-HMAC-SHA256 with 210,000 iterations. The coordinator applies a temporary lock after repeated failed attempts. Active login sessions and character leases are memory-only. A new valid login revokes the old account session and active character lease; map heartbeats refresh leases for characters actually online.
+Cluster TCP authentication is not encryption. Keep the coordinator private and review network protection before deployment. See [Distributed Server Architecture](DistributedServerArchitecture.md).

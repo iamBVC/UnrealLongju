@@ -125,12 +125,14 @@ else f(this);
 
 | Old | Ours |
 | --- | --- |
-| `m_map_kDamage` | `AMT2Mob::RecordDamage` / `GetDamageRecords()` |
-| `DistributeExp` | `MT2Rewards::DistributeExperience` |
-| ownership round-robin over >=10% damagers | `MT2Rewards::BuildLootOwners` |
+| `m_map_kDamage` | `AMT2Mob::RecordDamage` / `GetDamageShares()` |
+| `DistributeExp` | Local `DistributeExperience` helper in `MT2MobLootComponent.cpp` |
+| ownership round-robin over >=10% damagers | Reward-group/ownership logic in `UMT2MobLootComponent::GenerateRewards` |
 | `battle_is_attackable` | `AMT2CharacterBase::IsHostileTo` |
 | `AttackProcess` per-instance loop | `UMT2CombatComponent::FindBasicAttackTargets` (all hits, not nearest) |
-| `iSplashRange` / `lMaxHit` | `UMT2SkillDefinition::SplashRange` / `MaxHitCount` |
+| `iSplashRange` / `lMaxHit` | `UMT2SkillDefinition::SplashRange` / `MaxHits` |
 
 Old units are treated as centimetres 1:1 in UE, so the 5000 (50 m) exp range check and the
-300/1000 attack ranges carry over unchanged.
+legacy attack ranges inform the port. Current attack/skill range values are data/configuration-driven; do not assume every ability uses those fixed values.
+
+Source review: 2026-10-06. This maps selected mechanisms, not complete reward/party/splash parity. Safezone policy additionally checks BANPK on player combat at actual hit time.

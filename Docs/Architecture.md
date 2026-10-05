@@ -2,6 +2,8 @@
 
 ## Principles
 
+Source review: 2026-10-05. These are implementation boundaries, not a new multiplayer validation.
+
 - Use Unreal Engine framework classes, replication, movement, components, and subsystems.
 - The dedicated server owns gameplay state, validation, simulation, and persistence.
 - The client owns input, presentation, camera, UI, prediction, and interpolation.
@@ -34,10 +36,10 @@
 - Animation Blueprint classes are selected by race and sex through `UMT2CharacterAppearanceSettings`; style changes only the skin.
 - Player Animation Blueprints derive from `UMT2CharacterAnimInstance`, which provides movement direction, speed, falling, acceleration, and death state in native code.
 - MT2UE's `Generate Player Animation Blueprints` command imports only missing base wait/walk/run clips, binds them directly to each player mesh skeleton, and creates eight non-destructive race/gender AnimBPs.
-- Generated locomotion blends wait, walk, and run, then passes through `DefaultSlot` for attacks and other montages. Weapon-specific locomotion and combo sets remain to add.
+- Generated locomotion blends wait, walk, and run, then passes through `DefaultSlot` for attacks and other montages. Equipment selects weapon-specific animation sets; imported motion coverage and combo fidelity still require content validation.
 - Locomotion playback and `ACharacter` movement use the replicated GAS `MovementSpeed` attribute, where 100 is the default multiplier. Gameplay Effects from equipment or consumables can modify the same attribute.
 - `UMT2EquipmentComponent` owns modular hair, attached weapon, and body-armor presentation. Weapon bones follow the legacy race mapping; body armor uses race/sex variants imported from MSM shape tables.
-- Holding the primary attack input repeatedly activates the GAS attack ability. `UMT2CombatComponent` owns timing and a four-step combo index; releasing input stops new attacks.
+- Holding the primary attack input repeatedly activates the GAS attack ability. `UMT2CombatComponent` owns timing and the configured combo index/length; releasing input stops new attacks.
 - Health, mana, and stamina are exposed through reusable GAS-backed actor components on `AMT2CharacterBase`; the Attribute Set remains with the owning ASC.
 - `UMT2PrimaryStatsComponent` owns reusable ST/DX/HT/IQ base and bonus values. Player base values live on Player State and persist; mobs receive them from imported proto data.
 - `UMT2CombatStatsComponent` owns base and calculated defense, damage range, attack speed, movement speed, attack range, and maximum health. Equipment and effects will contribute through its bonus layer.
@@ -51,7 +53,7 @@
 - Static item definitions are Blueprint class defaults derived from `UMT2ItemTemplate` and specialized template classes such as weapon and armor. `UMT2Item` stores the template class, count, bonuses, sockets, and instance GUID.
 - Raw damage enters a non-replicated meta attribute; only resulting health and the replicated `Status.Dead` tag leave the server.
 - Skill levels use sparse Fast Array replication and gameplay tags instead of a fixed 255-entry legacy array.
-- Status effects are Gameplay Effects carrying tags under `Status`; they are not duplicated in a second status list.
+- Core GAS effects/tags coexist with `UMT2StatusEffectComponent`'s replicated legacy-affect records and behavior definitions. Legacy duration, SP drain, recovery pools, and persistence are not represented solely by GAS tags.
 
 ## Target Layout
 
@@ -60,9 +62,9 @@
 - `UnrealLongjuServer`: headless authoritative dedicated server.
 - `UnrealLongju`: convenient standalone game target for local development.
 
-## Planned Systems
+## Extension Boundaries
 
-Build gameplay as small vertical slices. Start with login and character selection, then spawn and movement, attributes, combat, inventory, persistence, NPCs, quests, groups, guilds, and world services.
+Continue gameplay as small vertical slices. Login/selection, combat, inventory, persistence, NPC/quest, party, and guild code already exists; do not treat this list as unimplemented features. See [ProjectStatus](ProjectStatus.md) and [QuestPortingStatus](OldGameResearch/QuestPortingStatus.md) for current gaps and recorded validation.
 
 Persistent account and character data belongs behind a server-only service boundary. Unreal replicated actors contain live session state, not the database implementation.
 

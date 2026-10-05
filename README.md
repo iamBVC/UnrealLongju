@@ -2,7 +2,7 @@
 
 An Unreal Engine recreation of Metin2, combining a C++ multiplayer runtime, Blueprint-based game content, dedicated-server services, and legacy asset import tools.
 
-The Git repository, Unreal project and build targets are named **UnrealLongju**. Use `UnrealLongju.uproject` when generating project files, building, or launching the editor.
+The Git repository, Unreal project, and build targets are named **UnrealLongju**; the runtime module remains named `Metin2`. Use `UnrealLongju.uproject` when generating project files, building, or launching the editor.
 
 > **Development status:** this is an actively developed port, not a complete replacement for the original game. Imported content and implemented systems do not imply full legacy gameplay or quest parity. See the [project status](Docs/ProjectStatus.md) and [quest porting audit](Docs/OldGameResearch/QuestPortingStatus.md) for scope and known gaps; check each document's update date.
 
@@ -33,6 +33,8 @@ The project separates authoritative gameplay from client presentation:
 - **Persistence:** coordinator-owned SQLite storage; map servers communicate with the coordinator instead of owning separate character databases.
 - **Editor tooling:** the bundled `MT2UE` plugin imports and converts supported legacy asset formats and gameplay definitions into Unreal content.
 - **Distribution tooling:** Windows client/server packaging scripts and a standalone .NET patcher.
+
+For review scope and historical-versus-current guidance, see [Documentation Status](Docs/DocumentationStatus.md).
 
 For implementation details, start with [Runtime Architecture](Docs/Architecture.md), [Distributed Server Architecture](Docs/DistributedServerArchitecture.md), and [Persistence Architecture](Docs/PersistenceArchitecture.md).
 
@@ -75,7 +77,7 @@ git clone --recurse-submodules https://github.com/iamBVC/UnrealLongju.git Unreal
 Set-Location .\UnrealLongju
 ```
 
-The `Content` directory is the [UnrealLongju-Content](https://github.com/iamBVC/UnrealLongju-Content.git) submodule. Recursive cloning initializes the content revision recorded by this repository. A ZIP download is not an equivalent submodule-aware checkout. The initial content revision contains documentation only, not playable game assets; a fresh clone cannot run the game until an authorized, compatible asset set is available.
+The `Content` directory is the [UnrealLongju-Content](https://github.com/iamBVC/UnrealLongju-Content.git) submodule. Recursive cloning initializes the content revision recorded by this repository. A ZIP download is not an equivalent submodule-aware checkout. The current content checkout includes starter assets; the initial documentation-only revision is historical. Use the parent-pinned content commit, not an arbitrary branch tip, and verify that the assets required by your build are available.
 
 For an existing checkout cloned without recursive initialization:
 
@@ -247,7 +249,7 @@ $ClientSource = 'X:\LegacyData\client-extracted'
 
 Replace those sample paths with actual datasets. This is an **asset-writing import**, not a read-only validation command. `-Verify=BP_Quest_<name>` inspects a generated quest after importing; it does not skip the import. Review `Saved\MT2QuestConversionReport.txt` as well as the process log: a successful import is not proof of zero unconverted statements or complete gameplay behavior.
 
-Format and system notes live in [Docs/OldGameResearch](Docs/OldGameResearch). The plugin's own README contains historical UE4-era instructions; use this project's UE5 target configuration and current source as the authority for engine setup.
+Format and system notes live in [Docs/OldGameResearch](Docs/OldGameResearch). Use the [plugin setup guide](Plugins/MT2UE/README.md) and the current UE5 target configuration for engine setup.
 
 ## Build packaged clients and servers
 
@@ -292,7 +294,7 @@ For a patcher-only build:
 .\Patcher\build.bat
 ```
 
-See [Patcher documentation](Patcher/README.md) for manifest structure and hosting. Where older prose differs, follow the current scripts—particularly version handling and endpoint defaults.
+See [Patcher documentation](Patcher/README.md) for manifest structure and hosting. Verify the deployment endpoints and version settings against the current scripts before a release.
 
 ## Validation and troubleshooting
 
@@ -327,7 +329,7 @@ Project logs are normally under `Saved\Logs`. Packaging diagnostics are also ava
 | --- | --- |
 | `Source/Metin2/` | Runtime gameplay, networking, UI integration, and server systems. |
 | `Source/*.Target.cs` | Editor, client, server, and standalone target definitions. |
-| `Content/` | `UnrealLongju-Content` submodule for Unreal assets, maps, Blueprints, definitions, and localization resources; its initial revision contains documentation only. |
+| `Content/` | `UnrealLongju-Content` submodule for Unreal assets, maps, Blueprints, definitions, and localization resources. |
 | `Config/` | Project, engine, packaging, localization, and release configuration. |
 | `Plugins/MT2UE/` | Bundled editor importer and conversion tooling. |
 | `Scripts/` | Build, launch, versioning, and localization automation. |

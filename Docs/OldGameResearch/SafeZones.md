@@ -56,7 +56,7 @@ only presentation attributes, preserving map environment and spawn settings.
 `-Verify` reloads maps and compares serialized dimensions and every byte against
 the selected source without saving.
 
-Five current maps use the client fallback: devils_catacomb, monkeydungeon_01,
+The recorded import used client fallback for five maps: devils_catacomb, monkeydungeon_01,
 monkeydungeon_02, monkeydungeon_03, and red_forest. The first four have different
 server directory names; red_forest has different server/client map dimensions.
 The remaining maps use server data.
@@ -66,7 +66,9 @@ and defender protection, restoration of the existing PvP policy after leaving,
 and removal of protection when a map unregisters. Multiplayer chat presentation,
 dedicated-server execution, and cooked builds require separate playtesting.
 
-Latest recheck: UnrealLongjuEditor Win64 Development build succeeded, and
+Recorded alignment-pass recheck (2026-10-05): UnrealLongjuEditor Win64 Development build succeeded, and
 `Metin2.World.SafeZones` plus all 25 quest regression tests passed without unexpected
 errors (`Saved/Logs/SafeZonesAlignmentFinal.log`). The reported compile error was
 not reproduced in this target. Live multiplayer transition-chat display remains unverified.
+
+Documentation review: 2026-10-06. The earlier 25-quest-test count belongs to that alignment run; the later function-result-list pass records 32 quest/safezone tests. No tests, map reimport, or multiplayer chat check was performed in this documentation review. Revalidate source selection after changing datasets or content revisions.

@@ -5,7 +5,7 @@ Sources studied: `client_src/source/common/tables.h` (SItemTable), `client_src/s
 `client_src/source/GameLib/ItemManager.cpp`, `Dumps/GF_v21.4.11/root/uiscript/inventorywindow.py`,
 `Dumps/my_dump/locale/it/item_proto` + `item_list.txt`.
 
-## item_proto record (TItemTable, 162 bytes packed)
+## Historical item_proto record (TItemTable, 162 bytes packed)
 
 Key fields: vnum, name[25], localeName[25], type, subType, weight, **size** (grid height in cells,
 1-3), antiFlags, flags, **wearFlags**, immuneFlags, gold, shopBuyPrice, refinedVnum, refineSet,
@@ -14,7 +14,9 @@ specular, gainSocketPct, addonType. The `my_dump` locale item_proto is a **raw u
 of these records; the GF dumps use a MIPX+TEA+Snappy container instead (reader in
 `GameLib/ItemManager.cpp:255` with key at `:7`).
 
-- **Weapons**: `values[1]/values[2]` = min/max body attack (values[3]/[4] = min/max magic attack).
+This paragraph describes an older dataset, not the current reader. Source review (2026-10-05): `MT2ItemProtoReader` accepts MIPX v1 with 156-byte 40250 records and TEA/LZO payloads. Raw 162-byte and Snappy variants are not supported by that reader. See [MobProtoFormats](MobProtoFormats.md) for current format constraints.
+
+- **Weapons**: the current template/tooltip convention uses `values[3]/values[4]` for physical attack and `values[1]/values[2]` for magic attack, with `values[5]` refinement addition. Do not use the former reversed description when importing item data.
 - **Armor**: `values[1]` = defense.
 - **Applies**: up to 3 `{EApplyTypes ordinal, value}` stat bonuses granted while equipped — same
   ordinals used by affects (APPLY_MAX_HP=1, CON=3, INT=4, STR=5, DEX=6, ATT_SPEED=7, MOV_SPEED=8,
@@ -41,7 +43,7 @@ From `uiscript/inventorywindow.py`:
 - `FMT2ItemDefinition`/`UMT2ItemTemplate` mirror the proto fields (Values, Applies, WearFlags,
   InventorySize). Importer: `MT2ItemProtoReader`/`MT2ItemImporter` → one Blueprint per vnum under
   `/Game/Items/Blueprints`, registered in the VNUM registry.
-- `UMT2InventoryComponent` = replicated 45-slot grid + wear-position-indexed equipment array;
+- `UMT2InventoryComponent` = replicated four-page grid (45 cells per page, 180 total) + wear-position-indexed equipment array;
   server-authoritative Move/Equip/Unequip RPCs on `AMT2PlayerCharacter`.
 - Equip applies weapon attached mesh / armor body-mesh swap + recomputes stat bonuses from
   Values+Applies of all worn items (`RecalculateEquipmentStats`).

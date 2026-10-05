@@ -1,61 +1,47 @@
 ﻿# MT2UE
 
-Standalone UE 4.25 editor plugin for importing unpacked Metin2 client assets.
+Bundled Unreal Engine 5 editor tooling for importing authorized, extracted Metin2 data into UnrealLongju. The project baseline is UE 5.7 (local engine 5.7.4), not UE 4.25.
 
-## Current Scope
+Source review: 2026-10-05. The plugin descriptor declares the editor-only `MT2UEEditor` module and an Interchange dependency. It is enabled for the project editor target; do not install a separate copy.
 
-- Scans an extracted `client/pack` folder.
-- Normalizes extracted pack paths such as `PC/ymir work/pc/...` back to Metin2-style virtual paths such as `d:/ymir work/pc/...`.
-- Counts key asset families: textures, `.gr2`, `.msm`, `.msa/.mss`, properties, terrain files, and map text files.
-- Adds an editor tab at `Window > MT2UE Importer`.
-- Provides a first automated texture import pass for `.dds`, `.tga`, `.jpg`, `.png`, and `.bmp`.
-- Resolves map `AreaData.txt` object placements through `YPRT` property CRCs.
-- Exports `Saved/MT2UE/StaticObjectReport.csv` for resolved static object inspection.
-- Provides an external static mesh conversion hook that calls `converter.exe input.gr2 output.obj`, caches converted mesh files, and imports them into UE.
-- Includes `Tools/Gr2ToObj`, a Win32 helper source project that exports rigid `.gr2` static meshes to `.obj/.mtl`.
-- Places imported static mesh actors into the current editor level from `AreaData.txt`, with a map-name filter and max actor cap for staged validation.
-- Uses a selectable importer browser: choose an object type, refresh entries, tick the entries to process, then import only those entries.
-- Prepares selected map terrains into `Saved/MT2UE/LandscapeSources/<map>` with stitched `.r16` heightmaps, stitched tile indices, per-tile weightmaps, and a manifest.
-- Creates a UE Landscape actor from the UE-sized heightmap and imports per-tile landscape weight layers through generated `ULandscapeLayerInfoObject` assets.
-- Generates a parent landscape material per map from `textureset/*.txt`, using `tile_###` landscape layers that match `tile.raw` indices.
-- Generates a landscape material instance per map that binds `Texture_tile_###` parameters to imported terrain textures, then assigns the instance to the generated Landscape.
-- Adds a base importer API skeleton with a registry, pipeline, import request/result types, and dedicated importer classes for each planned asset family.
+## Setup and use
 
-## API Skeleton
+Follow the [project setup guide](../../README.md), initialize the `Content` submodule, generate project files, and build `UnrealLongjuEditor` with the compatible source engine.
 
-The plugin now has a service layer under `Source/MT2UEEditor/Public/API` and `Source/MT2UEEditor/Public/Importers`.
+Open **Window > MT2UE Importer**. Configure the actual extracted client source path; another developer's legacy folders are not included in this checkout. Refresh discovery, select an asset family and a small batch, then inspect warnings and generated assets before importing a whole dataset.
 
-- `FMT2ImportPipeline` owns source scanning, discovery, and import dispatch.
-- `FMT2ImportRegistry` maps each import domain to a concrete importer.
-- `FMT2ImportRequest`, `FMT2ImportSelection`, `FMT2ImportContext`, `FMT2ImportDiscovery`, and `FMT2ImportResult` provide the shared data contract.
-- API implementations now exist for texture imports, audio imports, static mesh conversion/import, static object/property resolution, map terrain source preparation, landscape actor creation, map object actor placement, and landscape material/material-instance generation.
-- Map terrain import now also resolves static placements for the selected map, imports missing static mesh assets first, attempts to import material textures referenced by converted `.mtl` files, and then places the map actors.
-- Import results now emit more detailed warning/error messages for missing texture references, missing `.mtl` sidecars, failed converter runs, missing imported static meshes, and actor spawn failures.
-- Importer stubs remain for characters, skeletons, animations, effects, scripts, and archives because those need deeper format-specific implementation work.
-- The importer widget now uses `FMT2ImportPipeline` for the visible scan, discovery, and selected import flow. Older direct widget helper methods remain temporarily as fallback code until the UE 4.25 compile pass validates the service implementations.
+Imports may update/save assets and levels in the content submodule. Back up authored content, review both parent and submodule changes, and establish conversion/publication permissions before processing third-party assets.
 
-## Install
+## Import services
 
-Copy or keep this `MT2UE` folder under a UE4 project's `Plugins` directory, then regenerate project files and build the editor target.
+The service layer lives under `Source/MT2UEEditor/Public/API` and `Public/Importers`:
 
-The default source path assumes this repository layout:
+- `FMT2ImportPipeline`: scanning, discovery, and dispatch.
+- `FMT2ImportRegistry`: domain-to-importer registration.
+- Shared request, selection, context, discovery, and result types.
+- Texture and audio imports; static mesh conversion; skeletal/character/animation paths; effects; property/object placements; terrain sources, landscapes, and landscape materials.
+- Mob, item, skill, registry, UI-generation, and quest tooling are exposed through dedicated editor workflows/commandlets.
+
+The separate **Archives**, **Scripts**, and **Skeletons** import services still report skeleton-only implementations. This does not mean skeletal meshes or animations are wholly unimplemented: those have separate conversion/import paths. Provide extracted sources; the generic archive service does not extract legacy packs.
+
+Terrain import handles stitched heightmaps/weights, landscapes, static placements, spawn/map presentation metadata, and area attributes. BANPK safezones are supported at runtime; attribute-driven water placement and walkability remain separate work. See [SafeZones](../../Docs/OldGameResearch/SafeZones.md).
+
+## Quest conversion
 
 ```text
-RudeMetin2/
-  client/pack/
-  MT2UE/
+UnrealEditor-Cmd.exe <project.uproject> -run=MT2ImportQuests -Source=<quest-directory> -ClientSource=<extracted-client-root> -Destination=/Game
 ```
 
-If the plugin is copied into a different project, edit the source path in the importer tab.
+This writes assets. `-Verify=BP_Quest_<name>` inspects an imported quest after conversion; it is not a read-only mode. Review `Saved/MT2QuestConversionReport.txt` and the [current audit](../../Docs/OldGameResearch/QuestPortingStatus.md). Unsupported statements/gates/triggers remain; successful import is not proof of gameplay parity.
 
-## Next Milestones
+## Native format bridges
 
-1. Compile in UE 4.25 and fix any API signature drift around `ALandscape::Import`, `FLandscapeImportLayerInfo`, and editor-only material instance setters.
-2. Remove duplicated direct import logic from the Slate widget once the service path compiles cleanly.
-3. Validate texture/static mesh API imports on a small selected batch.
-4. Validate one small map terrain import with actor creation disabled first, then with landscape creation enabled.
-5. Continue with characters, skeletons, and animations after static meshes and terrain are stable.
+The Granny converter contains a Win64 in-process conversion path and uses the bundled Win64 Granny runtime. Preserve its tracked third-party dependency files and review their licenses.
 
-## Granny Note
+`Tools/Gr2ToObj` is an older optional Win32 rigid-mesh helper, not a prerequisite for the current skeletal/animation importer. Its build script expects an external legacy SDK layout absent from a normal checkout; see [its README](Tools/Gr2ToObj/README.md).
 
-UE4 Editor is 64-bit. The Metin2 client source includes old 32-bit Granny libraries, so we should not link those directly into this editor plugin. `Tools/Gr2ToObj` is intentionally a separate Win32 process; the 64-bit UE4 editor talks to it through command-line conversion.
+Legacy SpeedTreeRT is x86-only. The editor launches the separate bundled Win32 `SpeedTreeToObj` helper rather than loading that SDK into the 64-bit editor; see [its README](Tools/SpeedTreeToObj/README.md).
+
+## Validation
+
+Inspect a small authorized import before bulk conversion. Recorded commandlet/test/build results apply to their stated historical passes. This documentation review did not run imports or compile the plugin.

@@ -2,6 +2,8 @@
 
 ## Scope
 
+Source review: 2026-10-06. Code presence below does not establish horse quest/progression parity or live mounted-animation validation.
+
 This records the original client/server behaviour and the UE architecture selected for mounts. It
 separates the first playable foundation from horse progression, mount items, and content import.
 
@@ -57,7 +59,7 @@ Mounting, dismounting, and death are server-authoritative and replicated to all 
 ## Implemented foundation
 
 - Replicated mount/dismount state and authority-only Blueprint entry points. A client cannot submit
-  an arbitrary definition; the future mount item handler will resolve it from server-owned inventory.
+  an arbitrary definition; the mount item handler resolves it through server-owned item/template data.
 - Data-driven mount definition asset.
 - Mount skeletal mesh and animation class.
 - Configurable rider/mount transforms and movement multiplier.
@@ -75,7 +77,7 @@ Mounting, dismounting, and death are server-authoritative and replicated to all 
 1. Import/generate dedicated mount animation Blueprints where mob animation graphs do not expose
    the complete wait/walk/run/attack/death set.
 2. Apply the ride quest's temporary stat bonus while mounted and remove it on dismount/expiry.
-3. Add mount input/UI and summon/dismiss flow.
+3. Extend mount UI and full summon/dismiss behavior. `ServerToggleHorse`, `ServerToggleSpecialMount`, and called-mount definition state already exist; these are not a complete horse progression/summoned-actor system.
 4. Synchronize one-shot mount actions with rider attack, damage, skill, and death actions.
 5. Add dust, summon, mount, and dismount effects/sounds.
 6. Add a separate persistent horse progression component: level, grade, health, stamina, feeding,

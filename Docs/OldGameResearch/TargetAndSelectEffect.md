@@ -32,11 +32,13 @@ current one is missing or dead.
 ## Skill animation lock
 
 Old client `IsUsingSkill()` / `CanUseSkill()` prevents a new skill while one is mid-motion. We gate
-`ServerUseSkill` with a `SkillCastLockUntil` timestamp = now + the cast animation's motion duration
+`UMT2SkillCastComponent::TryUseSkill` with a `SkillCastLockUntil` timestamp = now + the cast animation's motion duration
 (the same `MotionDuration`/`GetPlayLength` the multicast uses), so skills can't be chained instantly.
 
 ## Asset references via settings
 
-All gameplay asset paths that used to be string literals now resolve through
+Centralized configurable gameplay asset references resolve through
 `UMT2GameplaySettings` (a `UDeveloperSettings`, category "Metin2", saved to `DefaultGame.ini` under
 `[/Script/Metin2.MT2GameplaySettings]`), so they are editable in Project Settings or the ini.
+
+Source review: 2026-10-05. Some runtime/UI paths still contain explicit asset references; this is not a claim that every hard-coded path has been removed. Asset availability requires the matching content submodule revision.

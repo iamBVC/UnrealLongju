@@ -1,14 +1,19 @@
 # Damage Feedback
 
-Normal attack damage numbers are implemented. The display pipeline already accepts the future damage type.
+Source review: 2026-10-06.
 
-Required behavior:
+`AMT2FloatingDamageActor` displays authoritative damage results on the attacking client. Its head-positioned text rises with horizontal variation and fades in/out. Client presentation does not determine gameplay damage.
 
-- Spawn at the hit actor's head and move upward with a small random horizontal direction.
-- Animate opacity from 0 to 1, then from 1 to 0 before removal.
-- Normal damage: yellow.
-- Critical damage: red.
-- Penetrating damage: purple.
-- Poison damage: green.
-- Damage amount and target come from the authoritative server result and are sent only to the attacking client.
-- Critical, penetrating, and poison calculations still need to pass their type into this display pipeline.
+Current `EMT2DamageDisplayType` colors:
+
+| Type | Color |
+| --- | --- |
+| Normal | Yellow |
+| Critical | Red |
+| Penetrating | Blue |
+| Critical + penetrating | Magenta |
+| Poison | Green |
+
+Critical/penetrating proc handling and display-type propagation already exist in `UMT2CombatComponent`; the former "future damage type" description was stale. A poison display enum is not proof of complete poison-affect/tick gameplay parity.
+
+This review inspected code only; live visual/networked presentation was not tested.

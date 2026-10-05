@@ -63,11 +63,11 @@ Skills carry their own values (e.g. `skill/palbang.msa` = HittingType 1, Externa
 
 ## UE recreation
 
+- Source review: 2026-10-06. The following mechanisms exist in source; they are not wholly unimplemented proposals.
 - Import `ExternalForce` + `HittingType` from the .msa `AttackingData` into
   `UMT2AnimationMotionData` (alongside the existing MotionDuration/Accumulation).
 - On a landed hit, push the victim away from the attacker by a distance scaled from
   ExternalForce; skip when the victim is NOMOVE (matching the CRUSH rule).
-- Skill CRUSH/CRUSH_LONG flags use the fixed 200/400/800 distances from section 1, independent of
-  the motion's force.
-- The push should be a launch/slide (LaunchCharacter) rather than a teleport, mirroring
-  Goto + CalculateMoveDuration.
+- The current player skill path uses CRUSH/CRUSH_LONG distances of 200/400, independent of motion force. Original NPC-attacker 400/800 variants are not implemented by that player-only casting path.
+- `AMT2CharacterBase` uses `LaunchCharacter` for authoritative sliding and rejects unsupported/NOMOVE victims. Player attack motion queues distance from `ExternalForce`; skill-cast code handles CRUSH distances separately.
+- Exact physics, distance, and motion fidelity require playtesting; source inspection is not proof of equivalence to legacy Goto/CalculateMoveDuration.

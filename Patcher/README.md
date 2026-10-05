@@ -1,75 +1,60 @@
 # UnrealLongju Patcher
 
-A small standalone launcher that keeps a player's client up to date, then starts the game. It fetches
-a manifest from the website, compares each local file by size + SHA-256, downloads only what changed
-(verifying each download), and launches `UnrealLongjuClient.exe`.
+Standalone Windows launcher that downloads a manifest, compares local files by size and SHA-256, downloads changes, and starts `UnrealLongjuClient.exe`.
 
-## How the pieces fit together
+Source review: 2026-10-05. No release build, download, or deployment was performed during this review.
 
-```
-Scripts\BuildShipping.bat ──▶ Saved\StagedShipping\WindowsClient\   (cooked client + pakchunkN + manifest.json)
-                              │
-        upload contents ──────┼────────────▶  https://mt2ue.iambvc.it/client/   (your website)
-                              │                     ├─ manifest.json
-                              │                     ├─ UnrealLongjuClient.exe
-                              │                     ├─ UnrealLongju/Content/Paks/pakchunk0-Windows.pak / .ucas / .utoc
-                              │                     └─ … every other client file …
-                              ▼
-   Player runs  UnrealLongjuPatcher.exe  (placed at the client root)
-        → downloads manifest.json → diffs local files → downloads changed ones → launches the game
-```
+## Build
 
-- `Scripts\BuildShipping.bat` builds and copies `UnrealLongjuPatcher.exe` into the staged client root, then
-  generates `manifest.json`
-  (`Patcher\GenerateManifest.ps1`). It lists every staged client file with size + SHA-256, a version
-  string, the download `baseUrl`, and the launch command.
-- File paths in the manifest are relative to the client root, so the patcher must sit **at the client
-  root** (next to `UnrealLongjuClient.exe`, `Engine\`, `UnrealLongju\`).
-
-## Build the patcher
-
-Requires the **.NET 8 SDK** (bundled with recent Visual Studio 2022).
+Install the .NET 8 SDK; Visual Studio alone does not guarantee it is available. From the parent project root:
 
 ```bat
 Patcher\build.bat
 ```
 
-Output (self-contained, no runtime needed on players' PCs):
+Self-contained Win64 output:
+`Patcher/bin/Release/net8.0-windows/win-x64/publish/UnrealLongjuPatcher.exe`.
 
-```
-Patcher\bin\Release\net8.0-windows\win-x64\publish\UnrealLongjuPatcher.exe
-```
+Players do not need to install the .NET runtime for this published executable.
 
 ## Release workflow
 
-1. `Scripts\BuildShipping.bat` increments the shared numeric client/server `ProjectVersion`, cooks
-   both targets, and writes `WindowsClient\manifest.json` with the same version.
-   - Override the hosting URL / gateway before running, if needed:
-     ```bat
-     set PATCH_BASE_URL=https://mt2ue.iambvc.it/client/
-     set GATEWAY_ADDRESS=mt2ue.iambvc.it:11000
-     Scripts\BuildShipping.bat
-     ```
-2. Upload the **entire** `Saved\StagedShipping\WindowsClient\` folder (including `manifest.json`) to
-   `https://mt2ue.iambvc.it/client/`, preserving the folder structure.
-3. Distribute the staged `WindowsClient` folder. Players start `UnrealLongjuPatcher.exe`; the Shipping
-   client rejects direct launches. Later runs download only files that changed.
+1. Select the compatible source-built UE engine through `UE_ROOT`. Review `Config/DefaultCrypto.ini`.
+2. If intentionally changing the shared release/network version, run `Scripts/IncreaseVersion.bat`.
+   Packaging reads `ProjectVersion` from `Config/DefaultGame.ini`; it does **not** increment it.
+3. Configure actual hosting/gateway endpoints and the baked manifest URL in `PatchConfig.cs`.
+4. Run `Scripts/BuildShipping.bat`. It builds/cooks/stages both targets, builds/copies the patcher,
+   and runs `GenerateManifest.ps1` for the client.
+5. Upload the complete authorized `Saved/StagedShipping/WindowsClient` distribution to the configured patch host, preserving its relative paths. Do not publish private `Saved/Symbols` archives.
+6. Players start the patcher from the staged client root, next to `UnrealLongjuClient.exe`, `Engine/`, and `UnrealLongju/`.
 
-## Configuration
+Example in Command Prompt; replace all host placeholders before use:
 
-- **Manifest URL** is baked into the patcher (`PatchConfig.cs`, `ManifestUrl`). Change it there only
-  if you move the manifest. Everything else — download base URL, which exe to launch, and the gateway
-  address it's launched with — comes from the manifest, so you can change those server-side without
-  reshipping the patcher.
-- **Gateway address**: set once via `GATEWAY_ADDRESS` at build time; it ends up in
-  `manifest.launch.args` and is passed to the client on launch (the client auto-connects to it).
+```bat
+set UE_ROOT=F:\Engine2
+set PATCH_BASE_URL=https://YOUR_PATCH_HOST/client/
+set GATEWAY_ADDRESS=YOUR_GATEWAY_HOST:11000
+Scripts\BuildShipping.bat
+```
 
-## Notes / limitations
+## Manifest and endpoints
 
-- **The patcher does not update itself** (a running exe can't overwrite its own file). If you ever
-  change the patcher, players download the new `UnrealLongjuPatcher.exe` manually. It's deliberately kept
-  out of the manifest.
-- Downloads are verified by SHA-256; a corrupt or tampered file is rejected and never overwrites the
-  good copy. Combined with your pak signing, a tampered pak also fails at load time in the client.
-- Serve the files over **HTTPS**. Make sure your web server sends the correct `Content-Length` and
-  doesn't gzip the `.pak/.ucas/.utoc` (they're already compressed).
+`manifest.json` records relative file paths, sizes, SHA-256 hashes, a version string, download `baseUrl`, and the launch executable/arguments. The patcher must reside at the client root.
+
+- `PatchConfig.cs::ManifestUrl` is baked into the executable. Changing the download base URL does not change this URL.
+- Download `baseUrl`, executable, and gateway arguments come from the manifest.
+- Current packaging defaults are `https://mt2ue.iambvc.it/client/` and `rm2.zapto.org:11000`.
+  They are not verified deployment endpoints.
+- `PatchConfig.cs` currently uses placeholder manifest/fallback host values. Replace these and rebuild before distribution.
+- `MT2UE_PATCHER_ARGS_OVERRIDE` lets the patcher replace launch arguments for local testing.
+- Normal Shipping clients require the inherited `MT2UE_PATCHER_TOKEN` and matching launch argument.
+  `StartAllShipping.bat` has a separate local-development token path; it launches the client directly.
+  A launch token is not account authentication or an anti-cheat trust boundary.
+
+## Limitations and security
+
+The patcher does not update itself; distribute a replacement manually. Its own executable is excluded from the generated manifest.
+
+Size/hash checks detect mismatches against the fetched manifest, not an attacker-controlled manifest. No signed-manifest trust scheme is documented here. Use HTTPS, protect publishing credentials and hosting, and validate actual pak signing/encryption before making tamper-resistance claims.
+
+Review third-party asset permissions before distributing any client content; the software license and rights notice do not grant redistribution rights for converted legacy assets.

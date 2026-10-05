@@ -1,47 +1,34 @@
 ﻿# Gr2ToObj
 
-Small command-line converter for the first MT2UE static mesh pass.
+Optional legacy Win32 rigid-mesh converter. This is not the current MT2UE skeletal/animation conversion path; the plugin also has its own Win64 Granny converter.
 
-It reads a Metin2 `.gr2` with the bundled Granny 2.11 headers/library and writes:
+Source review: 2026-10-05.
 
-- `output.obj`
-- `output.mtl`
+## Build constraints
 
-The converter exports rigid mesh geometry with the same PNT3322 vertex layout used by the original client: position, normal, UV0, and UV1. It also writes material groups and best-effort diffuse/opacity texture references from Granny materials.
+`build_win32.bat` requires an x86 Visual Studio developer environment with `cl.exe`. It computes its dependency root as three directories above this tool, currently `Plugins/MT2UE`, and expects:
 
-## Build
+- `client_src/extern/include`: Granny headers.
+- `client_src/extern/library/granny2.lib`: compatible 32-bit library.
+- `client/granny2.dll`: compatible runtime, copied beside the output if present.
 
-This tool must be built as **Win32/x86**, because the bundled Granny library in `client_src/extern/library` is 32-bit.
+These legacy SDK paths are not supplied by a normal project checkout. Obtain licensed matching dependencies and review/adapt the script's paths before building. A Win64 DLL cannot satisfy this Win32 executable.
 
-From a Visual Studio developer command prompt:
+From the project root in an **x86 Developer Command Prompt**:
 
 ```bat
-cd /d C:\Users\brian\Desktop\RudeMetin2\MT2UE\Tools\Gr2ToObj
+cd Plugins\MT2UE\Tools\Gr2ToObj
 build_win32.bat
 ```
 
-Expected output:
-
-```text
-MT2UE\Tools\Gr2ToObj\bin\Win32\Gr2ToObj.exe
-```
+Output: `Plugins/MT2UE/Tools/Gr2ToObj/bin/Win32/Gr2ToObj.exe`.
 
 ## Usage
 
-```bat
+```text
 Gr2ToObj.exe input.gr2 output.obj [extracted_pack_root]
 ```
 
-The UE4 plugin calls converters as:
+The helper writes OBJ geometry and an MTL sidecar, exporting rigid meshes and best-effort texture references. Providing the extracted pack root lets it resolve local texture files; unresolved references retain source paths.
 
-```text
-converter.exe "input.gr2" "output.obj" "client/pack"
-```
-
-So this tool can be pasted directly into the plugin's converter executable field.
-
-## Notes
-
-- This is for static props/buildings/trees first, not skeletal meshes or animations.
-- Geometry is exported in the source Granny coordinate space for the first validation pass.
-- OBJ/MTL texture paths are resolved to local extracted files when `extracted_pack_root` is provided. If resolution fails, the original Granny material path is preserved.
+It does not replace skeletal mesh, skinning, animation, or separate SpeedTree conversion. Validate output coordinates/materials and establish the required rights for SDK dependencies and source assets.
