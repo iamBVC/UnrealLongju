@@ -73,7 +73,7 @@ git clone --recurse-submodules https://github.com/iamBVC/UnrealLongju.git Unreal
 Set-Location .\UnrealLongju
 ```
 
-There are currently no recorded submodules in the committed tree. The recursive clone command is intentional: it also initializes dependencies when a submodule is added later. A ZIP download is not an equivalent submodule-aware checkout.
+The `Content` directory is the [UnrealLongju-Content](https://github.com/iamBVC/UnrealLongju-Content.git) submodule. Recursive cloning initializes the content revision recorded by this repository. A ZIP download is not an equivalent submodule-aware checkout. The initial content revision contains documentation only, not playable game assets; a fresh clone cannot run the game until an authorized, compatible asset set is available.
 
 For an existing checkout cloned without recursive initialization:
 
@@ -325,7 +325,7 @@ Project logs are normally under `Saved\Logs`. Packaging diagnostics are also ava
 | --- | --- |
 | `Source/Metin2/` | Runtime gameplay, networking, UI integration, and server systems. |
 | `Source/*.Target.cs` | Editor, client, server, and standalone target definitions. |
-| `Content/` | Unreal assets, maps, Blueprints, definitions, and localization resources. |
+| `Content/` | `UnrealLongju-Content` submodule for Unreal assets, maps, Blueprints, definitions, and localization resources; its initial revision contains documentation only. |
 | `Config/` | Project, engine, packaging, localization, and release configuration. |
 | `Plugins/MT2UE/` | Bundled editor importer and conversion tooling. |
 | `Scripts/` | Build, launch, versioning, and localization automation. |
@@ -340,9 +340,13 @@ Additional workflows: [Localization](Scripts/LOCALIZATION.md), [NPCs and Quests]
 
 ## Submodules and dependency management
 
-**Planned, not configured:** no submodule URL or destination has been selected in this README. The current `MT2UE` directory is bundled source, and `Engine2` is an external checkout; neither is implicitly converted into a submodule by these instructions.
+The content dependency is [UnrealLongju-Content](https://github.com/iamBVC/UnrealLongju-Content.git), checked out at `Content/`. `.gitmodules` records its URL and path; the parent repository records the selected commit. Developers and CI need access to both repositories. The current `MT2UE` directory remains bundled source, and `Engine2` remains an external checkout.
 
-When adding a dependency later:
+Read the [content rights notice](Content/README.md) before importing or publishing assets. Some planned content is obtained by converting Metin2 assets into Unreal Engine 5-compatible formats. Rights in those original assets remain with Gameforge, Ymir, and/or their respective rights holders; this project claims no ownership of them and is not affiliated with or endorsed by those companies. Conversion, attribution, and noncommercial intent do not grant permission to distribute their material. The parent project's software license does not license these third-party assets.
+
+To publish a content update, first commit and push the authorized changes in the content repository. Then stage and commit the updated `Content` pointer in the parent repository. Never record a content commit that collaborators cannot fetch.
+
+When adding further dependencies:
 
 1. Choose its repository URL, repository-relative destination, and access requirements.
 2. Review its license and redistribution rules independently of this project's license.
