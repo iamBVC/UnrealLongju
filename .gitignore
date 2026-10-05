@@ -1,0 +1,17 @@
+**/Intermediate
+/Saved
+**/Binaries
+!Plugins/MT2UE/Binaries/ThirdParty/
+!Plugins/MT2UE/Binaries/ThirdParty/SpeedTree/
+!Plugins/MT2UE/Binaries/ThirdParty/SpeedTree/Win32/
+!Plugins/MT2UE/Binaries/ThirdParty/SpeedTree/Win32/SpeedTreeToObj.exe
+!Plugins/MT2UE/Binaries/ThirdParty/SpeedTree/Win32/SpeedTreeRT.dll
+/.vsconfig
+/.vs
+/UnrealLongju.sln
+/DerivedDataCache
+/Build
+/graphify-out
+/.agents
+/.claude
+/.codex
