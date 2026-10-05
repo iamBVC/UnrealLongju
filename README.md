@@ -6,6 +6,8 @@ The Git repository, Unreal project and build targets are named **UnrealLongju**.
 
 > **Development status:** this is an actively developed port, not a complete replacement for the original game. Imported content and implemented systems do not imply full legacy gameplay or quest parity. See the [project status](Docs/ProjectStatus.md) and [quest porting audit](Docs/OldGameResearch/QuestPortingStatus.md) for scope and known gaps; check each document's update date.
 
+[Support the project](https://gofund.me/59937aa6a)
+
 ## Contents
 
 - [Project overview](#project-overview)
