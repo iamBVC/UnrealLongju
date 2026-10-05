@@ -2,7 +2,7 @@
 
 An Unreal Engine recreation of Metin2, combining a C++ multiplayer runtime, Blueprint-based game content, dedicated-server services, and legacy asset import tools.
 
-The Git repository is named **Metin2**; the Unreal project and build targets are named **UnrealLongju**. Use `UnrealLongju.uproject` when generating project files, building, or launching the editor.
+The Git repository, Unreal project and build targets are named **UnrealLongju**. Use `UnrealLongju.uproject` when generating project files, building, or launching the editor.
 
 > **Development status:** this is an actively developed port, not a complete replacement for the original game. Imported content and implemented systems do not imply full legacy gameplay or quest parity. See the [project status](Docs/ProjectStatus.md) and [quest porting audit](Docs/OldGameResearch/QuestPortingStatus.md) for scope and known gaps; check each document's update date.
 
@@ -58,7 +58,7 @@ The repository does **not currently pin an engine source commit**. The GUID in `
 The examples below use the existing default layout. Replace the drive and paths if needed:
 
 ```text
-F:\
+X:\
   Engine2\                 Unreal Engine source checkout
     Engine\
   UnrealLongju\                  This repository
@@ -68,8 +68,8 @@ F:\
 Run these commands in **PowerShell** from the parent directory where the project should live:
 
 ```powershell
-Set-Location F:\
-git clone --recurse-submodules https://github.com/iamBVC/Metin2.git UnrealLongju
+Set-Location X:\
+git clone --recurse-submodules https://github.com/iamBVC/UnrealLongju.git UnrealLongju
 Set-Location .\UnrealLongju
 ```
 
@@ -95,19 +95,19 @@ These commands check out the submodule commits selected by the parent repository
 
 ### 1. Obtain the compatible engine source
 
-Keep the engine outside this repository, for example at `F:\Engine2`. Obtain the maintainer-approved source checkout, including any required engine modifications. If using Epic's repository, complete its GitHub-access requirements first; see [Downloading Unreal Engine Source](https://dev.epicgames.com/documentation/unreal-engine/downloading-source-code-in-unreal-engine?lang=en-US).
+Keep the engine outside this repository, for example at `X:\Engine2`. Obtain the maintainer-approved source checkout, including any required engine modifications. If using Epic's repository, complete its GitHub-access requirements first; see [Downloading Unreal Engine Source](https://dev.epicgames.com/documentation/unreal-engine/downloading-source-code-in-unreal-engine?lang=en-US).
 
 An example clone is:
 
 ```powershell
-Set-Location F:\
+Set-Location X:\
 git clone https://github.com/EpicGames/UnrealEngine.git Engine2
 ```
 
 **Before setup or compilation, select the approved UE 5.7 revision.** Do not build whatever default branch the clone happens to select. Replace the following placeholder with the revision provided by the maintainer; no engine tag or fork is pinned by this project today:
 
 ```powershell
-git -C F:\Engine2 checkout REPLACE_WITH_APPROVED_ENGINE_REVISION
+git -C X:\Engine2 checkout REPLACE_WITH_APPROVED_ENGINE_REVISION
 ```
 
 Access to this game repository does not automatically grant access to Epic's engine repository.
@@ -117,7 +117,7 @@ Access to this game repository does not automatically grant access to Epic's eng
 From the engine source root:
 
 ```powershell
-Set-Location F:\Engine2
+Set-Location X:\Engine2
 .\Setup.bat
 .\GenerateProjectFiles.bat
 .\Engine\Build\BatchFiles\Build.bat UnrealEditor Win64 Development -WaitMutex
@@ -130,8 +130,8 @@ Run each command only after the previous command succeeds. The initial dependenc
 Return to the project and set session-local paths:
 
 ```powershell
-Set-Location F:\UnrealLongju
-$EngineRoot = 'F:\Engine2'
+Set-Location X:\UnrealLongju
+$EngineRoot = 'X:\Engine2'
 $ProjectRoot = (Get-Location).Path
 $ProjectFile = Join-Path $ProjectRoot 'UnrealLongju.uproject'
 $env:UE_ROOT = $EngineRoot
@@ -141,7 +141,7 @@ $env:UE_ROOT = $EngineRoot
 
 - `GenerateConsoleProjectFiles.bat` expects a sibling `..\Engine2` source checkout.
 - `RunEditor.bat` also resolves the sibling `..\Engine2` directory.
-- `Scripts\StartAllLocal.bat` and `Scripts\StartClientLocal.bat` explicitly use `F:\Engine2`.
+- `Scripts\StartAllLocal.bat` and `Scripts\StartClientLocal.bat` explicitly use `X:\Engine2`.
 
 If your layout differs, use the explicit engine commands below and review launcher paths before running those convenience scripts. Opening the editor executable directly avoids depending on another developer's `EngineAssociation` registration.
 
@@ -238,8 +238,8 @@ Open **Window > MT2UE Importer** to configure the source path and import a selec
 For example, the quest commandlet accepts explicit source overrides:
 
 ```powershell
-$QuestSource = 'D:\LegacyData\server\share\locale\italy\quest'
-$ClientSource = 'D:\LegacyData\client-extracted'
+$QuestSource = 'X:\LegacyData\server\share\locale\italy\quest'
+$ClientSource = 'X:\LegacyData\client-extracted'
 & "$EngineRoot\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" $ProjectFile -run=MT2ImportQuests "-Source=$QuestSource" "-ClientSource=$ClientSource" -Destination=/Game -nullrhi -nosound -unattended -nop4 -stdout
 ```
 
