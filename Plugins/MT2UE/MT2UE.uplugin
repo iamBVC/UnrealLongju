@@ -1,0 +1,25 @@
+﻿{
+  "FileVersion": 3,
+  "Version": 1,
+  "VersionName": "0.1.0",
+  "FriendlyName": "MT2UE",
+  "Description": "Editor import tools for unpacked Metin2 client assets.",
+  "Category": "Importers",
+  "CreatedBy": "Codex",
+  "CanContainContent": false,
+  "IsBetaVersion": true,
+  "Installed": false,
+  "Modules": [
+    {
+      "Name": "MT2UEEditor",
+      "Type": "Editor",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "Interchange",
+      "Enabled": true
+    }
+  ]
+}
