@@ -24,6 +24,7 @@
 #include "Characters/MT2CharacterBase.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/MT2PlayerState.h"
+#include "Duel/MT2DuelComponent.h"
 #include "Stats/MT2CombatStatsComponent.h"
 #include "Stats/MT2PlayerStatFormula.h"
 #include "Stats/MT2PrimaryStatsComponent.h"
@@ -335,6 +336,16 @@ bool UMT2CombatComponent::ApplyBasicAttackDamage(AActor* TargetActor)
 		TargetMob->RecordDamage(OwnerActor, AppliedDamage);
 	}
 	DamageSpec.Data->SetSetByCallerMagnitude(MT2GameplayTags::Data_Damage, AppliedDamage);
+	if (const AMT2PlayerCharacter* Attacker = Cast<AMT2PlayerCharacter>(OwnerActor))
+	{
+		if (const AMT2PlayerCharacter* Victim = Cast<AMT2PlayerCharacter>(TargetActor))
+		{
+			if (AMT2PlayerState* State = Attacker->GetPlayerState<AMT2PlayerState>())
+			{
+				State->GetDuelComponent()->RecordHit(Victim->GetPlayerState<AMT2PlayerState>());
+			}
+		}
+	}
 	SourceAbilitySystem->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetAbilitySystem);
 	if (AMT2PlayerCharacter* AttackerPlayer = Cast<AMT2PlayerCharacter>(OwnerActor))
 	{
@@ -463,6 +474,16 @@ bool UMT2CombatComponent::ApplySkillDamage(
 		TargetMob->RecordDamage(OwnerActor, AppliedDamage);
 	}
 	DamageSpec.Data->SetSetByCallerMagnitude(MT2GameplayTags::Data_Damage, AppliedDamage);
+	if (const AMT2PlayerCharacter* Attacker = Cast<AMT2PlayerCharacter>(OwnerActor))
+	{
+		if (const AMT2PlayerCharacter* Victim = Cast<AMT2PlayerCharacter>(TargetActor))
+		{
+			if (AMT2PlayerState* State = Attacker->GetPlayerState<AMT2PlayerState>())
+			{
+				State->GetDuelComponent()->RecordHit(Victim->GetPlayerState<AMT2PlayerState>());
+			}
+		}
+	}
 	SourceAbilitySystem->ApplyGameplayEffectSpecToTarget(*DamageSpec.Data.Get(), TargetAbilitySystem);
 	if (AMT2PlayerCharacter* AttackerPlayer = Cast<AMT2PlayerCharacter>(OwnerActor))
 	{

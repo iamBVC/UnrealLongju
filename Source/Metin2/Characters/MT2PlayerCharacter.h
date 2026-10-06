@@ -62,9 +62,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "PvP")
 	bool IsInSafeZone() const;
 
-	// Whether an active duel exists between this player and Other. Stub until the duel subsystem
-	// exists; IsPvPEnabledAgainst already consumes it so duels will just work once implemented.
-	bool IsDuelingWith(const AMT2CharacterBase* Other) const { return false; }
+	bool IsDuelingWith(const AMT2CharacterBase* Other) const;
 #if WITH_EDITOR
 	// Lets FirstPersonCameraOffset be dialled in live: edits in the details panel move the camera
 	// straight away instead of waiting for the next toggle.

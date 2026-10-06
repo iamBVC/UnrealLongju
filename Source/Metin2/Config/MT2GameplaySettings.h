@@ -439,6 +439,15 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Voice Chat", meta = (ClampMin = "500.0", Units = "cm"))
 	float VoiceChatRange = 3500.0f;
 
+	UPROPERTY(EditAnywhere, config, Category="Combat|Duels", meta=(ClampMin="1", Units="s"))
+	float DuelIdleTimeoutSeconds = 600.f;
+	UPROPERTY(EditAnywhere, config, Category="Combat|Duels", meta=(ClampMin="1", Units="cm"))
+	float DuelRequestRange = 3000.f;
+	UPROPERTY(EditAnywhere, config, Category="Combat|Duels", meta=(ClampMin="0", Units="s"))
+	float DuelRequestCooldownSeconds = 1.f;
+	UPROPERTY(EditAnywhere, config, Category="Combat|Duels", meta=(ClampMin="1", ClampMax="128"))
+	int32 MaximumDuelAgreements = 32;
+
 	// Audio buffered before a speaker's stream starts playing. Higher = more latency but smoother
 	// under jitter. Latency is explicitly acceptable here; streams are not synced across clients.
 	UPROPERTY(EditAnywhere, config, Category = "Voice Chat", meta = (ClampMin = "20", ClampMax = "1000", Units = "ms"))

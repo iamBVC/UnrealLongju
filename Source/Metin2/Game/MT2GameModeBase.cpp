@@ -20,6 +20,7 @@
 #include "Game/MT2GameStateBase.h"
 #include "Player/MT2PlayerController.h"
 #include "Player/MT2PlayerState.h"
+#include "Duel/MT2DuelComponent.h"
 #include "Quests/MT2QuestManagerComponent.h"
 #include "Server/MT2ServerRuntimeSubsystem.h"
 #include "TimerManager.h"
@@ -401,6 +402,7 @@ void AMT2GameModeBase::Logout(AController* Exiting)
 	if (AMT2PlayerState* PlayerState = Exiting
 		? Exiting->GetPlayerState<AMT2PlayerState>() : nullptr)
 	{
+		PlayerState->GetDuelComponent()->CancelAllDuels();
 		if (UMT2PersistenceComponent* Persistence = PlayerState->GetPersistenceComponent())
 		{
 			if (UMT2ServerRuntimeSubsystem* Runtime = GetGameInstance()

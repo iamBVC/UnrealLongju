@@ -34,6 +34,7 @@ class UMT2SkillComponent;
 class UMT2PersistenceComponent;
 class UMT2PrimaryStatsComponent;
 class UMT2TradeComponent;
+class UMT2DuelComponent;
 class AMT2PlayerCharacter;
 class AMT2Party;
 struct FMT2PrimaryStats;
@@ -81,6 +82,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Persistence")
 	UMT2PersistenceComponent* GetPersistenceComponent() const { return PersistenceComponent; }
 	UFUNCTION(BlueprintPure, Category="Trade") UMT2TradeComponent* GetTradeComponent() const { return TradeComponent; }
+	UFUNCTION(BlueprintPure, Category="Combat|Duel") UMT2DuelComponent* GetDuelComponent() const { return DuelComponent; }
 
 	UFUNCTION(BlueprintPure, Category = "Character")
 	FString GetCharacterName() const { return GetPlayerName(); }
@@ -416,6 +418,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Trade", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UMT2TradeComponent> TradeComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Combat|Duel", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UMT2DuelComponent> DuelComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats|Primary", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UMT2PrimaryStatsComponent> PrimaryStatsComponent;

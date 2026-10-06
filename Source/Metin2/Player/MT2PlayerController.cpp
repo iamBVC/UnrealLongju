@@ -8,6 +8,7 @@
 */
 
 #include "Player/MT2PlayerController.h"
+#include "Duel/MT2DuelComponent.h"
 #include "Config/MT2PathSettings.h"
 
 #include "Net/NetworkProfiler.h"
@@ -759,6 +760,27 @@ bool AMT2PlayerController::BeginMapTransfer(
 		});
 	Persistence->RequestSave(true);
 	return true;
+}
+
+void AMT2PlayerController::RequestDuel(AMT2PlayerCharacter* TargetPlayer) { ServerRequestDuel(TargetPlayer); }
+void AMT2PlayerController::CancelDuel(AMT2PlayerCharacter* TargetPlayer) { ServerCancelDuel(TargetPlayer); }
+void AMT2PlayerController::ServerRequestDuel_Implementation(AMT2PlayerCharacter* TargetPlayer)
+{
+	AMT2PlayerState* State = GetPlayerState<AMT2PlayerState>();
+	if (!State || State->GetPawn() != GetPawn()) { return; }
+	FString Error;
+	if (!State->GetDuelComponent()->RequestDuel(IsValid(TargetPlayer) ? TargetPlayer->GetPlayerState<AMT2PlayerState>() : nullptr, Error))
+	{
+		ClientSystemChatMessage(Error);
+	}
+}
+void AMT2PlayerController::ServerCancelDuel_Implementation(AMT2PlayerCharacter* TargetPlayer)
+{
+	AMT2PlayerState* State = GetPlayerState<AMT2PlayerState>();
+	if (State && IsValid(TargetPlayer) && State->GetDuelComponent()->CancelDuel(TargetPlayer->GetPlayerState<AMT2PlayerState>()))
+	{
+		ClientSystemChatMessage(TEXT("Duel agreement cancelled."));
+	}
 }
 
 void AMT2PlayerController::ClearMigrationSaveDelegate()

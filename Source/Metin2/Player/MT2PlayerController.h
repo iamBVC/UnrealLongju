@@ -95,6 +95,12 @@ public:
 
 	void RequestPartyInvite(AMT2PlayerCharacter* TargetPlayer);
 	void RequestTrade(AMT2PlayerCharacter* TargetPlayer);
+	UFUNCTION(BlueprintCallable, Category="Combat|Duel")
+	void RequestDuel(AMT2PlayerCharacter* TargetPlayer);
+	UFUNCTION(BlueprintCallable, Category="Combat|Duel")
+	void CancelDuel(AMT2PlayerCharacter* TargetPlayer);
+	UFUNCTION(Server, Reliable) void ServerRequestDuel(AMT2PlayerCharacter* TargetPlayer);
+	UFUNCTION(Server, Reliable) void ServerCancelDuel(AMT2PlayerCharacter* TargetPlayer);
 	void RespondToPartyInvite(int32 InviteId, bool bAccept);
 	void RequestDisbandParty();
 	void RequestLeaveParty();

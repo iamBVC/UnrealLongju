@@ -17,6 +17,7 @@ class UBorder;
 class UButton;
 class UHorizontalBox;
 class UMT2CombatComponent;
+class UMT2DuelComponent;
 class UMT2HealthComponent;
 class AMT2PlayerState;
 class UProgressBar;
@@ -24,7 +25,7 @@ class UTextBlock;
 
 // Fired when one of the player-target action buttons is clicked (old uitarget.py TargetBoard
 // buttons). Action is one of: Whisper, Trade, Duel, Party, Friend, Guild. The corresponding
-// subsystems (private messages, commerce, duel, party, guilds) bind here once they exist.
+// systems can observe this event; built-in actions also route to their owning-controller APIs.
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	FMT2TargetActionSignature, FName, Action, AActor*, Target);
 
@@ -58,6 +59,8 @@ private:
 	void BindLocalPartyState();
 	void UnbindLocalPartyState();
 	void RefreshTargetInfo();
+	void BindLocalDuels();
+	UFUNCTION() void HandleDuelsChanged();
 	FText BuildTargetLabel(const AActor* Target) const;
 
 	UFUNCTION()
@@ -101,6 +104,9 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UButton> PartyButton;
+	UPROPERTY(Transient) TObjectPtr<UButton> DuelButton;
+	UPROPERTY(Transient) TObjectPtr<UTextBlock> DuelLabel;
+	TWeakObjectPtr<UMT2DuelComponent> BoundDuels;
 
 	TWeakObjectPtr<UMT2CombatComponent> BoundCombatComponent;
 	TWeakObjectPtr<AActor> TargetActor;

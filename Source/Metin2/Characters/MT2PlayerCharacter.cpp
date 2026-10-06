@@ -85,6 +85,7 @@
 #include "Stats/MT2PrimaryStatsComponent.h"
 #include "Stats/MT2PlayerStatFormula.h"
 #include "UI/MT2FloatingDamageActor.h"
+#include "Duel/MT2DuelComponent.h"
 #include "UI/MT2RespawnWidget.h"
 #include "UI/MT2RefinementDialogWidget.h"
 
@@ -718,6 +719,10 @@ void AMT2PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 void AMT2PlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (HasAuthority())
+	{
+		if (AMT2PlayerState* State = GetPlayerState<AMT2PlayerState>()) { State->GetDuelComponent()->CancelAllDuels(); }
+	}
 	RegenerationComponent->StopRegen();
 	GetCombatComponent()->StopBasicAttackLoop();
 	GetCombatComponent()->OnBasicAttackPerformed.RemoveDynamic(
@@ -1058,6 +1063,14 @@ bool AMT2PlayerCharacter::IsInSafeZone() const
 	return Attributes && Attributes->IsSafeZone(GetActorLocation());
 }
 
+bool AMT2PlayerCharacter::IsDuelingWith(const AMT2CharacterBase* Other) const
+{
+	const AMT2PlayerCharacter* Opponent = Cast<AMT2PlayerCharacter>(Other);
+	const AMT2PlayerState* Self = GetPlayerState<AMT2PlayerState>();
+	return Opponent && Opponent != this && Self &&
+		Self->GetDuelComponent()->IsFighting(Opponent->GetPlayerState<AMT2PlayerState>());
+}
+
 void AMT2PlayerCharacter::UpdateSafeZoneNotification()
 {
 	if (!HasAuthority()) { return; }
@@ -1101,7 +1114,10 @@ void AMT2PlayerCharacter::HandleDeath()
 		GetStatusEffectComponent()->RemoveEffectsOnDeath();
 		AMT2PlayerCharacter* Killer = LastPlayerDamageInstigator.Get();
 		LastPlayerDamageInstigator.Reset();
-		if (Killer && Killer != this)
+		AMT2PlayerState* VictimState = GetPlayerState<AMT2PlayerState>();
+		const bool bDuelDeath = VictimState && VictimState->GetDuelComponent()->HandleDefeat(
+			Killer ? Killer->GetPlayerState<AMT2PlayerState>() : nullptr);
+		if (!bDuelDeath && Killer && Killer != this)
 		{
 			if (AMT2PlayerState* KillerState = Killer->GetPlayerState<AMT2PlayerState>();
 				KillerState && KillerState->IsAggressiveMode())
@@ -1109,14 +1125,13 @@ void AMT2PlayerCharacter::HandleDeath()
 				KillerState->ChangeKarmaPoints(-FMath::Max(UMT2GameplaySettings::Get().AggressivePlayerKillKarmaPenalty, 0));
 			}
 		}
-		AMT2PlayerState* VictimState = GetPlayerState<AMT2PlayerState>();
 		const int32 Karma = VictimState ? VictimState->GetKarmaPoints() : 0;
 		const float DropChance = Karma < 0
 			? FMath::Clamp(
 				static_cast<float>(-Karma) / static_cast<float>(-MT2KarmaLimits::Minimum),
 				0.0f, 1.0f)
 			: 0.0f;
-		if (Killer && Killer != this && FMath::FRand() < DropChance)
+		if (!bDuelDeath && Killer && Killer != this && FMath::FRand() < DropChance)
 		{
 			FMT2ItemSlot DroppedEquipment;
 			if (GetInventoryComponent()->ExtractRandomEquippedItem(DroppedEquipment))

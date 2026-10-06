@@ -18,6 +18,10 @@ See the [setup guide](../README.md) for supported commands and configuration cav
 - Saved VNUM registry for mob/item lookup; quest discovery has a separate registry and active-quest manifest.
 - Map spawn actor/component, regen/group definitions, mob lifecycle, damage records, experience/loot distribution, and ground pickup/inventory interaction code.
 - Server-authoritative inventory/equipment, multi-page grid, sockets/bonuses, commerce/trade, skill learning/casting, critical/penetrating damage, and presentation components.
+- Player duels use the existing target UI for challenge, acceptance, combat and
+  revenge, with replicated server-authoritative agreements and teardown/idle cleanup.
+  Safezones remain authoritative; agreed deaths bypass current PK karma/equipment
+  penalties. Arena/tournament matches are separate. See [player duels](Duels.md).
 - Damage feedback routes server-resolved basic/skill hits to both player participants:
   outgoing numbers retain their hit-type colours, while received hits show red above
   the victim on that player's owning client. The existing unreliable client RPC,
@@ -74,6 +78,12 @@ per hit, post-defense amounts, red colour, existing outgoing colours, and fading
 The final run used NullRHI: live viewport appearance, remote-client delivery, and
 cooked targets were not exercised. The configured-path audit passed; no asset or
 INI changes were needed.
+
+Duel logic validation (2026-10-06): Editor Development built and all 49 Metin2
+regressions passed (`Saved/Logs/DuelVerifiedRegressionTests.log`). New native-world
+tests cover agreement/revenge/expiry and lethal-hit karma handling; remote-client
+duel UI, late joining, and cooked server/client execution remain unverified.
+See [player duels](Duels.md) for the legacy comparison and deliberate safety limits.
 
 ## Quest porting baseline
 

@@ -15,6 +15,7 @@
 #include "Abilities/MT2CoreAttributeSet.h"
 #include "Abilities/MT2GameplayAbilityBasicAttack.h"
 #include "AbilitySystemComponent.h"
+#include "Duel/MT2DuelComponent.h"
 #include "Characters/MT2CharacterBase.h"
 #include "Characters/MT2PlayerCharacter.h"
 #include "Components/MT2HealthComponent.h"
@@ -75,6 +76,7 @@ AMT2PlayerState::AMT2PlayerState()
 	MessengerComponent = CreateDefaultSubobject<UMT2MessengerComponent>(TEXT("MessengerComponent"));
 	GuildComponent = CreateDefaultSubobject<UMT2GuildComponent>(TEXT("GuildComponent"));
 	TradeComponent = CreateDefaultSubobject<UMT2TradeComponent>(TEXT("TradeComponent"));
+	DuelComponent = CreateDefaultSubobject<UMT2DuelComponent>(TEXT("DuelComponent"));
 	DefaultAbilities.Add(UMT2GameplayAbilityBasicAttack::StaticClass());
 	ExperienceCurve = TSoftObjectPtr<UCurveFloat>(
 		FSoftObjectPath(UMT2PathSettings::Path(TEXT("ExperienceCurve"))));

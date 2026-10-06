@@ -5,7 +5,7 @@ Test names, behaviour, and automation categories are unchanged by the move.
 
 | Files | Compiling module |
 | --- | --- |
-| `MT2DamageFeedbackTests.cpp`, `MT2MapAttributeTests.cpp`, `MT2PathSettingsTests.cpp`, `MT2QuestPlayerApiTests.cpp` | `Metin2` runtime module |
+| `MT2DamageFeedbackTests.cpp`, `MT2DuelTests.cpp`, `MT2MapAttributeTests.cpp`, `MT2PathSettingsTests.cpp`, `MT2QuestPlayerApiTests.cpp` | `Metin2` runtime module |
 | `MT2AreaPaintTests.h`, `MT2PIETravelTests.h` | `MT2UEEditor`, through `Private/MT2TestRegistration.cpp` |
 | `MT2QuestImporterTests.h` | `MT2UEEditor`, included at the end of `Private/Importers/MT2QuestImporter.cpp` |
 
@@ -22,9 +22,13 @@ editor; NullRHI does not validate those paths. See
 [PIE map travel](../../../Docs/PIETravel.md) and
 [area painting](../../../Docs/AreaPainting.md) for fixture details.
 
-Validation (2026-10-06): Editor Win64 Development built successfully, and all 47
+Relocation validation (2026-10-06, before adding duels): Editor Win64 Development built successfully, and all 47
 `Metin2` tests passed in `Saved/Logs/CentralizedTestsValidation.log`, including
 real standalone PIE startup and the area-preview fixtures. The run used an
 offscreen RHI with FXAA to isolate the existing TSR shader ensure; project
 settings were not changed. The configured-path audit also passed. Cooked targets
 were not rebuilt for this source-only reorganization.
+
+Duel coverage adds `Metin2.Combat.Duels.Lifecycle` and `.DeathPenalties`; the full
+49-test suite passed after that addition. See [duels](../../../Docs/Duels.md) for
+the latest validation scope and log.

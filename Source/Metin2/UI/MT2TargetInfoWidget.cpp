@@ -16,6 +16,7 @@
 #include "Characters/MT2CharacterBase.h"
 #include "Characters/MT2PlayerCharacter.h"
 #include "Combat/MT2CombatComponent.h"
+#include "Duel/MT2DuelComponent.h"
 #include "Components/Border.h"
 #include "Components/Button.h"
 #include "Components/MT2HealthComponent.h"
@@ -84,6 +85,11 @@ void UMT2TargetInfoWidget::EnsurePlayerActionRow()
 		UButton* Button = FMT2UIStyle::AtlasButton(
 			*WidgetTree, Public, SmallThinNormal, SmallThinHovered, SmallThinPressed);
 		Button->AddChild(FMT2UIStyle::Label(*WidgetTree, FText::FromString(Entry.Label), 8));
+		if (Entry.HandlerName == GET_FUNCTION_NAME_CHECKED(UMT2TargetInfoWidget, HandleDuelClicked))
+		{
+			DuelButton = Button;
+			DuelLabel = Cast<UTextBlock>(Button->GetContent());
+		}
 		FScriptDelegate ClickDelegate;
 		ClickDelegate.BindUFunction(this, Entry.HandlerName);
 		Button->OnClicked.AddUnique(ClickDelegate);
@@ -107,6 +113,8 @@ void UMT2TargetInfoWidget::EnsurePlayerActionRow()
 
 void UMT2TargetInfoWidget::NativeDestruct()
 {
+	if (UMT2DuelComponent* Duel = BoundDuels.Get()) { Duel->OnDuelsChanged.RemoveDynamic(this, &UMT2TargetInfoWidget::HandleDuelsChanged); }
+	BoundDuels.Reset();
 	UnbindTargetPlayerState();
 	UnbindLocalPartyState();
 	UnbindTargetHealth();
@@ -119,6 +127,7 @@ void UMT2TargetInfoWidget::NativeTick(const FGeometry& MyGeometry, float InDelta
 	Super::NativeTick(MyGeometry, InDeltaTime);
 	BindCombatComponent();
 	BindLocalPartyState();
+	BindLocalDuels();
 	if (UMT2CombatComponent* Combat = BoundCombatComponent.Get())
 	{
 		AActor* SelectedTarget = Combat->GetSelectedTarget();
@@ -220,6 +229,19 @@ void UMT2TargetInfoWidget::UnbindTargetPlayerState()
 	TargetPlayerState.Reset();
 }
 
+void UMT2TargetInfoWidget::BindLocalDuels()
+{
+	AMT2PlayerState* State = GetOwningPlayer() ? GetOwningPlayer()->GetPlayerState<AMT2PlayerState>() : nullptr;
+	UMT2DuelComponent* Duel = State ? State->GetDuelComponent() : nullptr;
+	if (BoundDuels.Get() == Duel) { return; }
+	if (UMT2DuelComponent* Old = BoundDuels.Get()) { Old->OnDuelsChanged.RemoveDynamic(this, &UMT2TargetInfoWidget::HandleDuelsChanged); }
+	BoundDuels = Duel;
+	if (Duel) { Duel->OnDuelsChanged.AddUniqueDynamic(this, &UMT2TargetInfoWidget::HandleDuelsChanged); }
+	RefreshTargetInfo();
+}
+
+void UMT2TargetInfoWidget::HandleDuelsChanged() { RefreshTargetInfo(); }
+
 void UMT2TargetInfoWidget::BindLocalPartyState()
 {
 	AMT2PlayerState* State = GetOwningPlayerState<AMT2PlayerState>();
@@ -315,6 +337,16 @@ void UMT2TargetInfoWidget::RefreshTargetInfo()
 					}));
 		const bool bCanInvite = TargetState && !TargetState->IsInParty()
 			&& (!LocalState || !LocalState->IsInParty() || bLocalPartyLeader);
+		if (DuelButton && DuelLabel)
+		{
+			const FMT2DuelEntry* Duel = LocalState ? LocalState->GetDuelComponent()->FindDuel(TargetState) : nullptr;
+			DuelButton->SetIsEnabled(LocalState && TargetState && (!Duel || Duel->bCanAccept));
+			DuelLabel->SetText(!Duel ? NSLOCTEXT("MT2Duel", "Challenge", "Duel")
+				: Duel->Phase == EMT2DuelPhase::Fighting ? NSLOCTEXT("MT2Duel", "Fighting", "Fighting")
+				: !Duel->bCanAccept ? NSLOCTEXT("MT2Duel", "Waiting", "Waiting...")
+				: Duel->Phase == EMT2DuelPhase::Revenge ? NSLOCTEXT("MT2Duel", "Revenge", "Revenge")
+				: NSLOCTEXT("MT2Duel", "Accept", "Accept duel"));
+		}
 		if (PartyButton)
 		{
 			PartyButton->SetVisibility(
@@ -411,6 +443,14 @@ void UMT2TargetInfoWidget::RequestPlayerAction(FName Action)
 		return;
 	}
 	OnPlayerActionRequested.Broadcast(Action, Target);
+	if (Action == TEXT("Duel"))
+	{
+		if (AMT2PlayerController* PC = Cast<AMT2PlayerController>(GetOwningPlayer()))
+		{
+			PC->RequestDuel(Cast<AMT2PlayerCharacter>(Target));
+		}
+		return;
+	}
 
 	// Message opens the messenger on a private conversation with this player - the old client's
 	// whisper window. The character id is resolved server-side, so only the actor travels from here.
