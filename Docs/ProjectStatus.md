@@ -1,6 +1,6 @@
 # UnrealLongju Project Status
 
-Source review: 2026-10-05. This inventory is based on current C++, configuration, scripts, and recorded porting audits. It is not a claim that every target or gameplay path was tested today.
+Source review: 2026-10-05; area-tooling update: 2026-10-06. This inventory is based on current C++, configuration, scripts, and recorded porting audits. It is not a claim that every target or gameplay path was tested today.
 
 ## Development baseline
 
@@ -24,6 +24,13 @@ See the [setup guide](../README.md) for supported commands and configuration cav
 - Messenger friend requests, presence, stored cluster messages, separate whisper UI, and notifications. Coordinator-free fallback is session-local, not persistent.
 - Mount definition/component/item foundation, with progression and full presentation fidelity still separate work.
 - Imported area-attribute grids and authoritative BANPK safezones. Player chat reports `safezone area` / `unprotected area` on initial status and transitions. BLOCK/OBJECT now constrain player/mob movement through an attribute-aware character movement component; water generation and AI route planning around these cells remain separate work. See the [2026-10-06 validation](OldGameResearch/SafeZones.md).
+- Dedicated editor-only [area painter](AreaPainting.md) with native-resolution bit editing, colored terrain overlays, independent visibility, paint/erase brushes, and sparse undo/redo. Display-only grouping does not alter saved grid resolution; water surfaces remain separate work.
+
+Area-tooling validation (2026-10-06): Editor Development build succeeded and all 36 area-paint/world/quest tests passed (`Saved/Logs/AreaPaintTests.log`). This verifies data editing, editor transactions, and regression fixtures, not live viewport appearance or cooked multiplayer behavior.
+
+Subsequent overlay correction (2026-10-06): explicit standard-pass translucency and editor-compositing shaders, read-only attribute dimensions in Details, and terrain-preview diagnostics were added. Editor Development rebuilt successfully; all 37 tests passed (`Saved/Logs/AreaPaintOverlayTests.log`). Final live GPU appearance still requires verification.
+
+Viewport coverage update (2026-10-06): the user confirmed colors render in Yongan. The overlay now follows visible loaded terrain across the camera view rather than a mouse-centered radius; preview flags are cached, and saved resolution is unchanged. Editor Development built and all 38 tests passed (`Saved/Logs/AreaPaintViewportTests.log`). Viewport-wide coverage/performance still needs live verification.
 
 Code presence does not establish full original-game parity. Check system-specific documents and tests before enabling content in a release.
 

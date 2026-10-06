@@ -21,6 +21,8 @@ class FMT2UEEditorModule : public IModuleInterface
 public:
 	virtual void StartupModule() override;
 	virtual void ShutdownModule() override;
+	// Sparse area-paint changes can remain in the editor undo buffer.
+	virtual bool SupportsDynamicReloading() override { return false; }
 
 private:
 	void RegisterMenus();

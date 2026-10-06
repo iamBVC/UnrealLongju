@@ -26,6 +26,8 @@ The separate **Archives**, **Scripts**, and **Skeletons** import services still 
 
 Terrain import handles stitched heightmaps/weights, landscapes, static placements, spawn/map presentation metadata, and area attributes. BANPK safezones and BLOCK/OBJECT character-movement constraints are supported at runtime; attribute-driven water placement remains separate work. See [SafeZones](../../Docs/OldGameResearch/SafeZones.md).
 
+**Window > Metin2 Area Paint** opens the dedicated full-resolution attribute editor. Paint or erase any of the eight bits, toggle their colored Landscape overlays, and use normal Undo/Redo and map saves. This does not use Landscape paint weights or resample the grid. See [Area Painting](../../Docs/AreaPainting.md) for controls, display-only preview grouping, and reimport caveats.
+
 ## Quest conversion
 
 ```text

@@ -8,6 +8,9 @@
 */
 
 #include "MT2UEEditorModule.h"
+#include "MT2AreaPaintEdMode.h"
+#include "EditorModeManager.h"
+#include "EditorModeRegistry.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "ContentBrowserMenuContexts.h"
@@ -43,6 +46,11 @@ namespace
 
 void FMT2UEEditorModule::StartupModule()
 {
+	if (!IsRunningCommandlet())
+	{
+		FEditorModeRegistry::Get().RegisterMode<FMT2AreaPaintEdMode>(FMT2AreaPaintEdMode::ModeId,
+			LOCTEXT("AreaPaintMode", "Metin2 Areas"), FSlateIcon(), true);
+	}
 	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(
 		MT2ImporterTabName,
 		FOnSpawnTab::CreateRaw(this, &FMT2UEEditorModule::SpawnImporterTab))
@@ -68,6 +76,7 @@ void FMT2UEEditorModule::StartupModule()
 
 void FMT2UEEditorModule::ShutdownModule()
 {
+	if (!IsRunningCommandlet()) { FEditorModeRegistry::Get().UnregisterMode(FMT2AreaPaintEdMode::ModeId); }
 	UToolMenus::UnRegisterStartupCallback(this);
 	UToolMenus::UnregisterOwner(this);
 	if (UObjectInitialized())
@@ -140,6 +149,12 @@ void FMT2UEEditorModule::RegisterMenus()
 
 void FMT2UEEditorModule::AddMenuEntry(FMenuBuilder& MenuBuilder)
 {
+	MenuBuilder.AddMenuEntry(LOCTEXT("AreaPaintLabel", "Metin2 Area Paint"),
+		LOCTEXT("AreaPaintTooltip", "View and paint full-resolution gameplay attribute bits on the landscape."),
+		FSlateIcon(), FUIAction(FExecuteAction::CreateLambda([]()
+		{
+			GLevelEditorModeTools().ActivateMode(FMT2AreaPaintEdMode::ModeId, true);
+		})));
 	MenuBuilder.AddMenuEntry(
 		LOCTEXT("OpenImporterLabel", "MT2UE Importer"),
 		LOCTEXT("OpenImporterTooltip", "Open the Metin2 asset importer."),

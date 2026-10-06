@@ -19,7 +19,7 @@ USTRUCT()
 struct METIN2_API FMT2MapAttributes
 {
 	GENERATED_BODY()
-	UPROPERTY() FIntPoint Size = FIntPoint::ZeroValue;
+	UPROPERTY(VisibleAnywhere, Category = "Attributes") FIntPoint Size = FIntPoint::ZeroValue;
 	UPROPERTY() TArray<uint8> Flags;
 	bool Query(const FVector& Location, const FVector2D& WorldMin, const FVector2D& WorldMax, uint8& OutFlags) const;
 	bool TraceBlockedSegment(const FVector& Start, const FVector& End, const FVector2D& WorldMin,

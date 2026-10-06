@@ -68,6 +68,11 @@ grid before relying on no-walk or safezone protection in a release.
 
 ## Import and verification
 
+For authored edits, use the dedicated [Area Painting editor](../AreaPainting.md).
+It edits the original-resolution grid directly and shows all eight bits as
+colored terrain overlays without modifying Landscape texture layers. Attribute
+reimport replaces these edits; save/back up authored content first.
+
 The `MT2ImportMapAttributes` editor commandlet accepts comma-separated package
 paths via `-Maps`, the legacy locale directory via `-LocaleRoot`, and the
 extracted client root via `-ClientRoot` (containing `ymir work`). It changes
