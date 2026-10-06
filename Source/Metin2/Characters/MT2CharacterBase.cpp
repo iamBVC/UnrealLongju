@@ -8,6 +8,7 @@
 */
 
 #include "Characters/MT2CharacterBase.h"
+#include "Characters/MT2CharacterMovementComponent.h"
 
 #include "Animation/MT2CharacterAnimInstance.h"
 #include "Animation/AnimSequence.h"
@@ -29,7 +30,7 @@
 #include "UI/MT2NameplateComponent.h"
 
 AMT2CharacterBase::AMT2CharacterBase(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UMT2CharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;

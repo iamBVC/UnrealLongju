@@ -24,7 +24,7 @@ The service layer lives under `Source/MT2UEEditor/Public/API` and `Public/Import
 
 The separate **Archives**, **Scripts**, and **Skeletons** import services still report skeleton-only implementations. This does not mean skeletal meshes or animations are wholly unimplemented: those have separate conversion/import paths. Provide extracted sources; the generic archive service does not extract legacy packs.
 
-Terrain import handles stitched heightmaps/weights, landscapes, static placements, spawn/map presentation metadata, and area attributes. BANPK safezones are supported at runtime; attribute-driven water placement and walkability remain separate work. See [SafeZones](../../Docs/OldGameResearch/SafeZones.md).
+Terrain import handles stitched heightmaps/weights, landscapes, static placements, spawn/map presentation metadata, and area attributes. BANPK safezones and BLOCK/OBJECT character-movement constraints are supported at runtime; attribute-driven water placement remains separate work. See [SafeZones](../../Docs/OldGameResearch/SafeZones.md).
 
 ## Quest conversion
 

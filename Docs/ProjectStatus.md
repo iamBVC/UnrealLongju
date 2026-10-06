@@ -23,7 +23,7 @@ See the [setup guide](../README.md) for supported commands and configuration cav
 - Coordinator guild core with 15 editable ranks, invitations, membership, guild chat, and owner-client UI state. Local JSON guild code also remains; do not confuse it with cluster authority.
 - Messenger friend requests, presence, stored cluster messages, separate whisper UI, and notifications. Coordinator-free fallback is session-local, not persistent.
 - Mount definition/component/item foundation, with progression and full presentation fidelity still separate work.
-- Imported area-attribute grids and authoritative BANPK safezones. Player chat reports `safezone area` / `unprotected area` on initial status and transitions. Water/block flags are preserved; water generation and attribute-based walkability are not implemented by the safezone slice.
+- Imported area-attribute grids and authoritative BANPK safezones. Player chat reports `safezone area` / `unprotected area` on initial status and transitions. BLOCK/OBJECT now constrain player/mob movement through an attribute-aware character movement component; water generation and AI route planning around these cells remain separate work. See the [2026-10-06 validation](OldGameResearch/SafeZones.md).
 
 Code presence does not establish full original-game parity. Check system-specific documents and tests before enabling content in a release.
 
@@ -46,7 +46,7 @@ The recorded function-result-list validation passed 32 quest/safezone tests. The
 1. Continue quest control-flow/scoping, resumable expression/result-list propagation, table-field assignment, function values, and rejected trigger/gate work.
 2. Build real authoritative backends for unresolved dungeon/instance, cube, safebox/mall, pet, marriage, guild-war/building, and horse APIs rather than accepting placeholders.
 3. Audit already accepted quest bindings and unfinished quest triggers; conversion counts alone do not establish correctness.
-4. Implement water and walkability from area properties without weakening server authority.
+4. Implement water placement, and validate attribute-based movement with live multiplayer, AI routes, and authored spawn/warp destinations.
 5. Validate current content in cooked client/server builds, multiplayer travel, persistence/reconnect, and complete quest playthroughs.
 6. Establish reproducible engine/dependency revisions, explicit database migration/backup procedures, and reviewed production security/release configuration.
 

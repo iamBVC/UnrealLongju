@@ -10,11 +10,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "Characters/MT2CharacterMovementComponent.h"
 #include "MT2MobMovementComponent.generated.h"
 
 UCLASS()
-class METIN2_API UMT2MobMovementComponent : public UCharacterMovementComponent
+class METIN2_API UMT2MobMovementComponent : public UMT2CharacterMovementComponent
 {
 	GENERATED_BODY()
 

@@ -303,7 +303,7 @@ See [Patcher documentation](Patcher/README.md) for manifest structure and hostin
 After building the editor target:
 
 ```powershell
-& "$EngineRoot\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" $ProjectFile '-ExecCmds=Automation RunTests Metin2.Quests+Metin2.World.SafeZones' '-TestExit=Automation Test Queue Empty' -nullrhi -nosound -unattended -nop4 -nosplash -stdout "-abslog=$ProjectRoot\Saved\Logs\QuestRegression.log"
+& "$EngineRoot\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" $ProjectFile '-ExecCmds=Automation RunTests Metin2.Quests+Metin2.World' '-TestExit=Automation Test Queue Empty' -nullrhi -nosound -unattended -nop4 -nosplash -stdout "-abslog=$ProjectRoot\Saved\Logs\QuestRegression.log"
 ```
 
 Inspect each `Test Completed` result and unexpected errors in the log; do not rely only on the executable's exit code. These tests are not substitutes for multiplayer, cooking, dedicated-server, or end-to-end gameplay validation. Some fixtures use registry/import infrastructure and can write generated local data; review your working tree afterward.
