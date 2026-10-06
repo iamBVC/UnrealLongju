@@ -27,7 +27,7 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 
 	void InitializeDamage(float Damage, EMT2DamageDisplayType DamageType,
-		APlayerCameraManager* InCameraManager);
+		APlayerCameraManager* InCameraManager, bool bReceivedDamage = false);
 
 private:
 	static FColor GetDamageColor(EMT2DamageDisplayType DamageType);

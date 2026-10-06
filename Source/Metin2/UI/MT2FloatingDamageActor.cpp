@@ -38,10 +38,10 @@ AMT2FloatingDamageActor::AMT2FloatingDamageActor()
 }
 
 void AMT2FloatingDamageActor::InitializeDamage(
-	float Damage, EMT2DamageDisplayType DamageType, APlayerCameraManager* InCameraManager)
+	float Damage, EMT2DamageDisplayType DamageType, APlayerCameraManager* InCameraManager, bool bReceivedDamage)
 {
 	CameraManager = InCameraManager;
-	BaseColor = GetDamageColor(DamageType);
+	BaseColor = bReceivedDamage ? FColor(255, 35, 35) : GetDamageColor(DamageType);
 	DamageText->SetText(FText::AsNumber(FMath::Max(1, FMath::RoundToInt(Damage))));
 
 	const FVector CameraRight = InCameraManager

@@ -1374,7 +1374,8 @@ void AMT2PlayerCharacter::ClientShowDamageNumber_Implementation(
 	AActor* TargetActor, float Damage, EMT2DamageDisplayType DamageType)
 {
 	APlayerController* LocalController = Cast<APlayerController>(GetController());
-	if (!TargetActor || !LocalController || !LocalController->IsLocalController() || !GetWorld())
+	if (!IsValid(TargetActor) || !LocalController || !LocalController->IsLocalController() || !GetWorld() ||
+		!FMath::IsFinite(Damage) || Damage <= 0.0f)
 	{
 		return;
 	}
@@ -1388,8 +1389,10 @@ void AMT2PlayerCharacter::ClientShowDamageNumber_Implementation(
 	if (AMT2FloatingDamageActor* DamageActor = GetWorld()->SpawnActor<AMT2FloatingDamageActor>(
 		AMT2FloatingDamageActor::StaticClass(), SpawnLocation, FRotator::ZeroRotator, SpawnParameters))
 	{
-		DamageActor->InitializeDamage(Damage, DamageType, LocalController->PlayerCameraManager);
+		DamageActor->InitializeDamage(Damage, DamageType, LocalController->PlayerCameraManager, TargetActor == this);
 	}
+	// Receiving a number must not add a second set of attacker-side impact sounds.
+	if (TargetActor == this) { return; }
 
 	const UMT2GameplaySettings& Settings = UMT2GameplaySettings::Get();
 	if (!Settings.BasicHitSounds.IsEmpty())

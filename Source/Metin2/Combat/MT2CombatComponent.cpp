@@ -341,6 +341,10 @@ bool UMT2CombatComponent::ApplyBasicAttackDamage(AActor* TargetActor)
 		AttackerPlayer->ClientShowDamageNumber(
 			TargetActor, AppliedDamage, SpecialDamage.DisplayType);
 	}
+	if (AMT2PlayerCharacter* VictimPlayer = Cast<AMT2PlayerCharacter>(TargetActor))
+	{
+		VictimPlayer->ClientShowDamageNumber(VictimPlayer, AppliedDamage, SpecialDamage.DisplayType);
+	}
 
 	// Instant GameplayEffects resolve synchronously, so by this point a lethal hit has already gone
 	// through UMT2HealthComponent::OnDeath -> AMT2Mob::HandleDeath -> PlayMobMotion(FrontDead). Only
@@ -463,6 +467,10 @@ bool UMT2CombatComponent::ApplySkillDamage(
 	if (AMT2PlayerCharacter* AttackerPlayer = Cast<AMT2PlayerCharacter>(OwnerActor))
 	{
 		AttackerPlayer->ClientShowDamageNumber(TargetActor, AppliedDamage, SpecialDamage.DisplayType);
+	}
+	if (AMT2PlayerCharacter* VictimPlayer = Cast<AMT2PlayerCharacter>(TargetActor))
+	{
+		VictimPlayer->ClientShowDamageNumber(VictimPlayer, AppliedDamage, SpecialDamage.DisplayType);
 	}
 
 	if (AMT2Mob* TargetMob = Cast<AMT2Mob>(TargetActor); TargetMob && !TargetMob->GetHealthComponent()->IsDead())

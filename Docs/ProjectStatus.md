@@ -18,6 +18,12 @@ See the [setup guide](../README.md) for supported commands and configuration cav
 - Saved VNUM registry for mob/item lookup; quest discovery has a separate registry and active-quest manifest.
 - Map spawn actor/component, regen/group definitions, mob lifecycle, damage records, experience/loot distribution, and ground pickup/inventory interaction code.
 - Server-authoritative inventory/equipment, multi-page grid, sockets/bonuses, commerce/trade, skill learning/casting, critical/penetrating damage, and presentation components.
+- Damage feedback routes server-resolved basic/skill hits to both player participants:
+  outgoing numbers retain their hit-type colours, while received hits show red above
+  the victim on that player's owning client. The existing unreliable client RPC,
+  local-only floating actor, movement/fade, and outgoing hit sounds are retained;
+  incoming notifications do not replay attacker-side audio.
+
 - Gateway account/login/character flow, coordinator routing and persistence, map registration/heartbeats, admission tickets, and transfer code.
 - Coordinator SQLite persistence for characters, items, quests, guilds, and messenger state. Skills, quickslots, and affects use compact player TEXT fields. Schema creation exists; automatic versioned migration does not.
 - Coordinator guild core with 15 editable ranks, invitations, membership, guild chat, and owner-client UI state. Local JSON guild code also remains; do not confuse it with cluster authority.
@@ -60,6 +66,14 @@ retired. Editor Development built and all 45 regressions passed, including real
 TestMap launches in both startup modes (`Saved/Logs/PIESpawnVerifiedTests.log`).
 The path audit passed with 250 catalog entries, and Content stayed clean. See
 [PIE map travel](PIETravel.md) for test scope and Blueprint-hook caveats.
+
+Incoming damage validation (2026-10-06): Editor Win64 Development built; all eight
+combat/config/world regressions passed (`Saved/Logs/IncomingDamageFinalTests.log`).
+The native-world fixture checks mob and PvP basic/skill hits, one received popup
+per hit, post-defense amounts, red colour, existing outgoing colours, and fading.
+The final run used NullRHI: live viewport appearance, remote-client delivery, and
+cooked targets were not exercised. The configured-path audit passed; no asset or
+INI changes were needed.
 
 ## Quest porting baseline
 
