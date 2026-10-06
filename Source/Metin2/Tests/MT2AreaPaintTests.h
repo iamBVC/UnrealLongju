@@ -1,3 +1,5 @@
+#pragma once
+
 #if WITH_DEV_AUTOMATION_TESTS
 #include "MT2AreaPaintData.h"
 #include "MT2AreaPaintEdMode.h"

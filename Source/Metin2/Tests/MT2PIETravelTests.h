@@ -1,3 +1,5 @@
+#pragma once
+
 #if WITH_DEV_AUTOMATION_TESTS
 #include "Misc/AutomationTest.h"
 #include "World/MT2MapUtils.h"
