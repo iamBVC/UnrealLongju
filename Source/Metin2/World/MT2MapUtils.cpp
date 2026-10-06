@@ -13,11 +13,30 @@
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
+#include "Engine/World.h"
+#include "WorldPartition/DataLayer/WorldDataLayers.h"
+#include "WorldPartition/WorldPartition.h"
 #include "Misc/PackageName.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMT2MapUtils, Log, All);
+
+bool MT2MapUtils::HasPendingPIETravel(const UWorld& World)
+{
+	return World.WorldType == EWorldType::PIE && (World.IsInSeamlessTravel() || !World.NextURL.IsEmpty());
+}
+
+void MT2MapUtils::PreparePIEClientWorldForTravel(UWorld& World, bool bSeamless)
+{
+	if (World.WorldType != EWorldType::PIE || World.GetNetMode() != NM_Client || !bSeamless) { return; }
+	UWorldPartition* Partition = World.GetWorldPartition();
+	if (Partition && Partition->IsInitialized() && World.GetWorldDataLayers())
+	{
+		UE_LOG(LogMT2MapUtils, Display, TEXT("PIE client partition teardown before seamless travel: %s."), *World.GetPathName());
+		Partition->Uninitialize();
+	}
+}
 
 namespace
 {

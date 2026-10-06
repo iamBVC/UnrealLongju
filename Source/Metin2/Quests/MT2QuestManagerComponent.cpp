@@ -192,6 +192,10 @@ void UMT2QuestManagerComponent::TryFireEntryEvents()
 
 	// Login/Enter start or advance quests for this session; Letter then has every quest declare the
 	// journal entry for the state it is now in.
+#if WITH_EDITOR
+	TGuardValue<bool> PreserveSpawn(bPreservePIESpawnDuringDispatch,
+		GetWorld() && GetWorld()->WorldType == EWorldType::PIE);
+#endif
 	DispatchEvent(EMT2QuestEvent::Login);
 	DispatchEvent(EMT2QuestEvent::Enter);
 	RefreshQuestJournal();
@@ -400,6 +404,10 @@ void UMT2QuestManagerComponent::SetQuestState(const UMT2Quest* Quest, FName Stat
 	// and a flashing dot. The new state's letter/target block re-declares whatever it still needs.
 	ClearTargetMarker(NAME_None, Quest->GetQuestId());
 	PendingStateEntryQuestIds.Add(Quest->GetQuestId());
+	if (bPreservePIESpawnDuringDispatch || (bRunning && ActiveContext.bPreservePIESpawn))
+	{
+		PendingPIESpawnPreservingQuestIds.Add(Quest->GetQuestId());
+	}
 
 	// The old quest runtime enters the new state before refreshing its letter. Many scripts create
 	// their journal entry and target from `when enter or login`, so skipping Enter makes those quests
@@ -417,6 +425,8 @@ void UMT2QuestManagerComponent::SetQuestState(const UMT2Quest* Quest, FName Stat
 					WeakThis->bJournalRefreshQueued = false;
 					const TSet<FName> QuestIds = MoveTemp(WeakThis->PendingStateEntryQuestIds);
 					WeakThis->PendingStateEntryQuestIds.Reset();
+					const TSet<FName> PreserveSpawnQuestIds = MoveTemp(WeakThis->PendingPIESpawnPreservingQuestIds);
+					WeakThis->PendingPIESpawnPreservingQuestIds.Reset();
 					const AMT2PlayerState* PlayerState = Cast<AMT2PlayerState>(WeakThis->GetOwner());
 					UGameInstance* GameInstance = PlayerState ? PlayerState->GetGameInstance() : nullptr;
 					UMT2QuestRegistrySubsystem* Registry = GameInstance
@@ -427,10 +437,14 @@ void UMT2QuestManagerComponent::SetQuestState(const UMT2Quest* Quest, FName Stat
 						{
 							if (const UMT2Quest* ChangedQuest = Registry->FindQuest(QuestId))
 							{
+								TGuardValue<bool> PreserveSpawn(WeakThis->bPreservePIESpawnDuringDispatch,
+									PreserveSpawnQuestIds.Contains(QuestId));
 								WeakThis->DispatchEventToQuest(ChangedQuest, EMT2QuestEvent::Enter);
 							}
 						}
 					}
+					TGuardValue<bool> PreserveJournalSpawn(WeakThis->bPreservePIESpawnDuringDispatch,
+						!PreserveSpawnQuestIds.IsEmpty());
 					WeakThis->RefreshQuestJournal();
 				}
 			});
@@ -643,6 +657,7 @@ bool UMT2QuestManagerComponent::DispatchEventInternal(
 	Context.Event = Event;
 	Context.EventVnum = Vnum;
 	Context.EventItemSlot = ItemSlot;
+	Context.bPreservePIESpawn = bPreservePIESpawnDuringDispatch;
 	if (HasPendingConversation())
 	{
 		// Broadcasts currently replace the suspended run. End it explicitly so its
@@ -678,6 +693,7 @@ bool UMT2QuestManagerComponent::DispatchEventInternal(
 			// A broadcast Enter (initial login/map entry) satisfies a pending state Enter too. Consume it
 			// before execution so a state change made by that Enter can queue the next state normally.
 			PendingStateEntryQuestIds.Remove(Quest->GetQuestId());
+			PendingPIESpawnPreservingQuestIds.Remove(Quest->GetQuestId());
 		}
 
 		// The Blueprint hook runs first and can swallow the event - this is where converted complex
@@ -811,6 +827,7 @@ bool UMT2QuestManagerComponent::DispatchEventToQuest(const UMT2Quest* Quest, EMT
 	Context.Player = Cast<AMT2PlayerCharacter>(State->GetPawn());
 	Context.Event = Event;
 	Context.Quest = Quest;
+	Context.bPreservePIESpawn = bPreservePIESpawnDuringDispatch;
 
 	const FMT2QuestState* QuestState = Quest->FindState(GetQuestState(Quest));
 	if (!QuestState)

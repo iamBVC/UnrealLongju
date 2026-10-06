@@ -188,6 +188,11 @@ namespace
 		{
 			return false;
 		}
+		if (MT2MapUtils::HasPendingPIETravel(*World))
+		{
+			UE_LOG(LogMT2QuestRuntime, Display, TEXT("[Quest] PIE travel already pending; keeping the first warp request."));
+			return true;
+		}
 		const FString TargetPackage = ResolvePIEWorldPackage(Map);
 		if (TargetPackage.IsEmpty())
 		{
@@ -1144,6 +1149,14 @@ bool UMT2QuestNode_Warp::ResolveMapDestination(const FMT2QuestContext& Context,
 
 EMT2QuestNodeResult UMT2QuestNode_Warp::Execute(const FMT2QuestContext& Context)
 {
+#if WITH_EDITOR
+	if (Context.bPreservePIESpawn && IsValid(Context.Player) && Context.Player->GetWorld() &&
+		Context.Player->GetWorld()->WorldType == EWorldType::PIE)
+	{
+		UE_LOG(LogMT2QuestRuntime, Log, TEXT("[Quest] Skipped automatic PIE entry warp; preserving editor-selected spawn."));
+		return EMT2QuestNodeResult::Continue;
+	}
+#endif
 	if (!IsValid(Context.Player) || !Context.Player->HasAuthority())
 	{
 		return EMT2QuestNodeResult::Continue;

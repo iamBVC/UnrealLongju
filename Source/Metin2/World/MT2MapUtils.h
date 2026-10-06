@@ -11,10 +11,16 @@
 
 #include "CoreMinimal.h"
 
+class UWorld;
+class AActor;
+
 namespace MT2MapUtils
 {
 #if WITH_EDITOR
 	// Resolves server/client map aliases and deleted redirectors to the actual imported world package.
 	METIN2_API FString ResolvePIEWorldPackage(const TArray<FString>& MapAliases);
+	METIN2_API bool HasPendingPIETravel(const UWorld& World);
+	// Complete source partition teardown before seamless travel/network actor cleanup.
+	METIN2_API void PreparePIEClientWorldForTravel(UWorld& World, bool bSeamless);
 #endif
 }

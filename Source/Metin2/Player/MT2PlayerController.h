@@ -11,6 +11,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "GameFramework/UpdateLevelVisibilityLevelInfo.h"
 #include "Server/MT2ServerRuntimeTypes.h"
 #include "World/MT2MapPresentationActor.h"
 #include "MT2PlayerController.generated.h"
@@ -34,6 +35,13 @@ class METIN2_API AMT2PlayerController : public APlayerController
 
 public:
 	friend class UMT2QuestNode_Warp;
+
+#if WITH_EDITOR
+	friend class FMT2PIEVisibilityQueueTest;
+	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
+	virtual void ProcessEvent(UFunction* Function, void* Parameters) override;
+	virtual void PostSeamlessTravel() override;
+#endif
 
 	UFUNCTION(BlueprintCallable, Category = "Network")
 	bool ConnectToServer(const FString& Address);
@@ -256,6 +264,9 @@ private:
 	TObjectPtr<UMT2ChatWidget> ChatWidget;
 
 	FString AuthenticatedAccountId;
+#if WITH_EDITOR
+	TArray<FUpdateLevelVisibilityLevelInfo> PendingPIELevelVisibility;
+#endif
 	FString SessionToken;
 	bool bGatewayRequestPending = false;
 	bool bMigrationPending = false;

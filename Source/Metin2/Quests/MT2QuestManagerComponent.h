@@ -372,6 +372,7 @@ private:
 	// A state transition fires that quest's Enter block on the next tick. Keeping quest ids rather
 	// than callbacks prevents duplicate Enter execution when several nodes change the same state.
 	TSet<FName> PendingStateEntryQuestIds;
+	TSet<FName> PendingPIESpawnPreservingQuestIds;
 
 	// True while suspended on a wait() page break: any answer resumes the block instead of being
 	// treated as a dismissal.
@@ -413,5 +414,6 @@ private:
 	FTimerHandle TargetArrivalTimer;
 
 	bool bEntryEventsFired = false;
+	bool bPreservePIESpawnDuringDispatch = false;
 	FTimerHandle EntryEventTimer;
 };

@@ -64,6 +64,10 @@ AMT2GameModeBase::AMT2GameModeBase()
 void AMT2GameModeBase::BeginPlay()
 {
 	Super::BeginPlay();
+#if WITH_EDITOR
+	// Editor-selected starts can intentionally lie outside imported map bounds.
+	if (GetWorld()->WorldType == EWorldType::PIE) { return; }
+#endif
 	GetWorldTimerManager().SetTimer(
 		FallRecoveryTimer, this, &AMT2GameModeBase::RecoverPlayersOutsideMap, 1.0f, true, 1.0f);
 }
@@ -442,7 +446,12 @@ void AMT2GameModeBase::HandleStartingNewPlayer_Implementation(APlayerController*
 				}
 			}
 		}
-		RepairPlayerSpawn(NewPlayer, bForceTownSpawn);
+		// Only explicit map travel overrides Unreal's Player Start/current-camera placement.
+		const AMT2PlayerState* State = NewPlayer->GetPlayerState<AMT2PlayerState>();
+		if (bForceTownSpawn || (State && State->HasPendingSpawnLocation()))
+		{
+			RepairPlayerSpawn(NewPlayer, bForceTownSpawn);
+		}
 	}
 #endif
 }

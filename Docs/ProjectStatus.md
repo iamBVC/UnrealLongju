@@ -42,6 +42,25 @@ Follow-up alpha correction (2026-10-06): Unreal's editor-compositing shader perm
 
 Code presence does not establish full original-game parity. Check system-specific documents and tests before enabling content in a release.
 
+PIE guild-map travel correction (2026-10-06): the TestMap/gm_guild_build startup
+quest exposed a client World Partition teardown assertion and a destination-cell
+visibility-report race. PIE-only lifecycle handling, pending-travel guards, and
+bounded visibility-report deferral now preserve the transition without disabling
+native network validation. Editor Development built and all 43 relevant tests
+passed, including real networked TestMap-to-Yongan travel and clean PIE shutdown
+(`Saved/Logs/PIEGuildTravelFinalTests.log`). The test used FXAA to isolate a separate
+existing TSR shader ensure. See [PIE map travel](PIETravel.md) for scope and limitations.
+
+PIE startup placement correction (2026-10-06): native Player Start/current-camera
+placement and the open map are preserved. Automatic entry-event warp nodes are
+suppressed only in their PIE execution context; subsequent explicit warps and
+production spawning remain enabled. PIE no longer starts the town fall-recovery
+timer. The old automatic-city-travel fixture and its two INI path entries were
+retired. Editor Development built and all 45 regressions passed, including real
+TestMap launches in both startup modes (`Saved/Logs/PIESpawnVerifiedTests.log`).
+The path audit passed with 250 catalog entries, and Content stayed clean. See
+[PIE map travel](PIETravel.md) for test scope and Blueprint-hook caveats.
+
 ## Quest porting baseline
 
 The latest recorded import in [QuestPortingStatus](OldGameResearch/QuestPortingStatus.md) reports:

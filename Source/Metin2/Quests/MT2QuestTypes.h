@@ -107,6 +107,10 @@ struct METIN2_API FMT2QuestContext
 	UPROPERTY(BlueprintReadOnly, Category = "Quest")
 	EMT2QuestEvent Event = EMT2QuestEvent::Click;
 
+	// Captured by entry-event runs, including suspended dialogs; not a global warp disable.
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Quest")
+	bool bPreservePIESpawn = false;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Quest")
 	int32 EventVnum = 0;
 

@@ -501,6 +501,11 @@ void UMT2AdminCommandComponent::CmdGoto(const TArray<FString>& Args)
 #if WITH_EDITOR
 	if (World && World->WorldType == EWorldType::PIE)
 	{
+		if (MT2MapUtils::HasPendingPIETravel(*World))
+		{
+			SendResult(false, TEXT("A PIE map travel is already in progress."));
+			return;
+		}
 		TArray<FString> MapAliases{RequestedMapName, MapName};
 		if (!WorldPackagePath.IsEmpty())
 		{

@@ -166,6 +166,7 @@ public:
 	// that spot (ground-snapped by RepairPlayerSpawn) instead of the town. Persisted so it survives the
 	// cross-server transfer save/load, and consumed on the first arrival.
 	void SetPendingSpawnLocation(const FVector2D& Location) { PendingSpawnLocation = Location; bHasPendingSpawnLocation = true; }
+	bool HasPendingSpawnLocation() const { return bHasPendingSpawnLocation; }
 	void ClearPendingSpawnLocation()
 	{
 		PendingSpawnLocation = FVector2D::ZeroVector;

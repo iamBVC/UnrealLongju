@@ -230,6 +230,11 @@ bool AMT2Portal::TeleportPlayerInPIE(AMT2PlayerCharacter* Player)
 	{
 		return false;
 	}
+	if (MT2MapUtils::HasPendingPIETravel(*World))
+	{
+		UE_LOG(LogMT2Portal, Display, TEXT("PIE portal %s ignored while another map travel is pending."), *GetName());
+		return true;
+	}
 
 	const FString DestinationMapId = FPackageName::GetShortName(MapName.TrimStartAndEnd());
 	TArray<FString> MapAliases{MapName, DestinationMapId};

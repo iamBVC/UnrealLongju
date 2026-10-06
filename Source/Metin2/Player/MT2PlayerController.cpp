@@ -48,8 +48,76 @@
 #include "UI/MT2NameplateComponent.h"
 #include "UI/MT2NotificationsWidget.h"
 #include "World/MT2Portal.h"
+#include "World/MT2MapUtils.h"
+#include "UObject/StructOnScope.h"
+#include "UObject/UnrealType.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogMT2MapTravel, Log, All);
+
+#if WITH_EDITOR
+void AMT2PlayerController::PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
+{
+	if (UWorld* World = GetWorld())
+	{
+		MT2MapUtils::PreparePIEClientWorldForTravel(*World, bIsSeamlessTravel);
+	}
+	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
+}
+
+void AMT2PlayerController::ProcessEvent(UFunction* Function, void* Parameters)
+{
+	UWorld* World = GetWorld();
+	static const FName SingleName(TEXT("ServerUpdateLevelVisibility"));
+	static const FName BatchName(TEXT("ServerUpdateMultipleLevelsVisibility"));
+	if (Function && Parameters && (Function->GetFName() == SingleName || Function->GetFName() == BatchName) &&
+		World && HasAuthority() && MT2MapUtils::HasPendingPIETravel(*World))
+	{
+		// UE seals these RPC implementations. Intercept only their reflected dispatch in PIE;
+		// normal native RPC validation is retained when replayed in the destination world.
+		TArray<FUpdateLevelVisibilityLevelInfo> Updates;
+		if (Function->GetFName() == SingleName)
+		{
+			const FStructProperty* Property = FindFProperty<FStructProperty>(Function, TEXT("LevelVisibility"));
+			if (Property && Property->Struct == FUpdateLevelVisibilityLevelInfo::StaticStruct())
+			{
+				Updates.Add(*Property->ContainerPtrToValuePtr<FUpdateLevelVisibilityLevelInfo>(Parameters));
+			}
+		}
+		else
+		{
+			const FArrayProperty* Property = FindFProperty<FArrayProperty>(Function, TEXT("LevelVisibilities"));
+			const FStructProperty* Element = Property ? CastField<FStructProperty>(Property->Inner) : nullptr;
+			if (Element && Element->Struct == FUpdateLevelVisibilityLevelInfo::StaticStruct())
+			{
+				Updates = *Property->ContainerPtrToValuePtr<TArray<FUpdateLevelVisibilityLevelInfo>>(Parameters);
+			}
+		}
+		if (!Updates.IsEmpty() && PendingPIELevelVisibility.Num() + Updates.Num() <= 1024)
+		{
+			PendingPIELevelVisibility.Append(Updates);
+			return;
+		}
+		UE_LOG(LogMT2MapTravel, Warning, TEXT("PIE visibility dispatch cannot be deferred; using normal RPC validation."));
+	}
+	Super::ProcessEvent(Function, Parameters);
+}
+
+void AMT2PlayerController::PostSeamlessTravel()
+{
+	Super::PostSeamlessTravel();
+	TArray<FUpdateLevelVisibilityLevelInfo> Pending = MoveTemp(PendingPIELevelVisibility);
+	if (!Pending.IsEmpty())
+	{
+		UE_LOG(LogMT2MapTravel, Display, TEXT("Validating %d deferred PIE visibility reports after seamless travel."), Pending.Num());
+		UFunction* Function = FindFunctionChecked(TEXT("ServerUpdateMultipleLevelsVisibility"));
+		FStructOnScope Parameters(Function);
+		const FArrayProperty* Property = FindFProperty<FArrayProperty>(Function, TEXT("LevelVisibilities"));
+		check(Property);
+		*Property->ContainerPtrToValuePtr<TArray<FUpdateLevelVisibilityLevelInfo>>(Parameters.GetStructMemory()) = MoveTemp(Pending);
+		Super::ProcessEvent(Function, Parameters.GetStructMemory());
+	}
+}
+#endif
 
 void AMT2PlayerController::BeginPlay()
 {
