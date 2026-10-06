@@ -11,8 +11,9 @@ the recipient sees **Accept duel** and a chat notification. The recipient select
 the challenger and accepts to enable mutual combat. While fighting, the button
 is disabled and reads **Fighting**.
 
-A lethal hit ends that fight normally, leaving the loser dead. The winner remains
-agreed; after respawning, the loser can select the winner and click **Revenge** to
+A lethal hit ends that fight normally, leaving the loser dead. The winner sees a
+disabled **Duel** button, whose tooltip explains that the opponent can request
+revenge. The winner remains agreed; after respawning, the loser can select the winner and click **Revenge** to
 start a rematch with one acceptance. Ordinary respawn behaviour is unchanged.
 Agreed duel deaths bypass the current aggressive-kill karma and equipment-drop
 penalties. The legacy 15-second post-fight classification grace is retained for
@@ -81,3 +82,9 @@ pairs, cancellation, activity/expiry, and a real lethal skill-to-death callback
 with no agreed-duel karma penalty. This is not a remote-client duel/UI test or an
 equipment-drop integration test. The RHI run used FXAA to isolate the existing
 TSR ensure. The configured-path audit passed; Content stayed unchanged.
+
+Winner-label correction (2026-10-06): the post-victory winner now sees **Duel**
+instead of the pending-challenge **Waiting...** label. Consent rules are unchanged.
+Editor Development built and all three duel tests passed in
+`Saved/Logs/DuelStandardLabelTests.log`, including all button labels. This run used
+NullRHI; live tooltip/viewport rendering was not checked.

@@ -242,6 +242,19 @@ void UMT2TargetInfoWidget::BindLocalDuels()
 
 void UMT2TargetInfoWidget::HandleDuelsChanged() { RefreshTargetInfo(); }
 
+FText UMT2TargetInfoWidget::BuildDuelActionLabel(const FMT2DuelEntry* Duel)
+{
+	if (!Duel) { return NSLOCTEXT("MT2Duel", "Challenge", "Duel"); }
+	if (Duel->Phase == EMT2DuelPhase::Fighting) { return NSLOCTEXT("MT2Duel", "Fighting", "Fighting"); }
+	if (Duel->Phase == EMT2DuelPhase::Revenge)
+	{
+		return Duel->bCanAccept ? NSLOCTEXT("MT2Duel", "Revenge", "Revenge")
+			: NSLOCTEXT("MT2Duel", "Challenge", "Duel");
+	}
+	return Duel->bCanAccept ? NSLOCTEXT("MT2Duel", "Accept", "Accept duel")
+		: NSLOCTEXT("MT2Duel", "Waiting", "Waiting...");
+}
+
 void UMT2TargetInfoWidget::BindLocalPartyState()
 {
 	AMT2PlayerState* State = GetOwningPlayerState<AMT2PlayerState>();
@@ -341,11 +354,10 @@ void UMT2TargetInfoWidget::RefreshTargetInfo()
 		{
 			const FMT2DuelEntry* Duel = LocalState ? LocalState->GetDuelComponent()->FindDuel(TargetState) : nullptr;
 			DuelButton->SetIsEnabled(LocalState && TargetState && (!Duel || Duel->bCanAccept));
-			DuelLabel->SetText(!Duel ? NSLOCTEXT("MT2Duel", "Challenge", "Duel")
-				: Duel->Phase == EMT2DuelPhase::Fighting ? NSLOCTEXT("MT2Duel", "Fighting", "Fighting")
-				: !Duel->bCanAccept ? NSLOCTEXT("MT2Duel", "Waiting", "Waiting...")
-				: Duel->Phase == EMT2DuelPhase::Revenge ? NSLOCTEXT("MT2Duel", "Revenge", "Revenge")
-				: NSLOCTEXT("MT2Duel", "Accept", "Accept duel"));
+			DuelLabel->SetText(BuildDuelActionLabel(Duel));
+			DuelButton->SetToolTipText(Duel && Duel->Phase == EMT2DuelPhase::Revenge && !Duel->bCanAccept
+				? NSLOCTEXT("MT2Duel", "WonTooltip", "You won. Your opponent can request revenge after respawning.")
+				: FText::GetEmpty());
 		}
 		if (PartyButton)
 		{

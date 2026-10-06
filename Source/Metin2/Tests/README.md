@@ -29,6 +29,6 @@ offscreen RHI with FXAA to isolate the existing TSR shader ensure; project
 settings were not changed. The configured-path audit also passed. Cooked targets
 were not rebuilt for this source-only reorganization.
 
-Duel coverage adds `Metin2.Combat.Duels.Lifecycle` and `.DeathPenalties`; the full
-49-test suite passed after that addition. See [duels](../../../Docs/Duels.md) for
-the latest validation scope and log.
+Duel coverage includes `Metin2.Combat.Duels.Lifecycle`, `.DeathPenalties`, and
+`.ButtonLabels`. See [duels](../../../Docs/Duels.md) for the latest validation
+scope and log.

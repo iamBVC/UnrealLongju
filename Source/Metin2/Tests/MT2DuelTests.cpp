@@ -2,6 +2,7 @@
 #include "Misc/AutomationTest.h"
 #include "Misc/ScopeExit.h"
 #include "Duel/MT2DuelComponent.h"
+#include "UI/MT2TargetInfoWidget.h"
 #include "Config/MT2GameplaySettings.h"
 #include "Characters/MT2PlayerCharacter.h"
 #include "Player/MT2PlayerState.h"
@@ -129,6 +130,24 @@ bool FMT2DuelDeathTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Agreed duel causes no aggressive-kill karma penalty"), KS->GetKarmaPoints(), Karma);
 	const FMT2DuelEntry* Duel = VS->GetDuelComponent()->FindDuel(KS);
 	TestTrue(TEXT("Real death event transitions into revenge"), Duel && Duel->Phase == EMT2DuelPhase::Revenge && Duel->bCanAccept);
+	return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2DuelButtonStateTest, "Metin2.Combat.Duels.ButtonLabels",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FMT2DuelButtonStateTest::RunTest(const FString& Parameters)
+{
+	auto Label = [](const FMT2DuelEntry* Entry) { return UMT2TargetInfoWidget::BuildDuelActionLabel(Entry).ToString(); };
+	TestEqual(TEXT("No agreement"), Label(nullptr), FString(TEXT("Duel")));
+	FMT2DuelEntry Entry;
+	TestEqual(TEXT("Pending challenger"), Label(&Entry), FString(TEXT("Waiting...")));
+	Entry.bCanAccept = true;
+	TestEqual(TEXT("Challenge recipient"), Label(&Entry), FString(TEXT("Accept duel")));
+	Entry.Phase = EMT2DuelPhase::Fighting; Entry.bCanAccept = false;
+	TestEqual(TEXT("Active duel"), Label(&Entry), FString(TEXT("Fighting")));
+	Entry.Phase = EMT2DuelPhase::Revenge;
+	TestEqual(TEXT("Winner returns to the standard label"), Label(&Entry), FString(TEXT("Duel")));
+	Entry.bCanAccept = true;
+	TestEqual(TEXT("Loser retains revenge action"), Label(&Entry), FString(TEXT("Revenge")));
 	return true;
 }
 #endif

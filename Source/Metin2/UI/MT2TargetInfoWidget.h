@@ -18,6 +18,7 @@ class UButton;
 class UHorizontalBox;
 class UMT2CombatComponent;
 class UMT2DuelComponent;
+struct FMT2DuelEntry;
 class UMT2HealthComponent;
 class AMT2PlayerState;
 class UProgressBar;
@@ -50,6 +51,10 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 private:
+#if WITH_DEV_AUTOMATION_TESTS
+	friend class FMT2DuelButtonStateTest;
+#endif
+	static FText BuildDuelActionLabel(const FMT2DuelEntry* Duel);
 	void BindCombatComponent();
 	void UnbindCombatComponent();
 	void BindTargetHealth();
