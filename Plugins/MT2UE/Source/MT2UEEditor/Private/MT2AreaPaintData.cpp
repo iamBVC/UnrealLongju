@@ -73,8 +73,9 @@ FText MT2AreaPaint::BitName(int32 Bit)
 }
 
 int32 MT2AreaPaint::PaintSegment(AMT2MapPresentationActor& Map, const FVector2D& Start,
-	const FVector2D& End, double Radius, int32 Bit, bool bErase, TMap<int32, uint8>& Before)
+	const FVector2D& End, double Radius, int32 Bit, bool bErase, TMap<int32, uint8>& Before, FIntRect* OutDirty)
 {
+	if (OutDirty) { *OutDirty = FIntRect(0, 0, 0, 0); }
 	if (!IsValidGrid(&Map) || Bit < 0 || Bit > 7 || !FMath::IsFinite(Radius) || Radius < 0 ||
 		!FMath::IsFinite(Start.X) || !FMath::IsFinite(Start.Y) || !FMath::IsFinite(End.X) || !FMath::IsFinite(End.Y)) { return 0; }
 	const FIntPoint Size = Map.Attributes.Size;
@@ -99,6 +100,13 @@ int32 MT2AreaPaint::PaintSegment(AMT2MapPresentationActor& Map, const FVector2D&
 		if (Flags == NewFlags) { return; }
 		if (!Before.Contains(Index)) { Before.Add(Index, Flags); }
 		Flags = NewFlags; ++Changed;
+		if (OutDirty)
+		{
+			const FIntPoint Point(Index % Size.X, Index / Size.X);
+			if (OutDirty->Width() <= 0) { *OutDirty = FIntRect(Point, Point + FIntPoint(1, 1)); }
+			else { OutDirty->Min.X = FMath::Min(OutDirty->Min.X, Point.X); OutDirty->Min.Y = FMath::Min(OutDirty->Min.Y, Point.Y);
+				OutDirty->Max.X = FMath::Max(OutDirty->Max.X, Point.X + 1); OutDirty->Max.Y = FMath::Max(OutDirty->Max.Y, Point.Y + 1); }
+		}
 	};
 	if (Radius == 0)
 	{

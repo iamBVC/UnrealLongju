@@ -24,13 +24,21 @@ See the [setup guide](../README.md) for supported commands and configuration cav
 - Messenger friend requests, presence, stored cluster messages, separate whisper UI, and notifications. Coordinator-free fallback is session-local, not persistent.
 - Mount definition/component/item foundation, with progression and full presentation fidelity still separate work.
 - Imported area-attribute grids and authoritative BANPK safezones. Player chat reports `safezone area` / `unprotected area` on initial status and transitions. BLOCK/OBJECT now constrain player/mob movement through an attribute-aware character movement component; water generation and AI route planning around these cells remain separate work. See the [2026-10-06 validation](OldGameResearch/SafeZones.md).
-- Dedicated editor-only [area painter](AreaPainting.md) with native-resolution bit editing, colored terrain overlays, independent visibility, paint/erase brushes, and sparse undo/redo. Display-only grouping does not alter saved grid resolution; water surfaces remain separate work.
+- Dedicated editor-only [area painter](AreaPainting.md) with native-resolution bit editing, colored terrain overlays, independent visibility, paint/erase brushes, and sparse undo/redo. The current transient preview uses native Landscape triangles/current terrain LOD with +4-unit world-Z clearance and original byte textures; water surfaces remain separate work.
 
 Area-tooling validation (2026-10-06): Editor Development build succeeded and all 36 area-paint/world/quest tests passed (`Saved/Logs/AreaPaintTests.log`). This verifies data editing, editor transactions, and regression fixtures, not live viewport appearance or cooked multiplayer behavior.
 
 Subsequent overlay correction (2026-10-06): explicit standard-pass translucency and editor-compositing shaders, read-only attribute dimensions in Details, and terrain-preview diagnostics were added. Editor Development rebuilt successfully; all 37 tests passed (`Saved/Logs/AreaPaintOverlayTests.log`). Final live GPU appearance still requires verification.
 
 Viewport coverage update (2026-10-06): the user confirmed colors render in Yongan. The overlay now follows visible loaded terrain across the camera view rather than a mouse-centered radius; preview flags are cached, and saved resolution is unchanged. Editor Development built and all 38 tests passed (`Saved/Logs/AreaPaintViewportTests.log`). Viewport-wide coverage/performance still needs live verification.
+
+Camera-alignment correction (2026-10-06): preview groups now use fixed source-origin alignment and nested power-of-two strides with LOD hysteresis. Editor Development built and all 39 tests passed (`Saved/Logs/AreaPaintAlignmentTests.log`). The reported camera-motion artifact still needs a live visual retest.
+
+Terrain-surface update (2026-10-06): the user confirmed camera alignment, but corner-sampled quads cut through hills. The preview now uses the native Landscape editor-tool triangles/current terrain LOD with a +4-unit world-Z offset and original byte textures per component. The prior custom-quad grouping/hysteresis path is superseded. Base Landscape assets and saved attribute dimensions are unchanged; transient tool state is restored on exit/PIE. Editor Development built and all 39 revised area/world/quest fixtures passed (`Saved/Logs/AreaPaintSurfaceFinalTests.log`). GPU shader and live viewport validation are recorded in [Area Painting](AreaPainting.md).
+
+Initial opacity correction (2026-10-06): explicit premultiplied-alpha compositing configured visible flags at 50% opacity and clear/hidden cells at zero. Editor Development, all 39 regressions, and the real-RHI native shader fixture passed (`Saved/Logs/AreaPaintOpacityTests.log`, `Saved/Logs/AreaPaintOpacityShaderTests.log`), but the user's next screenshot confirmed the rendered result was still opaque. These checks did not read rendered pixels.
+
+Follow-up alpha correction (2026-10-06): Unreal's editor-compositing shader permutation forced output alpha to 1. The preview now disables that usage flag while retaining native Landscape shader support and clearance. Actual GPU pixel-readback coverage was added for clear, half-opacity, and hidden cells; see [Area Painting](AreaPainting.md) for validation and scope.
 
 Code presence does not establish full original-game parity. Check system-specific documents and tests before enabling content in a release.
 

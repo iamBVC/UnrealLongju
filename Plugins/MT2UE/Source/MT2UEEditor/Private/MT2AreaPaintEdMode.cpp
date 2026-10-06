@@ -1,11 +1,11 @@
 #include "MT2AreaPaintEdMode.h"
 
 #include "MT2AreaPaintData.h"
+#include "MT2AreaPaintSurface.h"
 #include "World/MT2MapPresentationActor.h"
 #include "LandscapeProxy.h"
 #include "LandscapeInfo.h"
 #include "LandscapeComponent.h"
-#include "DynamicMeshBuilder.h"
 #include "Editor.h"
 #include "EditorModeManager.h"
 #include "EditorViewportClient.h"
@@ -13,8 +13,6 @@
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "Materials/Material.h"
-#include "Materials/MaterialExpressionVertexColor.h"
-#include "Materials/MaterialExpressionConstant.h"
 #include "SceneView.h"
 #include "SceneManagement.h"
 #include "Toolkits/BaseToolkit.h"
@@ -27,6 +25,9 @@
 #include "Widgets/Text/STextBlock.h"
 
 const FEditorModeID FMT2AreaPaintEdMode::ModeId = TEXT("EM_MT2AreaPaint");
+FMT2AreaPaintEdMode::FMT2AreaPaintEdMode() = default;
+FMT2AreaPaintEdMode::~FMT2AreaPaintEdMode() = default;
+void FMT2AreaPaintEdMode::RefreshPreview() { if (Surface) { Surface->Clear(); } }
 
 namespace
 {
@@ -72,7 +73,7 @@ namespace
 			Rows->AddSlot().AutoHeight().Padding(4)[SNew(SButton).Text(FText::FromString(TEXT("Refresh terrain overlay")))
 				.OnClicked_Lambda([this] { Mode->RefreshPreview(); return FReply::Handled(); })];
 			Rows->AddSlot().AutoHeight().Padding(4)[SNew(STextBlock).AutoWrapText(true)
-				.Text(FText::FromString(TEXT("Overlap colors mix. Close views show individual cells; distant preview aggregates only its display, never the saved grid. Reserved bits have no invented gameplay behavior. Importing attributes again replaces authored changes.")))];
+				.Text(FText::FromString(TEXT("Overlap colors mix. Original cells are rendered on Landscape triangles at every terrain LOD, with a small upward offset. Reserved bits have no invented gameplay behavior. Importing attributes again replaces authored changes.")))];
 			Content = SNew(SScrollBox) + SScrollBox::Slot()[Rows];
 			FModeToolkit::Init(Host);
 		}
@@ -93,32 +94,18 @@ void FMT2AreaPaintEdMode::Exit()
 {
 	FinishStroke();
 	if (Toolkit.IsValid()) { FToolkitManager::Get().CloseToolkit(Toolkit.ToSharedRef()); Toolkit.Reset(); }
-	Preview.Reset(); Target.Reset(); Landscape.Reset(); PreviewMaterial = nullptr;
+	Surface.Reset(); Target.Reset(); Landscape.Reset(); PreviewMaterial = nullptr;
 	FEdMode::Exit();
 }
 void FMT2AreaPaintEdMode::AddReferencedObjects(FReferenceCollector& Collector)
 {
 	FEdMode::AddReferencedObjects(Collector);
 	Collector.AddReferencedObject(PreviewMaterial);
+	if (Surface) { Surface->AddReferencedObjects(Collector); }
 }
 void FMT2AreaPaintEdMode::CreatePreviewMaterial()
 {
-	PreviewMaterial = NewObject<UMaterial>(GetTransientPackage(), NAME_None, RF_Transient);
-	PreviewMaterial->BlendMode = BLEND_Translucent;
-	// PDI view meshes are submitted in the standard translucency pass, not After DOF.
-	PreviewMaterial->TranslucencyPass = MTP_BeforeDOF;
-	PreviewMaterial->bUsedWithEditorCompositing = true;
-	PreviewMaterial->TwoSided = true;
-	PreviewMaterial->SetShadingModel(MSM_Unlit);
-	UMaterialExpressionVertexColor* Color = NewObject<UMaterialExpressionVertexColor>(PreviewMaterial);
-	UMaterialExpressionConstant* Opacity = NewObject<UMaterialExpressionConstant>(PreviewMaterial);
-	Opacity->R = .45f;
-	UMaterialEditorOnlyData* Data = PreviewMaterial->GetEditorOnlyData();
-	Data->ExpressionCollection.AddExpression(Color);
-	Data->ExpressionCollection.AddExpression(Opacity);
-	Data->EmissiveColor.Expression = Color;
-	Data->Opacity.Expression = Opacity;
-	PreviewMaterial->PostEditChange();
+	PreviewMaterial = FMT2AreaPaintSurface::CreateMaterial();
 }
 
 void FMT2AreaPaintEdMode::UpdateCursor(FEditorViewportClient* Client, FViewport* Viewport)
@@ -139,7 +126,7 @@ void FMT2AreaPaintEdMode::UpdateCursor(FEditorViewportClient* Client, FViewport*
 			uint8 Flags;
 			if (!MT2AreaPaint::IsValidGrid(*It) || !It->IsEditable() ||
 				!It->Attributes.Query(Hit.ImpactPoint, It->WorldMin, It->WorldMax, Flags)) { continue; }
-			if (Target != *It || Landscape != HitLandscape) { RefreshPreview(); }
+			if (Target != *It || (Landscape.IsValid() && Landscape->GetLandscapeInfo() != HitLandscape->GetLandscapeInfo())) { RefreshPreview(); }
 			Target = *It; Landscape = HitLandscape; Cursor = Hit.ImpactPoint; bCursorValid = true;
 			return;
 		}
@@ -192,7 +179,8 @@ void FMT2AreaPaintEdMode::Paint()
 	{
 		FinishStroke(); return;
 	}
-	if (MT2AreaPaint::PaintSegment(*Map, LastPaint, FVector2D(Cursor), Radius, StrokeBit, bStrokeErase, Before)) { bPreviewFlagsDirty = true; }
+	FIntRect Dirty;
+	if (MT2AreaPaint::PaintSegment(*Map, LastPaint, FVector2D(Cursor), Radius, StrokeBit, bStrokeErase, Before, &Dirty) && Surface) { Surface->InvalidateCells(Dirty); }
 	LastPaint = FVector2D(Cursor);
 }
 void FMT2AreaPaintEdMode::FinishStroke()
@@ -216,6 +204,7 @@ void FMT2AreaPaintEdMode::Tick(FEditorViewportClient* Client, float DeltaTime)
 {
 	FEdMode::Tick(Client, DeltaTime);
 	if (GEditor && GEditor->PlayWorld) { FinishStroke(); bCursorValid = false; }
+	if (Surface && (!bShowOverlay || (GEditor && GEditor->PlayWorld))) { Surface->Clear(); }
 	if (Transaction.IsValid() && Client && Client->Viewport && !Client->Viewport->KeyState(EKeys::LeftMouseButton)) { FinishStroke(); }
 }
 FText FMT2AreaPaintEdMode::Status() const
@@ -225,9 +214,8 @@ FText FMT2AreaPaintEdMode::Status() const
 	const FVector2D Cell = (Map->WorldMax - Map->WorldMin) / FVector2D(Map->Attributes.Size);
 	uint8 Flags = 0;
 	Map->Attributes.Query(Cursor, Map->WorldMin, Map->WorldMax, Flags);
-	return FText::FromString(FString::Printf(TEXT("%s | %d x %d cells | %.2f x %.2f world units\nCursor flags: 0x%02X | %d cells touched in stroke\nPreview: %d terrain quads%s"),
-		*Map->MapId, Map->Attributes.Size.X, Map->Attributes.Size.Y, Cell.X, Cell.Y, Flags, Before.Num(), Preview.Num(),
-		bPreviewBuilt && Preview.IsEmpty() ? TEXT(" (no terrain samples; load terrain and refresh)") : TEXT("")));
+	return FText::FromString(FString::Printf(TEXT("%s | %d x %d cells | %.2f x %.2f world units\nCursor flags: 0x%02X | %d cells touched in stroke\nPreview: native Landscape surface | %d components | +4 world units"),
+		*Map->MapId, Map->Attributes.Size.X, Map->Attributes.Size.Y, Cell.X, Cell.Y, Flags, Before.Num(), Surface ? Surface->NumComponents() : 0));
 }
 
 void FMT2AreaPaintEdMode::Render(const FSceneView* View, FViewport* Viewport, FPrimitiveDrawInterface* PDI)
@@ -235,7 +223,7 @@ void FMT2AreaPaintEdMode::Render(const FSceneView* View, FViewport* Viewport, FP
 	FEdMode::Render(View, Viewport, PDI);
 	AMT2MapPresentationActor* Map = Target.Get();
 	ALandscapeProxy* Terrain = Landscape.Get();
-	if (!GEditor || GEditor->PlayWorld || !GetWorld() || !bShowOverlay || !PreviewMaterial) { return; }
+	if (!GEditor || GEditor->PlayWorld || !GetWorld() || !bShowOverlay || !PreviewMaterial) { RefreshPreview(); return; }
 	auto TerrainBounds = [](ALandscapeProxy* Proxy)
 	{
 		TArray<FBox> Boxes;
@@ -265,62 +253,9 @@ void FMT2AreaPaintEdMode::Render(const FSceneView* View, FViewport* Viewport, FP
 		}
 	}
 	if (!MT2AreaPaint::IsValidGrid(Map) || !Terrain) { return; }
-	const FIntPoint Size = Map->Attributes.Size;
-	const FVector2D Cell = (Map->WorldMax - Map->WorldMin) / FVector2D(Size);
-	// Cover every loaded terrain component intersecting this view, without a cursor-radius cap.
-	const TArray<FBox> Boxes = TerrainBounds(Terrain);
-	const FIntRect VisibleRect = MT2AreaPaint::VisibleGridRect(*Map, Boxes, View->ViewFrustum);
-	if (VisibleRect.Width() <= 0 || VisibleRect.Height() <= 0) { RefreshPreview(); return; }
-	// Quantized coverage contains the entire view and avoids resampling for tiny camera moves.
-	const FIntRect Rect(VisibleRect.Min.X / 16 * 16, VisibleRect.Min.Y / 16 * 16,
-		FMath::Min((VisibleRect.Max.X + 15) / 16 * 16, Size.X), FMath::Min((VisibleRect.Max.Y + 15) / 16 * 16, Size.Y));
-	uint32 TerrainHash = 0;
-	for (const FBox& Box : Boxes) { TerrainHash = HashCombineFast(TerrainHash, HashCombineFast(GetTypeHash(Box.Min), GetTypeHash(Box.Max))); }
-	const int32 MinX = Rect.Min.X, MinY = Rect.Min.Y, MaxX = Rect.Max.X, MaxY = Rect.Max.Y;
-	const int32 Step = FMath::Max(1, FMath::CeilToInt(FMath::Sqrt(double(Rect.Width()) * Rect.Height() / 16384.0)));
-	if (!bPreviewBuilt || Rect != PreviewRect || Step != PreviewStep || Size != PreviewSize || TerrainHash != PreviewTerrainHash)
-	{
-		Preview.Reset(); PreviewRect = Rect; PreviewStep = Step; PreviewSize = Size; PreviewTerrainHash = TerrainHash; bPreviewBuilt = true; bPreviewFlagsDirty = true;
-		for (int32 Y = MinY; Y < MaxY; Y += Step)
-		{
-			for (int32 X = MinX; X < MaxX; X += Step)
-			{
-				FPreviewCell Quad;
-				Quad.Cells = FIntRect(X, Y, FMath::Min(X + Step, MaxX), FMath::Min(Y + Step, MaxY));
-				const FIntPoint Corners[] = {{X, Y}, {Quad.Cells.Max.X, Y}, Quad.Cells.Max, {X, Quad.Cells.Max.Y}};
-				bool bValid = true;
-				for (int32 I = 0; I < 4; ++I)
-				{
-					const FVector2D XY = Map->WorldMax - FVector2D(Corners[I]) * Cell;
-					const TOptional<float> Height = Terrain->GetHeightAtLocation(FVector(XY, 0));
-					if (!Height.IsSet()) { bValid = false; break; }
-					Quad.Corners[I] = FVector(XY, Height.GetValue() + 4.0f);
-				}
-				if (bValid) { Preview.Add(Quad); }
-			}
-		}
-	}
-	FDynamicMeshBuilder Mesh(View->GetFeatureLevel());
-	bool bHasTriangles = false;
-	for (FPreviewCell& Quad : Preview)
-	{
-		if (bPreviewFlagsDirty)
-		{
-			Quad.Flags = 0;
-			for (int32 Y = Quad.Cells.Min.Y; Y < Quad.Cells.Max.Y; ++Y)
-				for (int32 X = Quad.Cells.Min.X; X < Quad.Cells.Max.X; ++X) { Quad.Flags |= Map->Attributes.Flags[Y * Size.X + X]; }
-		}
-		const uint8 Flags = Quad.Flags & VisibleBits;
-		if (!Flags) { continue; }
-		FLinearColor Color(0, 0, 0, 0); int32 Count = 0;
-		for (int32 BitIndex = 0; BitIndex < 8; ++BitIndex) { if (Flags & (1 << BitIndex)) { Color += MT2AreaPaint::BitColor(BitIndex); ++Count; } }
-		const FColor VertexColor = (Color / Count).ToFColor(true);
-		const int32 V = Mesh.AddVertex(FVector3f(Quad.Corners[0]), FVector2f::ZeroVector, FVector3f(1, 0, 0), FVector3f(0, 1, 0), FVector3f(0, 0, 1), VertexColor);
-		for (int32 I = 1; I < 4; ++I) { Mesh.AddVertex(FVector3f(Quad.Corners[I]), FVector2f::ZeroVector, FVector3f(1, 0, 0), FVector3f(0, 1, 0), FVector3f(0, 0, 1), VertexColor); }
-		Mesh.AddTriangle(V, V + 1, V + 2); Mesh.AddTriangle(V, V + 2, V + 3); bHasTriangles = true;
-	}
-	bPreviewFlagsDirty = false;
-	if (bHasTriangles) { Mesh.Draw(PDI, FMatrix::Identity, PreviewMaterial->GetRenderProxy(), SDPG_World, true, false); }
+	if (!Surface) { Surface = MakeUnique<FMT2AreaPaintSurface>(); }
+	Surface->Sync(*Map, *Terrain, *PreviewMaterial, VisibleBits);
+	const FVector2D Cell = (Map->WorldMax - Map->WorldMin) / FVector2D(Map->Attributes.Size);
 	if (bCursorValid)
 	{
 		DrawCircle(PDI, Cursor + FVector(0, 0, 6), FVector::XAxisVector, FVector::YAxisVector,

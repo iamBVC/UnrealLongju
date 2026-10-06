@@ -7,10 +7,13 @@
 class AMT2MapPresentationActor;
 class ALandscapeProxy;
 class UMaterial;
+class FMT2AreaPaintSurface;
 
 class FMT2AreaPaintEdMode : public FEdMode
 {
 public:
+	FMT2AreaPaintEdMode();
+	virtual ~FMT2AreaPaintEdMode() override;
 	static const FEditorModeID ModeId;
 	virtual void Enter() override;
 	virtual void Exit() override;
@@ -26,7 +29,7 @@ public:
 	virtual void Render(const FSceneView*, FViewport*, FPrimitiveDrawInterface*) override;
 	virtual void AddReferencedObjects(FReferenceCollector&) override;
 	virtual void PostUndo() override { RefreshPreview(); }
-	void RefreshPreview() { Preview.Reset(); bPreviewBuilt = false; bPreviewFlagsDirty = true; }
+	void RefreshPreview();
 	FText Status() const;
 	int32 Bit = 0;
 	uint8 VisibleBits = 0xff;
@@ -41,14 +44,7 @@ private:
 	void Paint();
 	void FinishStroke();
 	void CreatePreviewMaterial();
-	struct FPreviewCell { FIntRect Cells; FVector Corners[4]; uint8 Flags = 0; };
-	TArray<FPreviewCell> Preview;
-	FIntRect PreviewRect;
-	int32 PreviewStep = 0;
-	FIntPoint PreviewSize = FIntPoint::ZeroValue;
-	uint32 PreviewTerrainHash = 0;
-	bool bPreviewBuilt = false;
-	bool bPreviewFlagsDirty = true;
+	TUniquePtr<FMT2AreaPaintSurface> Surface;
 	TWeakObjectPtr<AMT2MapPresentationActor> Target;
 	TWeakObjectPtr<ALandscapeProxy> Landscape;
 	TWeakObjectPtr<AMT2MapPresentationActor> StrokeTarget;

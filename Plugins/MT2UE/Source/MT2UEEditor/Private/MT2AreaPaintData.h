@@ -13,7 +13,7 @@ namespace MT2AreaPaint
 	FText BitName(int32 Bit);
 	FIntRect VisibleGridRect(const AMT2MapPresentationActor& Map, const TArray<FBox>& TerrainBounds, const FConvexVolume& Frustum);
 	int32 PaintSegment(AMT2MapPresentationActor& Map, const FVector2D& Start, const FVector2D& End,
-		double Radius, int32 Bit, bool bErase, TMap<int32, uint8>& Before);
+		double Radius, int32 Bit, bool bErase, TMap<int32, uint8>& Before, FIntRect* OutDirty = nullptr);
 }
 
 // Stores only changed cells and restores only the painted bit, preserving overlapping flags.

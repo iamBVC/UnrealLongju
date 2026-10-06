@@ -25,7 +25,7 @@ cells; client fallback grids retain their own 100-unit cells.
    actor using the normal editor save workflow; the tool does not autosave assets.
 
 The status panel shows the map identifier, dimensions, cell spacing, cursor byte,
-number of changed cells in the current stroke, and sampled terrain-quad count. Painting is disabled during
+number of changed cells in the current stroke, and native overlay-component count. Painting is disabled during
 PIE. A stroke ends on mouse release, focus loss, a missed Landscape/grid hit, or
 switching maps, so it cannot bridge an unseen gap.
 
@@ -53,27 +53,40 @@ use the same saved grid; see [area runtime behavior](OldGameResearch/SafeZones.m
 No attribute resampling is performed. Mirrored source axes and half-open cell
 ownership match runtime queries. Each stroke records only changed indices and
 the selected bit for undo, preserving overlapping flags without copying the
-entire grid. No Landscape materials, paint layers, textures, or overlay actors
-are created or modified. The overlay material and geometry are editor-only and
-transient; saving persists only the existing actor's attribute data.
+entire grid. No Landscape material assets, paint layers, or source textures are
+modified, and no overlay actors are created. Preview materials and flag textures
+are transient/editor-only; saving persists only the existing actor's attribute data.
 
 The colored preview covers the selected map's loaded Landscape across the
-viewport, independently of cursor position. Camera-frustum clipping determines
-coverage; there is no mouse-radius or 6,000-unit distance cap. This also supports
-an overview of the whole map when its terrain is loaded and visible. Geometry
-uses adaptive display-only grouping (approximately 16,384 preview quads) to bound
-cost; distant groups show the union of their visible bits, while close views can
-show individual cells. Painting always addresses original cells, regardless of
-preview grouping. Zoom in for exact boundaries.
+viewport, independently of cursor position. Unreal's native Landscape editor-tool
+pass draws the same triangles, height morphing, and current terrain LOD as the
+Landscape, with a constant **+4 world-unit Z offset**. This replaces the earlier
+corner-sampled preview quads, which could cut through hills between samples.
+Depth testing remains enabled, so opaque buildings still occlude the overlay.
 
-Terrain geometry and grouped flag summaries are cached. Painting updates the
-cached flags; Undo/Redo and Refresh invalidate the preview. Loaded component-bound
-changes also invalidate cached geometry. Conservative frustum clipping includes
-the full terrain height range, with cell-boundary quantization to reduce rebuilding
-for tiny camera movements. No part of the saved grid is cropped by the view.
+Visible flagged cells blend at **50% opacity** using premultiplied alpha
+compositing, so the Landscape textures remain visible below their tint.
+Unflagged cells, hidden bits, and points outside the grid contribute zero color
+and zero opacity. Explicit alpha compositing also keeps the opacity override
+active in the engine's Substrate material path.
+The material deliberately disables `bUsedWithEditorCompositing`: that shader
+permutation forces output alpha to 1 in UE 5.7's weighted-Z editor compositing
+path, making even clear cells opaque black. Landscape vertex-factory support
+comes from the transient Landscape material instance, not that flag.
 
-Terrain height samples are cached. Use **Refresh terrain overlay** after sculpting
-or loading additional Landscape cells if the preview is stale. Unloaded terrain
+Each loaded Landscape component uses a nearest-filtered, single-mip, one-byte
+flag texture containing its original source-grid cells. Flags are decoded and
+colored per pixel; no byte truncation, attribute resampling, or camera-dependent
+grouping occurs. Painting uploads only changed rectangular regions. Texture
+coordinates follow mirrored map coordinates and remain fixed as the camera moves.
+The former adaptive-quad budget/LOD hysteresis no longer controls this preview.
+Zoom in to inspect small cells that are subpixel at a distance.
+
+The native pass follows Landscape sculpt/LOD updates. **Refresh terrain overlay**
+rebuilds transient bindings/textures if data was reimported or the preview is stale.
+Prior editor-tool materials are restored on mode exit, disabling the overlay, or
+PIE. These references are nontransactional, transient, and excluded from PIE
+duplication. Unloaded terrain
 cannot be painted and has no overlay. Terrain collision must be enabled for
 cursor picking. This tool does not rebuild navigation, validate spawn/warp
 destinations, or export changes back into legacy `server_attr`/`attr.atr` files.
@@ -92,13 +105,18 @@ tool does not replace server-authoritative runtime checks.
   hidden to avoid expanding millions of entries in Details.
 - **Valid dimensions and nonzero cursor flags, but no color:** enable **Show
   colored overlay** and the corresponding bit's visibility checkbox. The status
-  should show sampled terrain quads; if zero, load terrain and refresh. A nonzero
+  should show native overlay components; if zero, load terrain and refresh. A nonzero
   count with missing color indicates a rendering issue rather than missing flags.
 - The initial material used Unreal's default **After DOF** translucency pass,
   which the standard PDI view-mesh pass skips. The corrected transient material
   explicitly uses **Before DOF** and requests editor-compositing shaders. Rebuild
   and restart the editor to pick up this correction; wait for shader compilation
   before inspecting it.
+
+The terrain-conforming pass targets ordinary imported heightfield Landscapes.
+Custom Landscape material WPO, Nanite-specific geometry, and unusual rendering
+paths require separate verification. A component exceeding GPU texture-dimension
+limits reports an error rather than reducing attribute resolution.
 
 ## Validation
 
@@ -131,3 +149,52 @@ map-bound clipping, an overview of a 2048x2560 grid beyond the old distance cap,
 and unchanged native dimensions. The user confirmed the earlier material fix
 renders colors in Yongan; this new viewport-wide coverage still requires live
 GPU/camera-movement verification. No content assets were modified.
+
+Camera-alignment correction (2026-10-06): view-dependent grouping origins and
+arbitrary strides were replaced by source-origin-aligned, power-of-two partitions
+with LOD hysteresis. Editor Development built successfully, and all 39
+area-paint/world/quest tests passed (`Saved/Logs/AreaPaintAlignmentTests.log`).
+The new fixture verifies that overlapping source cells retain the same group
+after a camera pan, close views refine to individual cells, and overview geometry
+stays in budget. Visual confirmation of the reported camera-motion artifact is
+still required; these tests do not reproduce GPU/temporal-AA behavior.
+
+Native-surface correction (2026-10-06): the user confirmed camera stability, then
+reported terrain intersecting the coarse preview triangles. The custom quad
+renderer and its now-unused grouping helper were replaced by Landscape's native
+editor-tool surface pass. Editor Development built successfully; all 39 revised
+area/world/quest fixtures passed without errors (`Saved/Logs/AreaPaintSurfaceFinalTests.log`).
+The native-surface fixture also passed with a real RHI in an offscreen editor,
+including successful Landscape shader compilation (`Saved/Logs/AreaPaintSurfaceShaderFinalTests.log`).
+It verifies original-byte tile copies, partial-update bounds, +4-unit world-Z WPO,
+depth testing, Landscape shader support, prior-material restoration, and transient
+PIE-excluded references. Earlier failed runs exposed a test-fixture Outer error
+and concurrent startup registry-save contention; final validation was isolated
+and clean. The Content submodule has no changes. Visual hill clearance, sculpting,
+streaming, large-map performance, Nanite/custom-WPO cases still require live testing.
+
+Opacity correction (2026-10-06): after the user reported opaque colors and black
+unflagged ground, the preview switched to explicit alpha-composite blending with
+premultiplied color. Flagged cells use 0.5 opacity; all other cells use zero.
+Editor Development built, all 39 regressions passed (`Saved/Logs/AreaPaintOpacityTests.log`),
+and the native-surface shader test passed on the real RHI
+(`Saved/Logs/AreaPaintOpacityShaderTests.log`). Checks now cover active opacity
+and the effective Landscape/GPU blend mode, rather than only expression connections.
+The Content submodule remains unchanged; final viewport appearance needs a retest.
+
+Follow-up alpha correction (2026-10-06): the user confirmed the previous blending
+change was insufficient. Engine shader inspection found that editor-compositing
+usage overwrote output alpha with 1; this flag is now disabled while native
+Landscape shader support, depth testing, and +4-unit clearance are retained.
+The regression fixture now reads actual GPU pixels over a known background,
+checking clear cells, 50/50 flagged tint, and hidden flags. Its Canvas-only draw
+removes vertex displacement to avoid screen-space clipping; Landscape WPO and
+vertex-factory compilation are checked separately. This is not a live Yongan
+viewport test.
+Editor Development rebuilt successfully and all 39 area/world/quest tests passed
+with the real RHI (`Saved/Logs/AreaPaintAlphaReadbackFinalTests.log`), including
+the pixel-readback assertions and native Landscape shader compilation. The first
+readback run failed because +4-unit WPO clipped the Canvas tile; only the fixture
+was corrected, without changing production terrain clearance. No Content assets
+were changed. Restart Unreal to replace existing transient preview materials;
+live Yongan viewport verification remains required.
