@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2TargetInfoWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "UI/MT2HUD.h"
 #include "Messenger/MT2MessengerComponent.h"
@@ -61,7 +62,7 @@ void UMT2TargetInfoWidget::EnsurePlayerActionRow()
 	}
 
 	PlayerActionRow = WidgetTree->ConstructWidget<UHorizontalBox>();
-	UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+	UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 	struct FActionButton
 	{
 		const TCHAR* Label;

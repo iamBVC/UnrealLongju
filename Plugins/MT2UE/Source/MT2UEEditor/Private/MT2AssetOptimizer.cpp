@@ -8,6 +8,7 @@
 */
 
 #include "MT2AssetOptimizer.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Components/PrimitiveComponent.h"
@@ -72,7 +73,7 @@ bool FMT2AssetOptimizer::ConfigureSkeletalMesh(USkeletalMesh* Mesh)
 	}
 
 	USkeletalMeshLODSettings* CharacterLODSettings = LoadObject<USkeletalMeshLODSettings>(
-		nullptr, TEXT("/Game/Optimizations/CharactersLODs.CharactersLODs"));
+		nullptr, UMT2PathSettings::Path(TEXT("Optimizations_CharactersLODs")));
 	if (!CharacterLODSettings)
 	{
 		return false;
@@ -139,7 +140,7 @@ bool FMT2AssetOptimizer::OptimizeImportedAssets(FMT2AssetOptimizationResult& Out
 {
 	FAssetRegistryModule& RegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
 	TArray<FAssetData> Assets;
-	RegistryModule.Get().GetAssetsByPath(TEXT("/Game"), Assets, true);
+	RegistryModule.Get().GetAssetsByPath(UMT2PathSettings::Path(TEXT("ImportDestinationRoot")), Assets, true);
 
 	TArray<FAssetData> ImportedAssets;
 	for (const FAssetData& Asset : Assets)

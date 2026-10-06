@@ -8,6 +8,7 @@
 */
 
 #include "Quests/MT2QuestNode.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Characters/MT2PlayerCharacter.h"
 #include "Components/MT2StatusEffectComponent.h"
@@ -141,14 +142,13 @@ namespace
 		{
 			Candidates.Add(Map.WorldPackagePath);
 		}
-		Candidates.AddUnique(FString::Printf(
-			TEXT("/Game/Maps/Game/%s"), *FPaths::GetCleanFilename(Map.MapId)));
+		Candidates.AddUnique(UMT2PathSettings::Format(TEXT("GameMapTemplate"), TEXT("%s"), *FPaths::GetCleanFilename(Map.MapId)));
 
 		// Old server and client identifiers sometimes differ. atlasinfo.txt and server Setting.txt
 		// share the authoritative global origin and dimensions, so use those instead of aliases.
 		TArray<FString> AtlasLines;
 		const FString AtlasPath =
-			TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump/atlasinfo.txt");
+			UMT2PathSettings::Path(TEXT("Legacy_atlasinfo"));
 		if (FFileHelper::LoadFileToStringArray(AtlasLines, *AtlasPath))
 		{
 			for (FString Line : AtlasLines)
@@ -171,8 +171,7 @@ namespace
 					FCString::Atod(*Parts[4]) * 128.0 * 200.0);
 				if (Origin.Equals(Map.GlobalOrigin, 1.0) && Size.Equals(Map.WorldSize, 1.0))
 				{
-					Candidates.AddUnique(FString::Printf(
-						TEXT("/Game/Maps/Game/%s"), *FPaths::GetCleanFilename(Parts[0])));
+					Candidates.AddUnique(UMT2PathSettings::Format(TEXT("GameMapTemplate"), TEXT("%s"), *FPaths::GetCleanFilename(Parts[0])));
 				}
 			}
 		}

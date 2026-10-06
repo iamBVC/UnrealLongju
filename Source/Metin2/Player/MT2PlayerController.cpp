@@ -8,6 +8,7 @@
 */
 
 #include "Player/MT2PlayerController.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Net/NetworkProfiler.h"
 
@@ -1315,7 +1316,7 @@ bool AMT2PlayerController::EnsureChatWidget()
 		return true;
 	}
 	const TSubclassOf<UMT2ChatWidget> ChatWidgetClass =
-		LoadClass<UMT2ChatWidget>(nullptr, TEXT("/Game/UI/MT2Chat.MT2Chat_C"));
+		LoadClass<UMT2ChatWidget>(nullptr, UMT2PathSettings::Path(TEXT("UI_MT2Chat")));
 	if (!ChatWidgetClass)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Required UI asset /Game/UI/MT2Chat is missing or invalid."));

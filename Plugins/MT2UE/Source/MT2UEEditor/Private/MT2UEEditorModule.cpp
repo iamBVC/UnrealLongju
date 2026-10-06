@@ -8,6 +8,7 @@
 */
 
 #include "MT2UEEditorModule.h"
+#include "Config/MT2PathSettings.h"
 #include "MT2AreaPaintEdMode.h"
 #include "EditorModeManager.h"
 #include "EditorModeRegistry.h"
@@ -212,9 +213,9 @@ void FMT2UEEditorModule::ImportQuests()
 
 	FMT2QuestImportResult Result;
 	const bool bSucceeded = FMT2QuestImporter::Import(
-		TEXT("D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy/quest"),
-		TEXT("/Game"), Result,
-		TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump"));
+		UMT2PathSettings::Path(TEXT("Legacy_quest")),
+		UMT2PathSettings::Path(TEXT("ImportDestinationRoot")), Result,
+		UMT2PathSettings::Path(TEXT("LegacyDumpRoot")));
 
 	FString Message = Result.BuildSummary();
 	if (Result.StatementsUnconverted > 0)
@@ -265,7 +266,7 @@ void FMT2UEEditorModule::ReimportSkills()
 
 	FMT2SkillImportResult Result;
 	const bool bSucceeded = FMT2SkillImporter::Import(
-		TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump"), TEXT("/Game"), Result);
+		UMT2PathSettings::Path(TEXT("LegacyDumpRoot")), UMT2PathSettings::Path(TEXT("ImportDestinationRoot")), Result);
 
 	FString Message = Result.BuildSummary();
 	if (!Result.Warnings.IsEmpty())
@@ -342,7 +343,7 @@ void FMT2UEEditorModule::GeneratePlayerAnimationBlueprints()
 {
 	FMT2CharacterAnimationGenerationResult Result;
 	const bool bSucceeded = FMT2CharacterAnimationGenerator::Generate(
-		TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump"), true, Result);
+		UMT2PathSettings::Path(TEXT("LegacyDumpRoot")), true, Result);
 	FString Message = Result.BuildSummary();
 	if (!Result.Errors.IsEmpty())
 	{
@@ -426,8 +427,8 @@ void FMT2UEEditorModule::HandleTrackedAssetChanged(const FAssetData& AssetData)
 void FMT2UEEditorModule::HandleTrackedAssetRenamed(
 	const FAssetData& AssetData, const FString& OldObjectPath)
 {
-	if (IsTrackedAsset(AssetData) || OldObjectPath.StartsWith(TEXT("/Game/Mobs/Blueprints/")) ||
-		OldObjectPath.StartsWith(TEXT("/Game/Items/Blueprints/")))
+	if (IsTrackedAsset(AssetData) || OldObjectPath.StartsWith(UMT2PathSettings::Path(TEXT("Mobs_Blueprints_Prefix"))) ||
+		OldObjectPath.StartsWith(UMT2PathSettings::Path(TEXT("Items_Blueprints_Prefix"))))
 	{
 		ScheduleVnumRegistryRebuild();
 	}
@@ -479,15 +480,15 @@ bool FMT2UEEditorModule::IsTrackedBlueprint(const UBlueprint* Blueprint) const
 		return false;
 	}
 	const FString PackageName = Blueprint->GetOutermost()->GetName();
-	return PackageName.StartsWith(TEXT("/Game/Mobs/Blueprints/")) ||
-		PackageName.StartsWith(TEXT("/Game/Items/Blueprints/"));
+	return PackageName.StartsWith(UMT2PathSettings::Path(TEXT("Mobs_Blueprints_Prefix"))) ||
+		PackageName.StartsWith(UMT2PathSettings::Path(TEXT("Items_Blueprints_Prefix")));
 }
 
 bool FMT2UEEditorModule::IsTrackedAsset(const FAssetData& AssetData) const
 {
 	const FString PackageName = AssetData.PackageName.ToString();
-	return PackageName.StartsWith(TEXT("/Game/Mobs/Blueprints/")) ||
-		PackageName.StartsWith(TEXT("/Game/Items/Blueprints/"));
+	return PackageName.StartsWith(UMT2PathSettings::Path(TEXT("Mobs_Blueprints_Prefix"))) ||
+		PackageName.StartsWith(UMT2PathSettings::Path(TEXT("Items_Blueprints_Prefix")));
 }
 
 TSharedRef<SDockTab> FMT2UEEditorModule::SpawnImporterTab(const FSpawnTabArgs& SpawnTabArgs)

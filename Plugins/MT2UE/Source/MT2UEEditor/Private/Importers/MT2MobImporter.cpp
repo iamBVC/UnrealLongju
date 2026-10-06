@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2MobImporter.h"
+#include "Config/MT2PathSettings.h"
 #include "MT2AnimBlueprintBuilder.h"
 
 #include "Animation/AnimBlueprint.h"
@@ -71,7 +72,7 @@ namespace
 
 	FString NormalizeDestinationRoot(const FString& DestinationRoot)
 	{
-		FString Result = DestinationRoot.IsEmpty() ? TEXT("/Game") : DestinationRoot;
+		FString Result = DestinationRoot.IsEmpty() ? UMT2PathSettings::Path(TEXT("ImportDestinationRoot")) : DestinationRoot;
 		Result.ReplaceInline(TEXT("\\"), TEXT("/"));
 		while (Result.EndsWith(TEXT("/")))
 		{
@@ -312,8 +313,8 @@ namespace
 		const FString& SourceRoot, TMap<int32, float>& OutChancePercentByVnum)
 	{
 		const TArray<FString> DatabaseCandidates = {
-			SourceRoot / TEXT("db.sql"),
-			TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump/db.sql")
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_db")),
+			UMT2PathSettings::Path(TEXT("Legacy_db"))
 		};
 		FString DatabasePath;
 		for (const FString& Candidate : DatabaseCandidates)
@@ -365,9 +366,9 @@ namespace
 		}
 
 		const TArray<FString> EtcCandidates = {
-			SourceRoot / TEXT("locale/en/etc_drop_item.txt"),
-			SourceRoot / TEXT("etc_drop_item.txt"),
-			TEXT("D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy/etc_drop_item.txt")
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_etc_drop_item")),
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_etc_drop_item")),
+			UMT2PathSettings::Path(TEXT("Legacy_etc_drop_item"))
 		};
 		FString EtcPath;
 		for (const FString& Candidate : EtcCandidates)
@@ -464,7 +465,7 @@ namespace
 		{
 			Relative.RightChopInline(10);
 		}
-		return TEXT("/Game/ymir_work/") + Relative;
+		return UMT2PathSettings::Path(TEXT("ymir_work_Prefix")) + Relative;
 	}
 
 	FString FindMobMesh(const FString& GameDirectory, const FString& ResourceName)
@@ -781,7 +782,7 @@ namespace
 	{
 		FMT2MobMotionSet Result;
 		FString Text;
-		if (!FFileHelper::LoadFileToString(Text, *(Record.SourceDirectory / TEXT("motlist.txt"))))
+		if (!FFileHelper::LoadFileToString(Text, *(Record.SourceDirectory / UMT2PathSettings::Path(TEXT("Part_motlist")))))
 		{
 			return Result;
 		}
@@ -792,7 +793,7 @@ namespace
 		{
 			RelativeDirectory.RightChopInline(10);
 		}
-		const FString GameDirectory = TEXT("/Game/ymir_work/") + RelativeDirectory;
+		const FString GameDirectory = UMT2PathSettings::Path(TEXT("ymir_work_Prefix")) + RelativeDirectory;
 		TArray<FString> Lines;
 		Text.ParseIntoArrayLines(Lines, true);
 		for (FString& Line : Lines)
@@ -896,7 +897,7 @@ namespace
 		FMT2MobImportResult& OutResult)
 	{
 		const FString Name = TEXT("ABP_Mob_") + SanitizeName(Record.Definition.ResourceName);
-		const FString PackagePath = NormalizeDestinationRoot(DestinationRoot) / TEXT("Mobs/Animations");
+		const FString PackagePath = NormalizeDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Mobs_Animations"));
 		const FString ObjectPath = PackagePath / Name + TEXT(".") + Name;
 		if (AssetExists(ObjectPath))
 		{
@@ -1047,7 +1048,7 @@ namespace
 		Run = Run ? Run : Walk;
 
 		const FString Name = TEXT("ABP_Mob_") + SanitizeName(Record.Definition.ResourceName);
-		const FString PackagePath = NormalizeDestinationRoot(DestinationRoot) / TEXT("Mobs/Animations");
+		const FString PackagePath = NormalizeDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Mobs_Animations"));
 		bool bCreated = false;
 		UAnimBlueprint* Blueprint = MT2AnimBlueprintBuilder::CreateOrUpdateChild(
 			PackagePath, Name, BaseBlueprint, Mesh, OutResult.Errors, bCreated);
@@ -1292,7 +1293,7 @@ namespace
 	{
 		const FString Name = FString::Printf(TEXT("LT_Mob_%05d"), Vnum);
 		const FString PackageName =
-			NormalizeDestinationRoot(DestinationRoot) / TEXT("Mobs/LootTables") / Name;
+			NormalizeDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Mobs_LootTables")) / Name;
 		const FString ObjectPath = PackageName + TEXT(".") + Name;
 		UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *ObjectPath);
 		if (!Blueprint)
@@ -1328,15 +1329,15 @@ FString FMT2MobImporter::BuildBlueprintObjectPath(
 	if (IsNpcDefinition(Definition))
 	{
 		const FString Name = TEXT("BP_Npc_") + BuildAssetStem(Definition);
-		return NormalizeDestinationRoot(DestinationRoot) / TEXT("Npcs/Blueprints") / Name + TEXT(".") + Name;
+		return NormalizeDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Npcs_Blueprints")) / Name + TEXT(".") + Name;
 	}
 	if (IsMetinDefinition(Definition))
 	{
 		const FString Name = TEXT("BP_Metin_") + BuildAssetStem(Definition);
-		return NormalizeDestinationRoot(DestinationRoot) / TEXT("Metins/Blueprints") / Name + TEXT(".") + Name;
+		return NormalizeDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Metins_Blueprints")) / Name + TEXT(".") + Name;
 	}
 	const FString Name = TEXT("BP_Mob_") + BuildAssetStem(Definition);
-	return NormalizeDestinationRoot(DestinationRoot) / TEXT("Mobs/Blueprints") / Name + TEXT(".") + Name;
+	return NormalizeDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Mobs_Blueprints")) / Name + TEXT(".") + Name;
 }
 
 int32 FMT2MobImporter::ImportMobLootEntries(
@@ -1345,9 +1346,9 @@ int32 FMT2MobImporter::ImportMobLootEntries(
 	TArray<FString>& OutWarnings)
 {
 	const TArray<FString> Candidates = {
-		SourceRoot / TEXT("locale/en/mob_drop_item.txt"),
-		SourceRoot / TEXT("mob_drop_item.txt"),
-		TEXT("D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy/mob_drop_item.txt")
+		SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_mob_drop_item")),
+		SourceRoot / UMT2PathSettings::Path(TEXT("Part_mob_drop_item")),
+		UMT2PathSettings::Path(TEXT("Legacy_mob_drop_item"))
 	};
 	FString LootPath;
 	for (const FString& Candidate : Candidates)
@@ -1372,7 +1373,7 @@ int32 FMT2MobImporter::ImportMobLootEntries(
 	}
 	FMT2MobProtoReadResult Proto;
 	FString ProtoError;
-	if (!FMT2MobProtoReader::Read(SourceRoot / TEXT("locale/en/mob_proto"), Proto, ProtoError))
+	if (!FMT2MobProtoReader::Read(SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_mob_proto")), Proto, ProtoError))
 	{
 		OutWarnings.Add(FString::Printf(TEXT("mob_proto could not be read for loot tables: %s"), *ProtoError));
 		return 0;
@@ -1390,12 +1391,12 @@ int32 FMT2MobImporter::ImportMobLootEntries(
 		DefinitionsByVnum.Add(Definition.Vnum, &Definition);
 	}
 	TMap<int32, FServerMobOverride> ServerOverrides;
-	LoadServerMobOverrides(SourceRoot / TEXT("db.sql"), ServerOverrides);
+	LoadServerMobOverrides(SourceRoot / UMT2PathSettings::Path(TEXT("Part_db")), ServerOverrides);
 
 	FAssetRegistryModule& RegistryModule =
 		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
 	TArray<FAssetData> MobBlueprintAssets;
-	for (const TCHAR* RelativeFolder : { TEXT("Mobs/Blueprints"), TEXT("Metins/Blueprints") })
+	for (const TCHAR* RelativeFolder : { UMT2PathSettings::Path(TEXT("Relative_Mobs_Blueprints")), UMT2PathSettings::Path(TEXT("Relative_Metins_Blueprints")) })
 	{
 		TArray<FAssetData> FolderAssets;
 		RegistryModule.Get().GetAssetsByPath(
@@ -1478,7 +1479,7 @@ int32 FMT2MobImporter::ImportMobLootEntries(
 		{
 			const FString ItemName = FString::Printf(TEXT("BP_Item_%05d"), ItemVnum);
 			const FString ItemPath = NormalizeDestinationRoot(DestinationRoot) /
-				TEXT("Items/Blueprints") / ItemName + TEXT(".") + ItemName;
+				UMT2PathSettings::Path(TEXT("Relative_Items_Blueprints")) / ItemName + TEXT(".") + ItemName;
 			UBlueprint* ItemBlueprint = LoadObject<UBlueprint>(nullptr, *ItemPath);
 			if (!ItemBlueprint || !ItemBlueprint->GeneratedClass)
 			{
@@ -1652,7 +1653,7 @@ int32 FMT2MobImporter::ImportNpcShops(
 
 	FAssetRegistryModule& RegistryModule =
 		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
-	const FString NpcFolder = NormalizeDestinationRoot(DestinationRoot) / TEXT("Npcs/Blueprints");
+	const FString NpcFolder = NormalizeDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Npcs_Blueprints"));
 	TArray<FAssetData> NpcAssets;
 	RegistryModule.Get().GetAssetsByPath(FName(*NpcFolder), NpcAssets, true, false);
 
@@ -1715,9 +1716,9 @@ bool FMT2MobImporter::Discover(
 	TMap<int32, FMT2MetinSpawnGroup> SpawnGroups;
 	{
 		const TArray<FString> GroupCandidates = {
-			SourceRoot / TEXT("group.txt"),
-			SourceRoot / TEXT("locale/en/group.txt"),
-			TEXT("D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy/group.txt")
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_group")),
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_group")),
+			UMT2PathSettings::Path(TEXT("Legacy_group"))
 		};
 		for (const FString& Candidate : GroupCandidates)
 		{
@@ -1735,12 +1736,12 @@ bool FMT2MobImporter::Discover(
 	OutWarnings.Reset();
 	OutError.Reset();
 
-	const FString ProtoPath = SourceRoot / TEXT("locale/en/mob_proto");
+	const FString ProtoPath = SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_mob_proto"));
 	FMT2MobProtoReadResult Proto;
 	if (!FMT2MobProtoReader::Read(ProtoPath, Proto, OutError)) return false;
 
 	TMap<int32, FString> Resources;
-	if (!LoadNpcList(SourceRoot / TEXT("npclist.txt"), Resources))
+	if (!LoadNpcList(SourceRoot / UMT2PathSettings::Path(TEXT("Part_npclist")), Resources))
 	{
 		OutError = TEXT("Could not read npclist.txt.");
 		return false;
@@ -1751,7 +1752,7 @@ bool FMT2MobImporter::Discover(
 	BuildMobScriptMap(SourceRoot, MobScripts);
 	TMap<int32, FServerMobOverride> ServerOverrides;
 	const int32 ServerFlagCount = LoadServerMobOverrides(
-		SourceRoot / TEXT("db.sql"), ServerOverrides);
+		SourceRoot / UMT2PathSettings::Path(TEXT("Part_db")), ServerOverrides);
 	FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().SearchAllAssets(true);
 
 	int32 MissingMeshCount = 0;
@@ -1878,7 +1879,7 @@ bool FMT2MobImporter::Import(
 	Progress.MakeDialog(true);
 	TArray<UPackage*> PackagesToSave;
 	TMap<FString, UAnimBlueprint*> AnimBlueprintCache;
-	const FString AnimationPackagePath = NormalizeDestinationRoot(DestinationRoot) / TEXT("Mobs/Animations");
+	const FString AnimationPackagePath = NormalizeDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Mobs_Animations"));
 	bool bBaseCreated = false;
 	UAnimBlueprint* BaseAnimBlueprint = MT2AnimBlueprintBuilder::CreateOrUpdateBase(
 		AnimationPackagePath, TEXT("ABP_MT2MobBase"), UMT2MobAnimInstance::StaticClass(),
@@ -1971,7 +1972,7 @@ bool FMT2MobImporter::Import(
 	}
 
 	// Shops live in the server DB dump, keyed by npc vnum.
-	const FString DatabasePath = TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump/db.sql");
+	const FString DatabasePath = UMT2PathSettings::Path(TEXT("Legacy_db"));
 	TArray<FString> ShopWarnings;
 	ImportNpcShops(DatabasePath, DestinationRoot, ShopWarnings);
 	for (const FString& Warning : ShopWarnings)

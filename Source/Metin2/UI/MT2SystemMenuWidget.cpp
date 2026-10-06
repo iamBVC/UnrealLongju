@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2SystemMenuWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Audio/MT2AudioUserSettings.h"
 #include "AudioCaptureCore.h"
@@ -673,7 +674,7 @@ void UMT2SystemMenuWidget::RebuildControlsRows()
 	ControlsList->ClearChildren();
 	KeyButtonLabels.Reset();
 
-	UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+	UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 	const FMT2AtlasRegion MiddleNormal(194, 142, 255, 163);
 	const FMT2AtlasRegion MiddleHovered(88, 181, 149, 202);
 	const FMT2AtlasRegion MiddlePressed(149, 181, 210, 202);

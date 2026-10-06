@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "UI/MT2UserWidget.h"
 #include "MT2ShopWidget.generated.h"
 
@@ -63,7 +64,7 @@ private:
 	// The old client's buy/sell "money" sound (uishop.py OnSellItem / OnBuyItem).
 	UPROPERTY(EditDefaultsOnly, Category = "UI|Sound")
 	TSoftObjectPtr<USoundBase> TransactionSound =
-		TSoftObjectPtr<USoundBase>(FSoftObjectPath(TEXT("/Game/sound/ui/money.money")));
+		TSoftObjectPtr<USoundBase>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("sound_ui_money"))));
 
 	void PlayTransactionSound();
 

@@ -8,6 +8,7 @@
 */
 
 #include "MT2MapTerrainBuilder.h"
+#include "Config/MT2PathSettings.h"
 
 #include "HAL/FileManager.h"
 #include "HAL/PlatformFilemanager.h"
@@ -304,11 +305,11 @@ bool FMT2MapTerrainBuilder::PrepareLandscapeSources(const FMT2MapTerrainInfo& Ma
 	}
 	OutPrepared.LandscapeHeightData = LandscapeHeightmap;
 
-	OutPrepared.HeightmapPath = OutPrepared.OutputDirectory / TEXT("height_metin2_raw.r16");
-	OutPrepared.CenteredHeightmapPath = OutPrepared.OutputDirectory / TEXT("height_ue_centered.r16");
-	OutPrepared.LandscapeHeightmapPath = OutPrepared.OutputDirectory / TEXT("height_ue_landscape.r16");
-	OutPrepared.TileIndexPath = OutPrepared.OutputDirectory / TEXT("tile_indices.raw");
-	OutPrepared.ManifestPath = OutPrepared.OutputDirectory / TEXT("manifest.txt");
+	OutPrepared.HeightmapPath = OutPrepared.OutputDirectory / UMT2PathSettings::Path(TEXT("Part_height_metin2_raw"));
+	OutPrepared.CenteredHeightmapPath = OutPrepared.OutputDirectory / UMT2PathSettings::Path(TEXT("Part_height_ue_centered"));
+	OutPrepared.LandscapeHeightmapPath = OutPrepared.OutputDirectory / UMT2PathSettings::Path(TEXT("Part_height_ue_landscape"));
+	OutPrepared.TileIndexPath = OutPrepared.OutputDirectory / UMT2PathSettings::Path(TEXT("Part_tile_indices"));
+	OutPrepared.ManifestPath = OutPrepared.OutputDirectory / UMT2PathSettings::Path(TEXT("Part_manifest"));
 
 	if (!SaveRaw16(Heightmap, OutPrepared.HeightmapPath) ||
 		!SaveRaw16(CenteredHeightmap, OutPrepared.CenteredHeightmapPath) ||
@@ -509,7 +510,7 @@ bool FMT2MapTerrainBuilder::ParseTextureSet(const FString& TextureSetPath, TArra
 bool FMT2MapTerrainBuilder::LoadCellHeightmap(const FString& CellDirectory, TArray<uint16>& OutHeights)
 {
 	TArray<uint8> Bytes;
-	if (!FFileHelper::LoadFileToArray(Bytes, *(CellDirectory / TEXT("height.raw"))) ||
+	if (!FFileHelper::LoadFileToArray(Bytes, *(CellDirectory / UMT2PathSettings::Path(TEXT("Part_height")))) ||
 		Bytes.Num() < Metin2HeightRawSize * Metin2HeightRawSize * static_cast<int32>(sizeof(uint16)))
 	{
 		return false;
@@ -522,7 +523,7 @@ bool FMT2MapTerrainBuilder::LoadCellHeightmap(const FString& CellDirectory, TArr
 
 bool FMT2MapTerrainBuilder::LoadCellTilemap(const FString& CellDirectory, TArray<uint8>& OutTiles)
 {
-	if (!FFileHelper::LoadFileToArray(OutTiles, *(CellDirectory / TEXT("tile.raw"))) ||
+	if (!FFileHelper::LoadFileToArray(OutTiles, *(CellDirectory / UMT2PathSettings::Path(TEXT("Part_tile")))) ||
 		OutTiles.Num() < Metin2TileRawSize * Metin2TileRawSize)
 	{
 		return false;

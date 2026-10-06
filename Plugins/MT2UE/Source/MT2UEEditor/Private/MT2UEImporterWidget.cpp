@@ -8,6 +8,7 @@
 */
 
 #include "MT2UEImporterWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetToolsModule.h"
@@ -1195,10 +1196,10 @@ FReply SMT2UEImporterWidget::ExportStaticObjectReport()
 		return FReply::Handled();
 	}
 
-	FString ReportDirectory = FPaths::ProjectSavedDir() / TEXT("MT2UE");
+	FString ReportDirectory = UMT2PathSettings::Path(TEXT("ImporterWorkingDirectory"));
 	FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*ReportDirectory);
 
-	const FString ReportPath = ReportDirectory / TEXT("StaticObjectReport.csv");
+	const FString ReportPath = ReportDirectory / UMT2PathSettings::Path(TEXT("StaticObjectReportFilename"));
 	TArray<FString> Lines;
 	Lines.Reserve(LastResolvedWorld.MapObjects.Num() + 1);
 	Lines.Add(TEXT("Map,Cell,X,Y,Z,Pitch,Yaw,Roll,HeightBias,PropertyCRC,PropertyType,PropertyName,ReferencedAsset,ResolvedAbsolutePath"));
@@ -1467,7 +1468,7 @@ FReply SMT2UEImporterWidget::PrepareMapTerrainSources(const TArray<FMT2MapTerrai
 		return FReply::Handled();
 	}
 
-	const FString OutputRoot = FPaths::ProjectSavedDir() / TEXT("MT2UE/LandscapeSources");
+	const FString OutputRoot = UMT2PathSettings::Path(TEXT("LandscapeSourceDirectory"));
 	FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*OutputRoot);
 
 	int32 PreparedCount = 0;
@@ -1583,7 +1584,7 @@ bool SMT2UEImporterWidget::CreateLandscapeFromPreparedTerrain(const FMT2MapTerra
 	for (const FName LayerName : LayerNames)
 	{
 		const FString LayerAssetName = TEXT("LI_") + FMT2AssetScanner::SanitizePackagePathSegment(LayerName.ToString());
-		const FString LayerPackagePath = DestinationRoot / TEXT("LandscapeLayers");
+		const FString LayerPackagePath = DestinationRoot / UMT2PathSettings::Path(TEXT("Part_LandscapeLayers"));
 		const FString LayerPackageName = LayerPackagePath / LayerAssetName;
 		const FString LayerObjectPath = LayerPackageName + TEXT(".") + LayerAssetName;
 
@@ -1652,7 +1653,7 @@ UMaterialInterface* SMT2UEImporterWidget::CreateLandscapeMaterialInstanceForMap(
 
 	const FString SanitizedMapName = FMT2AssetScanner::SanitizePackagePathSegment(Map.MapName);
 	const FString MaterialAssetName = FString::Printf(TEXT("M_%s_Landscape"), *SanitizedMapName);
-	const FString MaterialPackagePath = DestinationRoot / TEXT("LandscapeMaterials") / SanitizedMapName;
+	const FString MaterialPackagePath = DestinationRoot / UMT2PathSettings::Path(TEXT("Part_LandscapeMaterials")) / SanitizedMapName;
 	const FString MaterialPackageName = MaterialPackagePath / MaterialAssetName;
 
 	UPackage* Package = CreatePackage(*MaterialPackageName);
@@ -1758,7 +1759,7 @@ UMaterialInterface* SMT2UEImporterWidget::CreateLandscapeMaterialInstanceForMap(
 	FAssetRegistryModule::AssetCreated(Material);
 
 	const FString InstanceAssetName = FString::Printf(TEXT("MI_%s_Landscape"), *SanitizedMapName);
-	const FString InstancePackagePath = DestinationRoot / TEXT("LandscapeMaterialInstances") / SanitizedMapName;
+	const FString InstancePackagePath = DestinationRoot / UMT2PathSettings::Path(TEXT("Part_LandscapeMaterialInstances")) / SanitizedMapName;
 	const FString InstancePackageName = InstancePackagePath / InstanceAssetName;
 	UPackage* InstancePackage = CreatePackage(*InstancePackageName);
 	UMaterialInstanceConstant* MaterialInstance = NewObject<UMaterialInstanceConstant>(InstancePackage, *InstanceAssetName, RF_Public | RF_Standalone | RF_Transactional);
@@ -2058,7 +2059,7 @@ FText SMT2UEImporterWidget::GetLogText() const
 
 FString SMT2UEImporterWidget::BuildDefaultSourceRoot() const
 {
-	const FString DumpRoot = TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump");
+	const FString DumpRoot = UMT2PathSettings::Path(TEXT("LegacyDumpRoot"));
 	if (IFileManager::Get().DirectoryExists(*DumpRoot))
 	{
 		return DumpRoot;
@@ -2075,7 +2076,7 @@ FString SMT2UEImporterWidget::BuildDefaultSourceRoot() const
 		BaseDir = FPaths::ProjectPluginsDir() / TEXT("MT2UE");
 	}
 
-	FString Candidate = FPaths::ConvertRelativePathToFull(BaseDir / TEXT("../client/pack"));
+	FString Candidate = FPaths::ConvertRelativePathToFull(BaseDir / UMT2PathSettings::Path(TEXT("Part__client_pack")));
 	FPaths::NormalizeDirectoryName(Candidate);
 	return Candidate;
 }
@@ -2085,7 +2086,7 @@ FMT2ImportContext SMT2UEImporterWidget::BuildImportContext() const
 	FMT2ImportContext Context;
 	Context.SourceRoot = SourceRoot;
 	Context.DestinationRoot = DestinationRoot;
-	Context.WorkingDirectory = FPaths::ProjectSavedDir() / TEXT("MT2UE");
+	Context.WorkingDirectory = UMT2PathSettings::Path(TEXT("ImporterWorkingDirectory"));
 	Context.MapNameFilter = MapNameFilter;
 	Context.MaxStaticMeshImports = MaxStaticMeshImports;
 	Context.MaxMapObjectPlacements = MaxMapPlacements;
@@ -2145,7 +2146,7 @@ FString SMT2UEImporterWidget::BuildConvertedMeshPathForRecord(const FMT2AssetRec
 	TArray<FString> Parts;
 	Record.ContentPath.ParseIntoArray(Parts, TEXT("/"), true);
 
-	FString Result = FPaths::ProjectSavedDir() / TEXT("MT2UE/Converted") / FMT2AssetScanner::SanitizePackagePathSegment(Record.PackName);
+	FString Result = FString(UMT2PathSettings::Path(TEXT("ConvertedDirectory"))) / FMT2AssetScanner::SanitizePackagePathSegment(Record.PackName);
 	for (int32 Index = 0; Index < Parts.Num(); ++Index)
 	{
 		FString Segment = Parts[Index];

@@ -8,12 +8,13 @@
 */
 
 #include "Skills/MT2SkillSet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
 #include "Skills/MT2SkillDefinition.h"
 
-const TCHAR* UMT2SkillSet::SkillSetSearchRoot = TEXT("/Game/Skills");
+const TCHAR* UMT2SkillSet::SkillSetSearchRoot() { return UMT2PathSettings::Path(TEXT("SkillRoot")); }
 
 namespace
 {
@@ -25,7 +26,7 @@ namespace
 
 		FARFilter Filter;
 		Filter.ClassPaths.Add(UMT2SkillSet::StaticClass()->GetClassPathName());
-		Filter.PackagePaths.Add(UMT2SkillSet::SkillSetSearchRoot);
+		Filter.PackagePaths.Add(UMT2SkillSet::SkillSetSearchRoot());
 		Filter.bRecursivePaths = true;
 
 		TArray<FAssetData> Assets;
@@ -85,7 +86,7 @@ UMT2SkillDefinition* UMT2SkillSet::FindSkillAcrossSets(int32 SkillVnum)
 	IAssetRegistry& AssetRegistry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
 	FARFilter Filter;
 	Filter.ClassPaths.Add(UMT2SkillDefinition::StaticClass()->GetClassPathName());
-	Filter.PackagePaths.Add(UMT2SkillSet::SkillSetSearchRoot);
+	Filter.PackagePaths.Add(UMT2SkillSet::SkillSetSearchRoot());
 	Filter.bRecursivePaths = true;
 	TArray<FAssetData> Assets;
 	AssetRegistry.GetAssets(Filter, Assets);

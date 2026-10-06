@@ -8,6 +8,7 @@
 */
 
 #include "Server/MT2ServerRuntimeSubsystem.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Persistence/MT2PersistenceBackend.h"
 #include "Misc/Base64.h"
@@ -284,7 +285,7 @@ bool UMT2ServerRuntimeSubsystem::ParseCommandLine(FString& OutError)
 
 	if (Config.IsCoordinator())
 	{
-		Config.DatabaseRoot = FPaths::ProjectSavedDir() / TEXT("Database");
+		Config.DatabaseRoot = UMT2PathSettings::Path(TEXT("DatabaseRoot"));
 		ReadCommandString(TEXT("db_root="), Config.DatabaseRoot);
 		ReadCommandString(TEXT("db_file="), Config.DatabaseFile);
 		ReadCommandString(TEXT("db_synchronous="), Config.DatabaseSynchronousMode);
@@ -3717,7 +3718,7 @@ void UMT2ServerRuntimeSubsystem::SendGuildSnapshot(const FString& CharacterId)
 		SendToCharacter(CharacterId, Clear);
 		return;
 	}
-	const FString MarkPath = FPaths::Combine(Config.DatabaseRoot, TEXT("GuildMarks"), FString::Printf(TEXT("%d.png"), Guild.GuildId));
+	const FString MarkPath = FPaths::Combine(Config.DatabaseRoot, UMT2PathSettings::Path(TEXT("GuildMarkSubdirectory")), FString::Printf(TEXT("%d.png"), Guild.GuildId));
 	if (IFileManager::Get().FileExists(*MarkPath)) Guild.MarkRevision = IFileManager::Get().GetTimeStamp(*MarkPath).ToUnixTimestamp();
 	for (FMT2GuildMember& Member : Guild.Members)
 	{
@@ -3897,7 +3898,7 @@ void UMT2ServerRuntimeSubsystem::HandleGuildMarkUpload(
 		SendGuildResult(CharacterId, TEXT("mark"), EMT2GuildResult::InvalidMark);
 		return;
 	}
-	const FString Directory = FPaths::Combine(Config.DatabaseRoot, TEXT("GuildMarks"));
+	const FString Directory = FPaths::Combine(Config.DatabaseRoot, UMT2PathSettings::Path(TEXT("GuildMarkSubdirectory")));
 	IFileManager::Get().MakeDirectory(*Directory, true);
 	const FString MarkPath = FPaths::Combine(Directory, FString::Printf(TEXT("%d.png"), Guild.GuildId));
 	if (!FFileHelper::SaveArrayToFile(PngData, *MarkPath))
@@ -3925,7 +3926,7 @@ void UMT2ServerRuntimeSubsystem::HandleGuildMarkRequest(
 	const FString CharacterId = GetStringField(Message, TEXT("character_id"));
 	const int32 GuildId = GetIntField(Message, TEXT("guild_id"));
 	if (GuildId <= 0 || CharacterId.IsEmpty()) return;
-	const FString MarkPath = FPaths::Combine(Config.DatabaseRoot, TEXT("GuildMarks"), FString::Printf(TEXT("%d.png"), GuildId));
+	const FString MarkPath = FPaths::Combine(Config.DatabaseRoot, UMT2PathSettings::Path(TEXT("GuildMarkSubdirectory")), FString::Printf(TEXT("%d.png"), GuildId));
 	TArray<uint8> PngData;
 	if (!FFileHelper::LoadFileToArray(PngData, *MarkPath) || PngData.Num() > 64 * 1024) return;
 	TSharedRef<FJsonObject> Reply = MakeMessage(TEXT("guild_mark_data"));

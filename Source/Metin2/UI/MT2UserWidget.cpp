@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2UserWidget.h"
+#include "Config/MT2PathSettings.h"
 #include "Audio/MT2SoundPlaybackSubsystem.h"
 
 #include "Blueprint/WidgetTree.h"
@@ -20,8 +21,8 @@
 
 UMT2UserWidget::UMT2UserWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
-	, DefaultButtonClickSound(FSoftObjectPath(TEXT("/Game/sound/ui/click.click")))
-	, TypingSound(FSoftObjectPath(TEXT("/Game/sound/ui/type.type")))
+	, DefaultButtonClickSound(FSoftObjectPath(UMT2PathSettings::Path(TEXT("sound_ui_click"))))
+	, TypingSound(FSoftObjectPath(UMT2PathSettings::Path(TEXT("sound_ui_type"))))
 {
 }
 

@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2SpeedTreeConverter.h"
+#include "Config/MT2PathSettings.h"
 
 #include "HAL/FileManager.h"
 #include "HAL/PlatformFileManager.h"
@@ -24,7 +25,7 @@ namespace
 	{
 		const TSharedPtr<IPlugin> Plugin = IPluginManager::Get().FindPlugin(TEXT("MT2UE"));
 		return Plugin.IsValid()
-			? Plugin->GetBaseDir() / TEXT("Binaries/ThirdParty/SpeedTree/Win32/SpeedTreeToObj.exe")
+			? Plugin->GetBaseDir() / UMT2PathSettings::Path(TEXT("SpeedTreeConverterRelativePath"))
 			: FString();
 	}
 }

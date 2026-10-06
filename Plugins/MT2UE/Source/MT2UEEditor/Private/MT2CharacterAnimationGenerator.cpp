@@ -8,6 +8,7 @@
 */
 
 #include "MT2CharacterAnimationGenerator.h"
+#include "Config/MT2PathSettings.h"
 #include "MT2AnimBlueprintBuilder.h"
 
 #include "Animation/AnimBlueprint.h"
@@ -191,16 +192,14 @@ namespace
 	{
 		const FString Race = GetRaceLower(Profile);
 		const FString MeshName = FString::Printf(TEXT("SK_%s_novice"), *Race);
-		return FString::Printf(
-			TEXT("/Game/ymir_work/%s/%s/%s_novice/SkeletalMeshes/%s.%s"),
+		return UMT2PathSettings::Format(TEXT("ymir_work_Name_Name_Name_novice_SkeletalMeshes_Name"), TEXT("%s%s%s%s%s"),
 			Profile.SourceFolder, *Race, *Race, *MeshName, *MeshName);
 	}
 
 	FString BuildAnimationPath(const FCharacterProfile& Profile, const TCHAR* AnimationName)
 	{
 		const FString AssetName = FString::Printf(TEXT("A_%s"), AnimationName);
-		return FString::Printf(
-			TEXT("/Game/ymir_work/%s/%s/general/%s.%s"),
+		return UMT2PathSettings::Format(TEXT("ymir_work_Name_Name_general_Name"), TEXT("%s%s%s%s"),
 			Profile.SourceFolder, *GetRaceLower(Profile), *AssetName, *AssetName);
 	}
 
@@ -350,7 +349,7 @@ namespace
 		}
 
 		const FString Race = GetRaceLower(Profile);
-		const FString AnimationGrannyPath = SourceRoot / Profile.SourceFolder / Race / TEXT("general") /
+		const FString AnimationGrannyPath = SourceRoot / Profile.SourceFolder / Race / UMT2PathSettings::Path(TEXT("Part_general")) /
 			(FString(AnimationName) + TEXT(".gr2"));
 		const FString ModelGrannyPath = SourceRoot / Profile.SourceFolder / Race /
 			FString::Printf(TEXT("%s_novice.gr2"), *Race);
@@ -454,8 +453,7 @@ namespace
 		TArray<UPackage*>& OutPackages)
 	{
 		const FString BlueprintName = BuildBlueprintName(Profile);
-		const FString ObjectPath = FString::Printf(
-			TEXT("/Game/Characters/Animations/%s.%s"), *BlueprintName, *BlueprintName);
+		const FString ObjectPath = UMT2PathSettings::Format(TEXT("Characters_Animations_Name"), TEXT("%s%s"), *BlueprintName, *BlueprintName);
 		UAnimBlueprint* Blueprint = LoadObject<UAnimBlueprint>(nullptr, *ObjectPath);
 		const bool bUpdatingExisting = Blueprint != nullptr;
 
@@ -486,7 +484,7 @@ namespace
 			IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>(TEXT("AssetTools")).Get();
 			Blueprint = Cast<UAnimBlueprint>(AssetTools.CreateAsset(
 				BlueprintName,
-				TEXT("/Game/Characters/Animations"),
+				UMT2PathSettings::Path(TEXT("CharacterAnimationRoot")),
 				UAnimBlueprint::StaticClass(),
 				Factory));
 		}
@@ -663,8 +661,7 @@ namespace
 		Defaults->DefaultAnimationSet = TEXT("general");
 		Defaults->AnimationSets.Reset();
 
-		const FString RootPath = FString::Printf(
-			TEXT("/Game/ymir_work/%s/%s"), Profile.SourceFolder, *GetRaceLower(Profile));
+		const FString RootPath = UMT2PathSettings::Format(TEXT("ymir_work_Name_Name"), TEXT("%s%s"), Profile.SourceFolder, *GetRaceLower(Profile));
 		TArray<FAssetData> Assets;
 		TArray<FImportedAnimationBinding> Bindings;
 		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"))
@@ -744,7 +741,7 @@ namespace
 
 		bool bCreated = false;
 		UAnimBlueprint* Blueprint = MT2AnimBlueprintBuilder::CreateOrUpdateChild(
-			TEXT("/Game/Characters/Animations"), BuildBlueprintName(Profile), BaseBlueprint, Mesh,
+			UMT2PathSettings::Path(TEXT("CharacterAnimationRoot")), BuildBlueprintName(Profile), BaseBlueprint, Mesh,
 			OutResult.Errors, bCreated);
 		if (!Blueprint || !Blueprint->GeneratedClass)
 		{
@@ -796,7 +793,7 @@ bool FMT2CharacterAnimationGenerator::Generate(
 	}
 	bool bBaseCreated = false;
 	UAnimBlueprint* BaseBlueprint = MT2AnimBlueprintBuilder::CreateOrUpdateBase(
-		TEXT("/Game/Characters/Animations"), TEXT("ABP_MT2CharacterBase"), ParentClass,
+		UMT2PathSettings::Path(TEXT("CharacterAnimationRoot")), TEXT("ABP_MT2CharacterBase"), ParentClass,
 		OutResult.Errors, bBaseCreated);
 	if (!BaseBlueprint)
 	{

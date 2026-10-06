@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "MT2AssetScanner.h"
 #include "MT2MapTerrainBuilder.h"
 #include "MT2PropertyResolver.h"
@@ -61,7 +62,7 @@ struct FMT2ImportMessage
 struct FMT2ImportContext
 {
 	FString SourceRoot;
-	FString DestinationRoot = TEXT("/Game");
+	FString DestinationRoot = UMT2PathSettings::Path(TEXT("ImportDestinationRoot"));
 	FString WorkingDirectory;
 	FString MapNameFilter;
 	int32 MaxStaticMeshImports = 0;

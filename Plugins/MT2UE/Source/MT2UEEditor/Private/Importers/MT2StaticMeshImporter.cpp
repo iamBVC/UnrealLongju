@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2StaticMeshImporter.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetImportTask.h"
@@ -694,7 +695,7 @@ FString FMT2StaticMeshImporter::BuildSharedMaterialFolder(const FMT2ImportContex
 {
 	FString Root = Context.DestinationRoot;
 	Root.RemoveFromEnd(TEXT("/"));
-	return Root / TEXT("Materials");
+	return Root / UMT2PathSettings::Path(TEXT("Part_Materials"));
 }
 
 FString FMT2StaticMeshImporter::BuildSharedMaterialObjectPath(const FMT2ImportContext& Context, const FMT2GrannyMaterialSlot& Slot, int32 SlotIndex, const FString& DiffuseTextureObjectPath, const FString& OpacityTextureObjectPath)
@@ -746,7 +747,7 @@ FString FMT2StaticMeshImporter::BuildConvertedMeshPath(const FMT2ImportContext& 
 	TArray<FString> Parts;
 	Record.ContentPath.ParseIntoArray(Parts, TEXT("/"), true);
 
-	FString Result = GetWorkingRoot(Context) / TEXT("Converted") / FMT2AssetScanner::SanitizePackagePathSegment(Record.PackName);
+	FString Result = GetWorkingRoot(Context) / UMT2PathSettings::Path(TEXT("Part_Converted")) / FMT2AssetScanner::SanitizePackagePathSegment(Record.PackName);
 	for (int32 Index = 0; Index < Parts.Num(); ++Index)
 	{
 		if (Index == Parts.Num() - 1)
@@ -766,7 +767,7 @@ FString FMT2StaticMeshImporter::GetWorkingRoot(const FMT2ImportContext& Context)
 	FString WorkingRoot = Context.WorkingDirectory;
 	if (WorkingRoot.IsEmpty())
 	{
-		WorkingRoot = FPaths::ProjectSavedDir() / TEXT("MT2UE");
+		WorkingRoot = UMT2PathSettings::Path(TEXT("ImporterWorkingDirectory"));
 	}
 	FPaths::NormalizeFilename(WorkingRoot);
 	return WorkingRoot;

@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2ExperienceGaugeWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
@@ -23,7 +24,7 @@ void UMT2ExperienceGaugeWidget::NativeConstruct()
 
 void UMT2ExperienceGaugeWidget::ApplyGaugeStyle()
 {
-	UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_taskbar.T_taskbar"));
+	UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_TaskbarAtlas")));
 	if (!Taskbar)
 	{
 		return;

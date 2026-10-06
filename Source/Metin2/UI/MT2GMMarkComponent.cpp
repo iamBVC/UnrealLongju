@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2GMMarkComponent.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CapsuleComponent.h"
@@ -20,7 +21,7 @@
 namespace
 {
 	// locale/en/effect/ymirred.tga - the texture gm.mse billboards over GM heads.
-	const FSoftObjectPath GMMarkTexturePath(TEXT("/Game/locale/en/effect/T_ymirred.T_ymirred"));
+	FSoftObjectPath GMMarkTexturePath() { return FSoftObjectPath(UMT2PathSettings::Path(TEXT("locale_en_effect_T_ymirred"))); }
 }
 
 TSharedRef<SWidget> UMT2GMMarkWidget::RebuildWidget()
@@ -28,7 +29,7 @@ TSharedRef<SWidget> UMT2GMMarkWidget::RebuildWidget()
 	if (WidgetTree && !WidgetTree->RootWidget)
 	{
 		MarkImage = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("MarkImage"));
-		if (UTexture2D* MarkTexture = Cast<UTexture2D>(GMMarkTexturePath.TryLoad()))
+		if (UTexture2D* MarkTexture = Cast<UTexture2D>(GMMarkTexturePath().TryLoad()))
 		{
 			MarkImage->SetBrushFromTexture(MarkTexture);
 			MarkImage->SetDesiredSizeOverride(FVector2D(64.0f, 64.0f));

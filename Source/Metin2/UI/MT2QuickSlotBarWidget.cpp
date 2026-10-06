@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2QuickSlotBarWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Characters/MT2PlayerCharacter.h"
 #include "Components/Button.h"
@@ -28,7 +29,7 @@ void UMT2QuickSlotBarWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 	Slots = {QuickSlot1, QuickSlot2, QuickSlot3, QuickSlot4, QuickSlot5, QuickSlot6, QuickSlot7, QuickSlot8};
-	UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+	UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 	for (int32 Index = 0; Index < Slots.Num(); ++Index)
 	{
 		const FText Hotkey = FText::FromString(Index < 4 ? FString::FromInt(Index + 1) : FString::Printf(TEXT("F%d"), Index - 3));

@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2ShopWidget.h"
+#include "Config/MT2PathSettings.h"
 #include "Audio/MT2SoundPlaybackSubsystem.h"
 
 #include "Kismet/GameplayStatics.h"
@@ -52,7 +53,7 @@ namespace
 
 	UButton* MakeTextButton(UWidgetTree& Tree, const FText& Label, TObjectPtr<UTextBlock>& OutLabel)
 	{
-		UTexture2D* PublicTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* PublicTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		UButton* Button = FMT2UIStyle::AtlasButton(
 			Tree, PublicTexture, MiddleButtonUp, MiddleButtonOver, MiddleButtonDown);
 		OutLabel = FMT2UIStyle::Label(Tree, Label, 10);
@@ -88,7 +89,7 @@ TSharedRef<SWidget> UMT2ShopWidget::RebuildWidget()
 		RootCanvas->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 		WidgetTree->RootWidget = RootCanvas;
 
-		UTexture2D* PublicTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* PublicTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 
 		// The grid's real drawn width is (Columns-1) strides plus one full cell; the board adds an
 		// even margin on both sides so the grid and the buttons sit centered.
@@ -112,7 +113,7 @@ TSharedRef<SWidget> UMT2ShopWidget::RebuildWidget()
 		BoardSlot->SetAlignment(FVector2D(0.5, 0.5));
 		BoardSlot->SetSize(FVector2D(BoardWidth, BoardHeight));
 
-		BoardWidget = CreateSharedWidget<UMT2BoardWidget>(TEXT("/Game/UI/MT2Board.MT2Board_C"));
+		BoardWidget = CreateSharedWidget<UMT2BoardWidget>(UMT2PathSettings::Path(TEXT("UI_MT2Board")));
 		if (BoardWidget)
 		{
 			if (UCanvasPanelSlot* BoardBackSlot = FMT2UIStyle::Place(
@@ -124,7 +125,7 @@ TSharedRef<SWidget> UMT2ShopWidget::RebuildWidget()
 			}
 		}
 
-		TitleBarWidget = CreateSharedWidget<UMT2TitleBarWidget>(TEXT("/Game/UI/MT2TitleBar.MT2TitleBar_C"));
+		TitleBarWidget = CreateSharedWidget<UMT2TitleBarWidget>(UMT2PathSettings::Path(TEXT("UI_MT2TitleBar")));
 		if (TitleBarWidget)
 		{
 			TitleBarWidget->InitializeTitleBar(BoardWidth - 16.0f, FText::FromString(TEXT("Shop")));

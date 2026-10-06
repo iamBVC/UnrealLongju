@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2CharacterCreateWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
@@ -185,7 +186,7 @@ void UMT2CharacterCreateWidget::EnsureCharacterPreview()
 			PreviewActor->InitializePreview(PreviewRenderResolution);
 		UMaterialInterface* CompositeMaterial = LoadObject<UMaterialInterface>(
 			nullptr,
-			TEXT("/Game/UI/Materials/M_MT2CharacterPreviewComposite.M_MT2CharacterPreviewComposite"));
+			UMT2PathSettings::Path(TEXT("CharacterPreviewMaterial")));
 		if (CompositeMaterial)
 		{
 			CharacterPreviewMaterial =

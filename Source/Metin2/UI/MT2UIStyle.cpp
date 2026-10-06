@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2UIStyle.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
@@ -146,8 +147,7 @@ UWidget* FMT2UIStyle::ThinBoard(UWidgetTree& Tree, UWidget* Content, const FMarg
 	const FLinearColor BoardColor(0.0f, 0.0f, 0.0f, 0.51f);
 	auto Pattern = [](const TCHAR* Name)
 	{
-		return LoadTexture(*FString::Printf(
-			TEXT("/Game/ymir_work/ui/pattern/T_thinboard_%s.T_thinboard_%s"), Name, Name));
+		return LoadTexture(*UMT2PathSettings::Format(TEXT("ymir_work_ui_pattern_T_thinboard_Name"), TEXT("%s%s"), Name, Name));
 	};
 
 	UGridPanel* Board = Tree.ConstructWidget<UGridPanel>();

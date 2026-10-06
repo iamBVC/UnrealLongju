@@ -8,6 +8,7 @@
 */
 
 #include "Effects/MT2HitEffectActor.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Components/BillboardComponent.h"
 #include "Engine/Texture2D.h"
@@ -23,9 +24,9 @@ namespace
 		{
 			bInitialized = true;
 			static const TCHAR* FramePaths[] = {
-				TEXT("/Game/ymir_work/effect/monster2/T_impact1.T_impact1"),
-				TEXT("/Game/ymir_work/effect/monster2/T_impact2.T_impact2"),
-				TEXT("/Game/ymir_work/effect/monster2/T_impact3.T_impact3"),
+				UMT2PathSettings::Path(TEXT("ymir_work_effect_monster2_T_impact1")),
+				UMT2PathSettings::Path(TEXT("ymir_work_effect_monster2_T_impact2")),
+				UMT2PathSettings::Path(TEXT("ymir_work_effect_monster2_T_impact3")),
 			};
 			for (const TCHAR* Path : FramePaths)
 			{

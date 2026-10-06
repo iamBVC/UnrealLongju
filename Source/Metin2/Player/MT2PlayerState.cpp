@@ -8,6 +8,7 @@
 */
 
 #include "Player/MT2PlayerState.h"
+#include "Config/MT2PathSettings.h"
 #include "Audio/MT2SoundPlaybackSubsystem.h"
 
 #include "Abilities/MT2GameplayTags.h"
@@ -76,7 +77,7 @@ AMT2PlayerState::AMT2PlayerState()
 	TradeComponent = CreateDefaultSubobject<UMT2TradeComponent>(TEXT("TradeComponent"));
 	DefaultAbilities.Add(UMT2GameplayAbilityBasicAttack::StaticClass());
 	ExperienceCurve = TSoftObjectPtr<UCurveFloat>(
-		FSoftObjectPath(TEXT("/Game/Logic/XPCurve.XPCurve")));
+		FSoftObjectPath(UMT2PathSettings::Path(TEXT("ExperienceCurve"))));
 	QuickSlots.SetNum(MT2QuickSlots::TotalSlots);
 }
 

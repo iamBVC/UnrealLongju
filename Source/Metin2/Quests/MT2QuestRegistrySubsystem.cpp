@@ -8,6 +8,7 @@
 */
 
 #include "Quests/MT2QuestRegistrySubsystem.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetRegistry/IAssetRegistry.h"
@@ -19,7 +20,7 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogMT2Quest, Log, All);
 
-const TCHAR* UMT2QuestRegistrySubsystem::QuestRoot = TEXT("/Game/Quests");
+const TCHAR* UMT2QuestRegistrySubsystem::QuestRoot() { return UMT2PathSettings::Path(TEXT("QuestRoot")); }
 
 const TArray<TObjectPtr<const UMT2Quest>>& UMT2QuestRegistrySubsystem::GetQuests()
 {
@@ -50,7 +51,7 @@ void UMT2QuestRegistrySubsystem::ReloadQuests()
 	// In the editor quest assets are UBlueprints; in a cooked build only the generated class survives,
 	// so accept both and resolve each to its UClass.
 	FARFilter Filter;
-	Filter.PackagePaths.Add(QuestRoot);
+	Filter.PackagePaths.Add(QuestRoot());
 	Filter.bRecursivePaths = true;
 	Filter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
 	Filter.ClassPaths.Add(UBlueprintGeneratedClass::StaticClass()->GetClassPathName());
@@ -108,6 +109,6 @@ void UMT2QuestRegistrySubsystem::ReloadQuests()
 	}
 
 	UE_LOG(LogMT2Quest, Display,
-		TEXT("Loaded %d active quest Blueprint(s) from %s%s."), Quests.Num(), QuestRoot,
+		TEXT("Loaded %d active quest Blueprint(s) from %s%s."), Quests.Num(), QuestRoot(),
 		InactiveCount > 0 ? *FString::Printf(TEXT("; skipped %d not present in locale_list"), InactiveCount) : TEXT(""));
 }

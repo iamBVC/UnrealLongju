@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2SkillPageWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
@@ -66,9 +67,9 @@ TSharedRef<SWidget> UMT2SkillPageWidget::RebuildWidget()
 		PageCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("SkillPageCanvas"));
 		WidgetTree->RootWidget = PageCanvas;
 
-		UTexture2D* WindowsTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_windows.T_windows"));
+		UTexture2D* WindowsTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_WindowsAtlas")));
 		UTexture2D* LocaleWindowsTexture =
-			FMT2UIStyle::LoadTexture(TEXT("/Game/locale/en/ui/windows/T_windows.T_windows"));
+			FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("locale_en_ui_windows_T_windows")));
 
 		// ---- Active skills title bar ----
 		BuildHorizontalBar(PageCanvas, FVector2D(BarX, ActiveBarY), BarWidth);
@@ -178,9 +179,9 @@ TSharedRef<SWidget> UMT2SkillPageWidget::RebuildWidget()
 void UMT2SkillPageWidget::BuildHorizontalBar(UCanvasPanel* Canvas, const FVector2D& Position, float Width)
 {
 	// ui.py HorizontalBar: left cap + tiled center + right cap, 17px tall.
-	UTexture2D* LeftTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/pattern/T_horizontalbar_left.T_horizontalbar_left"));
-	UTexture2D* CenterTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/pattern/T_horizontalbar_center.T_horizontalbar_center"));
-	UTexture2D* RightTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/pattern/T_horizontalbar_right.T_horizontalbar_right"));
+	UTexture2D* LeftTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_horizontalbar_left")));
+	UTexture2D* CenterTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_horizontalbar_center")));
+	UTexture2D* RightTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_horizontalbar_right")));
 	const float CapWidth = LeftTexture ? LeftTexture->GetSizeX() : 8.0f;
 
 	FMT2UIStyle::Place(Canvas, FMT2UIStyle::Image(*WidgetTree, LeftTexture),

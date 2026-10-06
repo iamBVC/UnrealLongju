@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2AnimationImporter.h"
+#include "Config/MT2PathSettings.h"
 #include "Importers/MT2MotionScriptParser.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -217,7 +218,7 @@ namespace
 
 		const FString SourceRoot = NormalizedPath.Left(MarkerIndex);
 		const FString RelativeToMotionRoot = NormalizedPath.Mid(MarkerIndex + YmirWorkMarker.Len());
-		return SourceRoot / TEXT("sound") / FPaths::ChangeExtension(RelativeToMotionRoot, TEXT("mss"));
+		return SourceRoot / UMT2PathSettings::Path(TEXT("Part_sound")) / FPaths::ChangeExtension(RelativeToMotionRoot, TEXT("mss"));
 	}
 
 	bool ParseMotionSoundScript(const FString& SoundScriptPath, TArray<FMT2MotionSoundEvent>& OutEvents)
@@ -501,8 +502,8 @@ namespace
 
 			TArray<FString> CandidateObjectPaths;
 			CandidateObjectPaths.Add(BasePackagePath / AssetName + TEXT(".") + AssetName);
-			CandidateObjectPaths.Add(BasePackagePath / TEXT("SkeletalMeshes") / AssetName + TEXT(".") + AssetName);
-			CandidateObjectPaths.Add(BasePackagePath / BaseName / TEXT("SkeletalMeshes") / AssetName + TEXT(".") + AssetName);
+			CandidateObjectPaths.Add(BasePackagePath / UMT2PathSettings::Path(TEXT("Part_SkeletalMeshes")) / AssetName + TEXT(".") + AssetName);
+			CandidateObjectPaths.Add(BasePackagePath / BaseName / UMT2PathSettings::Path(TEXT("Part_SkeletalMeshes")) / AssetName + TEXT(".") + AssetName);
 
 			int32 Score = CountCommonPathSegments(BasePackagePath, PreviewPackagePath) * 100;
 			for (const FString& CandidateObjectPath : CandidateObjectPaths)

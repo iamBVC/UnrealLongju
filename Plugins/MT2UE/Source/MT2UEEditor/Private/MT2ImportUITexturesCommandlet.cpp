@@ -8,6 +8,7 @@
 */
 
 #include "MT2ImportUITexturesCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/Texture2D.h"
@@ -26,13 +27,13 @@ UMT2ImportUITexturesCommandlet::UMT2ImportUITexturesCommandlet()
 
 int32 UMT2ImportUITexturesCommandlet::Main(const FString& Params)
 {
-	FString SourceRoot = TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump");
+	FString SourceRoot = UMT2PathSettings::Path(TEXT("LegacyDumpRoot"));
 	FParse::Value(*Params, TEXT("SourceRoot="), SourceRoot);
 	for (int32 Index = 1; Index <= 3; ++Index)
 	{
 		const FString BaseName = FString::Printf(TEXT("T_ex_gemshop_button_0%d"), Index);
-		const FString Filename = FPaths::Combine(SourceRoot, TEXT("UI/game/taskbar"), BaseName.RightChop(2) + TEXT(".tga"));
-		const FString PackageName = TEXT("/Game/ymir_work/ui/game/taskbar/") + BaseName;
+		const FString Filename = FPaths::Combine(SourceRoot, UMT2PathSettings::Path(TEXT("LegacyTaskbarDirectory")), BaseName.RightChop(2) + TEXT(".tga"));
+		const FString PackageName = UMT2PathSettings::Path(TEXT("ymir_work_ui_game_taskbar")) + BaseName;
 		if (!FPaths::FileExists(Filename))
 		{
 			UE_LOG(LogTemp, Error, TEXT("Missing MT2 UI texture: %s"), *Filename);

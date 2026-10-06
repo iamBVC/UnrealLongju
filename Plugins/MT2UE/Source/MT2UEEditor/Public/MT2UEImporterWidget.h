@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "API/MT2ImportPipeline.h"
 #include "MT2AssetScanner.h"
 #include "MT2MapTerrainBuilder.h"
@@ -162,7 +163,7 @@ private:
 private:
 	FMT2ImportPipeline ImportPipeline;
 	FString SourceRoot;
-	FString DestinationRoot = TEXT("/Game");
+	FString DestinationRoot = UMT2PathSettings::Path(TEXT("ImportDestinationRoot"));
 	FString MapNameFilter;
 	int32 MaxStaticMeshImports = 25;
 	int32 MaxMapPlacements = 1000;

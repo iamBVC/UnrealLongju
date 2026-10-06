@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2QuestImporter.h"
+#include "Config/MT2PathSettings.h"
 #include "MT2QuestExpressionSyntax.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -4447,7 +4448,7 @@ namespace
 	{
 		TArray<FString> AtlasLines;
 		if (ClientSourceRoot.IsEmpty() || !FFileHelper::LoadFileToStringArray(
-			AtlasLines, *(ClientSourceRoot / TEXT("atlasinfo.txt"))))
+			AtlasLines, *(ClientSourceRoot / UMT2PathSettings::Path(TEXT("Part_atlasinfo")))))
 		{
 			return;
 		}
@@ -4478,7 +4479,7 @@ namespace
 		LoadClientMapDefinitions(ClientSourceRoot, ClientMaps);
 
 		TArray<FString> IndexLines;
-		if (!FFileHelper::LoadFileToStringArray(IndexLines, *(LocaleRoot / TEXT("map") / TEXT("index"))))
+		if (!FFileHelper::LoadFileToStringArray(IndexLines, *(LocaleRoot / UMT2PathSettings::Path(TEXT("Part_map")) / UMT2PathSettings::Path(TEXT("Part_index")))))
 		{
 			return;
 		}
@@ -4494,7 +4495,7 @@ namespace
 
 			TArray<FString> SettingLines;
 			if (!FFileHelper::LoadFileToStringArray(
-				SettingLines, *(LocaleRoot / TEXT("map") / IndexParts[1] / TEXT("Setting.txt"))))
+				SettingLines, *(LocaleRoot / UMT2PathSettings::Path(TEXT("Part_map")) / IndexParts[1] / UMT2PathSettings::Path(TEXT("Part_Setting")))))
 			{
 				continue;
 			}
@@ -4529,8 +4530,7 @@ namespace
 			Map.MapId = IndexParts[1];
 			Map.GlobalOrigin = FVector2D(BasePosition.X, BasePosition.Y);
 			Map.WorldSize = FVector2D(MapSize.X, MapSize.Y) * (128.0 * CellScale);
-			Map.WorldPackagePath = FString::Printf(
-				TEXT("/Game/Maps/Game/%s"), *FPaths::GetCleanFilename(Map.MapId));
+			Map.WorldPackagePath = UMT2PathSettings::Format(TEXT("GameMapTemplate"), TEXT("%s"), *FPaths::GetCleanFilename(Map.MapId));
 
 			const FClientMapDefinition* ClientMap = ClientMaps.FindByPredicate(
 				[&Map](const FClientMapDefinition& Candidate)
@@ -4540,8 +4540,7 @@ namespace
 				});
 			if (ClientMap)
 			{
-				Map.WorldPackagePath = FString::Printf(
-					TEXT("/Game/Maps/Game/%s"), *FPaths::GetCleanFilename(ClientMap->MapName));
+				Map.WorldPackagePath = UMT2PathSettings::Format(TEXT("GameMapTemplate"), TEXT("%s"), *FPaths::GetCleanFilename(ClientMap->MapName));
 			}
 		}
 	}
@@ -4561,14 +4560,14 @@ bool FMT2QuestImporter::Import(
 	// Dialog text lives in the locale's translate.lua, normally one level above the quest folder.
 	TMap<FString, FString> Locale;
 	const FString LocaleRoot = FPaths::GetPath(SourceRoot.TrimChar(TEXT('/')));
-	for (const FString& Candidate : {SourceRoot / TEXT("translate.lua"), LocaleRoot / TEXT("translate.lua")})
+	for (const FString& Candidate : {SourceRoot / UMT2PathSettings::Path(TEXT("Part_translate")), LocaleRoot / UMT2PathSettings::Path(TEXT("Part_translate"))})
 	{
 		if (Locale.IsEmpty())
 		{
 			LoadLocaleTable(Candidate, Locale);
 		}
 	}
-	LoadLocaleAliases(SourceRoot / TEXT("locale.lua"), Locale);
+	LoadLocaleAliases(SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale")), Locale);
 	OutResult.LocaleStringsLoaded = Locale.Num();
 	if (Locale.IsEmpty())
 	{
@@ -4579,10 +4578,10 @@ bool FMT2QuestImporter::Import(
 	// The original quest manager resolves symbolic NPC names through questnpc.txt before dispatching
 	// click/chat events. Import the same registry instead of leaving those triggers with vnum zero.
 	TMap<FString, int32> QuestNpcAliases;
-	LoadQuestNpcAliases(SourceRoot / TEXT("questnpc.txt"), QuestNpcAliases);
+	LoadQuestNpcAliases(SourceRoot / UMT2PathSettings::Path(TEXT("Part_questnpc")), QuestNpcAliases);
 
 	TArray<FString> ScriptFiles;
-	const FString ActiveQuestList = SourceRoot / TEXT("locale_list");
+	const FString ActiveQuestList = SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_list"));
 	TArray<FString> ActiveQuestEntries;
 	if (FFileHelper::LoadFileToStringArray(ActiveQuestEntries, *ActiveQuestList))
 	{
@@ -4616,12 +4615,12 @@ bool FMT2QuestImporter::Import(
 		return false;
 	}
 
-	const FString QuestPackagePath = DestinationRoot / TEXT("Quests");
+	const FString QuestPackagePath = DestinationRoot / UMT2PathSettings::Path(TEXT("Part_Quests"));
 	TArray<UPackage*> PackagesToSave;
 	UMT2QuestTableAsset* SharedTableAsset = nullptr;
 	TMap<FString, FString> LibraryConstants;
 	TSet<FString> InitializedQuestNames;
-	ParseLuaLibraryScalars(SourceRoot / TEXT("questlib.lua"), LibraryConstants);
+	ParseLuaLibraryScalars(SourceRoot / UMT2PathSettings::Path(TEXT("Part_questlib")), LibraryConstants);
 
 	// The constant tables the scripts index (special.levelup_quest, special.questscroll, ...) are
 	// converted first: the expression validator consults them to decide whether a table read can be
@@ -4636,7 +4635,7 @@ bool FMT2QuestImporter::Import(
 		LoadQuestMapDefinitions(LocaleRoot, ClientSourceRoot, Maps);
 		if (!Tables.IsEmpty() || !Maps.IsEmpty())
 		{
-			const FString TablePackageName = QuestPackagePath / TEXT("DA_MT2QuestTables");
+			const FString TablePackageName = QuestPackagePath / UMT2PathSettings::Path(TEXT("Part_DA_MT2QuestTables"));
 			UPackage* TablePackage = CreatePackage(*TablePackageName);
 			UMT2QuestTableAsset* TableAsset = FindObject<UMT2QuestTableAsset>(
 				TablePackage, TEXT("DA_MT2QuestTables"));
@@ -4929,7 +4928,7 @@ bool FMT2QuestImporter::Import(
 	if (!OutResult.ConversionReport.IsEmpty())
 	{
 		const FString ReportPath =
-			FPaths::ProjectSavedDir() / TEXT("MT2QuestConversionReport.txt");
+			UMT2PathSettings::Path(TEXT("QuestConversionReport"));
 		FString Report = OutResult.BuildSummary() + TEXT("\n\nUnconverted statements:\n");
 		Report += FString::Join(OutResult.ConversionReport, TEXT("\n"));
 		FFileHelper::SaveStringToFile(Report, *ReportPath);

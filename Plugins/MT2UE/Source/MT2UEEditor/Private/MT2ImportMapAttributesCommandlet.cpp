@@ -1,4 +1,5 @@
 #include "MT2ImportMapAttributesCommandlet.h"
+#include "Config/MT2PathSettings.h"
 #include "Importers/MT2MapAttributeReader.h"
 #include "World/MT2MapPresentationActor.h"
 #include "EngineUtils.h"
@@ -35,11 +36,11 @@ int32 UMT2ImportMapAttributesCommandlet::Main(const FString& Params)
 		{
 			FMT2MapAttributes Attributes;
 			FString Error;
-			const FString Filename = LocaleRoot / TEXT("map") / It->MapId / TEXT("server_attr");
+			const FString Filename = LocaleRoot / UMT2PathSettings::Path(TEXT("Part_map")) / It->MapId / UMT2PathSettings::Path(TEXT("Part_server_attr"));
 			bool bRead = FMT2MapAttributeReader::Read(Filename, Attributes, Error) && Attributes.Size == It->MapCells * 512;
 			if (!bRead && !ClientRoot.IsEmpty())
 			{
-				bRead = FMT2MapAttributeReader::ReadClient(ClientRoot / TEXT("ymir work") / It->MapId, It->MapCells, Attributes, Error);
+				bRead = FMT2MapAttributeReader::ReadClient(ClientRoot / UMT2PathSettings::Path(TEXT("Part_ymir_work")) / It->MapId, It->MapCells, Attributes, Error);
 				if (bRead) { UE_LOG(LogTemp, Warning, TEXT("Using matching client attr.atr for %s; server data missing or dimensions differ."), *MapPath); }
 			}
 			if (!bRead)

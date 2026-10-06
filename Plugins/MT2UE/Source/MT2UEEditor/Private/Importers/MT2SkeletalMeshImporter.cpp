@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2SkeletalMeshImporter.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "AssetImportTask.h"
@@ -94,8 +95,8 @@ namespace
 
 		TArray<FString> CandidateObjectPaths;
 		CandidateObjectPaths.Add(BasePackagePath / AssetName + TEXT(".") + AssetName);
-		CandidateObjectPaths.Add(BasePackagePath / TEXT("SkeletalMeshes") / AssetName + TEXT(".") + AssetName);
-		CandidateObjectPaths.Add(BasePackagePath / BaseName / TEXT("SkeletalMeshes") / AssetName + TEXT(".") + AssetName);
+		CandidateObjectPaths.Add(BasePackagePath / UMT2PathSettings::Path(TEXT("Part_SkeletalMeshes")) / AssetName + TEXT(".") + AssetName);
+		CandidateObjectPaths.Add(BasePackagePath / BaseName / UMT2PathSettings::Path(TEXT("Part_SkeletalMeshes")) / AssetName + TEXT(".") + AssetName);
 		return CandidateObjectPaths;
 	}
 
@@ -147,7 +148,7 @@ namespace
 		TArray<FString> Parts;
 		Record.ContentPath.ParseIntoArray(Parts, TEXT("/"), true);
 
-		FString Result = FMT2StaticMeshImporter::GetWorkingRoot(Context) / TEXT("ConvertedSkeletal") / FMT2AssetScanner::SanitizePackagePathSegment(Record.PackName);
+		FString Result = FMT2StaticMeshImporter::GetWorkingRoot(Context) / UMT2PathSettings::Path(TEXT("Part_ConvertedSkeletal")) / FMT2AssetScanner::SanitizePackagePathSegment(Record.PackName);
 		for (int32 Index = 0; Index < Parts.Num(); ++Index)
 		{
 			if (Index == Parts.Num() - 1)

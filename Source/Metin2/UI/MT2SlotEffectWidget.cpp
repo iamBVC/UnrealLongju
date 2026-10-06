@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2SlotEffectWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "UI/MT2AtlasImage.h"
@@ -31,7 +32,7 @@ TSharedRef<SWidget> UMT2SlotEffectWidget::RebuildWidget()
 {
 	if (WidgetTree && !WidgetTree->RootWidget)
 	{
-		EffectAtlas = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		EffectAtlas = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		EffectImage = WidgetTree->ConstructWidget<UMT2AtlasImage>(
 			UMT2AtlasImage::StaticClass(), TEXT("SlotEffectImage"));
 		EffectImage->SetAtlas(EffectAtlas, EffectFrame(0));

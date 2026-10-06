@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2CharacterSelectWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Authentication/MT2ClientSessionSubsystem.h"
 #include "Blueprint/WidgetTree.h"
@@ -171,7 +172,7 @@ void UMT2CharacterSelectWidget::EnsureCharacterPreview()
 			PreviewActor->InitializePreview(PreviewRenderResolution);
 		UMaterialInterface* CompositeMaterial = LoadObject<UMaterialInterface>(
 			nullptr,
-			TEXT("/Game/UI/Materials/M_MT2CharacterPreviewComposite.M_MT2CharacterPreviewComposite"));
+			UMT2PathSettings::Path(TEXT("CharacterPreviewMaterial")));
 		if (CompositeMaterial)
 		{
 			CharacterPreviewMaterial =

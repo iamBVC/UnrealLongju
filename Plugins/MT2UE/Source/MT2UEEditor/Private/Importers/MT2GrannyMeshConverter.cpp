@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2GrannyMeshConverter.h"
+#include "Config/MT2PathSettings.h"
 
 #include "ReferenceSkeleton.h"
 #include "HAL/FileManager.h"
@@ -49,7 +50,7 @@ namespace
 			return false;
 		}
 
-		const FString DllPath = Plugin->GetBaseDir() / TEXT("Binaries/ThirdParty/Granny/Win64/granny2_x64.dll");
+		const FString DllPath = Plugin->GetBaseDir() / UMT2PathSettings::Path(TEXT("GrannyLibraryRelativePath"));
 		void* Handle = FPlatformProcess::GetDllHandle(*DllPath);
 		bLoaded = Handle != nullptr;
 		if (!bLoaded)

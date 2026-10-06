@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2NameplateComponent.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Characters/MT2PlayerCharacter.h"
 #include "CollisionQueryParams.h"
@@ -27,7 +28,7 @@
 UMT2NameplateComponent::UMT2NameplateComponent()
 {
 	NameplateWidgetClass = TSoftClassPtr<UMT2NameplateWidget>(
-		FSoftObjectPath(TEXT("/Game/UI/MT2Nameplate.MT2Nameplate_C")));
+		FSoftObjectPath(UMT2PathSettings::Path(TEXT("UI_MT2Nameplate"))));
 	SetWidgetSpace(EWidgetSpace::Screen);
 	SetDrawSize(FVector2D(420.0f, 72.0f));
 	SetPivot(FVector2D(0.5f, 1.0f));

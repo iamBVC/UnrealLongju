@@ -8,6 +8,7 @@
 */
 
 #include "MT2GeneratePlayerAnimationCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimBlueprint.h"
@@ -25,8 +26,8 @@ namespace
 {
 	int32 CreateExperienceCurve()
 	{
-		const FString PackageName = TEXT("/Game/Logic/XPCurve");
-		UCurveFloat* Curve = LoadObject<UCurveFloat>(nullptr, TEXT("/Game/Logic/XPCurve.XPCurve"));
+		const FString PackageName = UMT2PathSettings::Path(TEXT("ExperienceCurvePackage"));
+		UCurveFloat* Curve = LoadObject<UCurveFloat>(nullptr, UMT2PathSettings::Path(TEXT("ExperienceCurve")));
 		const bool bCreated = Curve == nullptr;
 		UPackage* Package = Curve ? Curve->GetOutermost() : CreatePackage(*PackageName);
 		if (bCreated)
@@ -76,7 +77,7 @@ namespace
 	{
 		TArray<FAssetData> Assets;
 		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"))
-			.Get().GetAssetsByPath(TEXT("/Game/ymir_work"), Assets, true, false);
+			.Get().GetAssetsByPath(UMT2PathSettings::Path(TEXT("ymir_work")), Assets, true, false);
 
 		for (const FAssetData& Asset : Assets)
 		{
@@ -134,8 +135,7 @@ namespace
 		};
 		for (const TCHAR* BlueprintName : BlueprintNames)
 		{
-			const FString Path = FString::Printf(
-				TEXT("/Game/Characters/Animations/%s.%s"), BlueprintName, BlueprintName);
+			const FString Path = UMT2PathSettings::Format(TEXT("Characters_Animations_Name"), TEXT("%s%s"), BlueprintName, BlueprintName);
 			const UAnimBlueprint* Blueprint = LoadObject<UAnimBlueprint>(nullptr, *Path);
 			const UMT2CharacterAnimInstance* Defaults = Blueprint && Blueprint->GeneratedClass
 				? Cast<UMT2CharacterAnimInstance>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
@@ -193,7 +193,7 @@ int32 UMT2GeneratePlayerAnimationCommandlet::Main(const FString& Params)
 	FParse::Value(*Params, TEXT("SourceRoot="), SourceRoot);
 	if (SourceRoot.IsEmpty())
 	{
-		SourceRoot = TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump");
+		SourceRoot = UMT2PathSettings::Path(TEXT("LegacyDumpRoot"));
 	}
 
 	FMT2CharacterAnimationGenerationResult Result;

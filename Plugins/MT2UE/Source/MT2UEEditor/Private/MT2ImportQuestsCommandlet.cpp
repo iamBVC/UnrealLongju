@@ -8,6 +8,7 @@
 */
 
 #include "MT2ImportQuestsCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Engine/Blueprint.h"
 #include "FileHelpers.h"
@@ -158,7 +159,7 @@ namespace
 	void DumpQuest(const FString& QuestAssetName)
 	{
 		const FString ObjectPath =
-			FString::Printf(TEXT("/Game/Quests/%s.%s"), *QuestAssetName, *QuestAssetName);
+			UMT2PathSettings::Format(TEXT("Quests_Name"), TEXT("%s%s"), *QuestAssetName, *QuestAssetName);
 		const UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *ObjectPath);
 		const UMT2Quest* Quest = (Blueprint && Blueprint->GeneratedClass)
 			? Cast<UMT2Quest>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
@@ -246,9 +247,9 @@ UMT2ImportQuestsCommandlet::UMT2ImportQuestsCommandlet()
 int32 UMT2ImportQuestsCommandlet::Main(const FString& Params)
 {
 	FString SourceRoot =
-		TEXT("D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy/quest");
-	FString DestinationRoot = TEXT("/Game");
-	FString ClientSourceRoot = TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump");
+		UMT2PathSettings::Path(TEXT("Legacy_quest"));
+	FString DestinationRoot = UMT2PathSettings::Path(TEXT("ImportDestinationRoot"));
+	FString ClientSourceRoot = UMT2PathSettings::Path(TEXT("LegacyDumpRoot"));
 	FParse::Value(*Params, TEXT("Source="), SourceRoot);
 	FParse::Value(*Params, TEXT("Destination="), DestinationRoot);
 	FParse::Value(*Params, TEXT("ClientSource="), ClientSourceRoot);

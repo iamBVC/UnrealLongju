@@ -62,5 +62,5 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skills")
 	TArray<TObjectPtr<UMT2SkillDefinition>> SupportSkills;
 
-	static const TCHAR* SkillSetSearchRoot;
+	static const TCHAR* SkillSetSearchRoot();
 };

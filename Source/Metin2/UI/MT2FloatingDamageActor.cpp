@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2FloatingDamageActor.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Camera/PlayerCameraManager.h"
 #include "Components/TextRenderComponent.h"
@@ -29,7 +30,7 @@ AMT2FloatingDamageActor::AMT2FloatingDamageActor()
 	DamageText->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	DamageText->SetTranslucentSortPriority(100);
 	static ConstructorHelpers::FObjectFinder<UMaterialInterface> TranslucentTextMaterial(
-		TEXT("/Engine/EngineMaterials/DefaultTextMaterialTranslucent"));
+		UMT2PathSettings::Path(TEXT("Engine_EngineMaterials_DefaultTextMaterialTranslucent")));
 	if (TranslucentTextMaterial.Succeeded())
 	{
 		DamageText->SetTextMaterial(TranslucentTextMaterial.Object);

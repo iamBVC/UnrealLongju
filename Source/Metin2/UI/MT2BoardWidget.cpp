@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2BoardWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Components/Image.h"
 #include "UI/MT2UIStyle.h"
@@ -36,13 +37,13 @@ void UMT2BoardWidget::NativePreConstruct()
 
 void UMT2BoardWidget::ApplyVisuals()
 {
-	ApplyTexture(BoardBase, TEXT("/Game/ymir_work/ui/pattern/T_board_base.T_board_base"));
-	ApplyTexture(BoardTop, TEXT("/Game/ymir_work/ui/pattern/T_board_line_top.T_board_line_top"));
-	ApplyTexture(BoardBottom, TEXT("/Game/ymir_work/ui/pattern/T_board_line_bottom.T_board_line_bottom"));
-	ApplyTexture(BoardLeft, TEXT("/Game/ymir_work/ui/pattern/T_board_line_left.T_board_line_left"));
-	ApplyTexture(BoardRight, TEXT("/Game/ymir_work/ui/pattern/T_board_line_right.T_board_line_right"));
-	ApplyTexture(BoardLT, TEXT("/Game/ymir_work/ui/pattern/T_board_corner_lefttop.T_board_corner_lefttop"));
-	ApplyTexture(BoardRT, TEXT("/Game/ymir_work/ui/pattern/T_board_corner_righttop.T_board_corner_righttop"));
-	ApplyTexture(BoardLB, TEXT("/Game/ymir_work/ui/pattern/T_board_corner_leftbottom.T_board_corner_leftbottom"));
-	ApplyTexture(BoardRB, TEXT("/Game/ymir_work/ui/pattern/T_board_corner_rightbottom.T_board_corner_rightbottom"));
+	ApplyTexture(BoardBase, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_base")));
+	ApplyTexture(BoardTop, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_line_top")));
+	ApplyTexture(BoardBottom, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_line_bottom")));
+	ApplyTexture(BoardLeft, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_line_left")));
+	ApplyTexture(BoardRight, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_line_right")));
+	ApplyTexture(BoardLT, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_corner_lefttop")));
+	ApplyTexture(BoardRT, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_corner_righttop")));
+	ApplyTexture(BoardLB, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_corner_leftbottom")));
+	ApplyTexture(BoardRB, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_corner_rightbottom")));
 }

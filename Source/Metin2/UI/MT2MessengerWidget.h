@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "Messenger/MT2MessengerTypes.h"
 #include "UI/MT2UserWidget.h"
 #include "MT2MessengerWidget.generated.h"
@@ -71,7 +72,7 @@ public:
 	// the atlas without changing row logic.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Messenger|Style")
 	TSoftObjectPtr<class UTexture2D> MessengerAtlas =
-		TSoftObjectPtr<class UTexture2D>(FSoftObjectPath(TEXT("/Game/ymir_work/ui/T_windows.T_windows")));
+		TSoftObjectPtr<class UTexture2D>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("UI_WindowsAtlas"))));
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Messenger|Style")
 	FVector2D LampSize = FVector2D(12.0, 12.0);

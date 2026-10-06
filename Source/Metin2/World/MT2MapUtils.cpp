@@ -8,6 +8,7 @@
 */
 
 #include "World/MT2MapUtils.h"
+#include "Config/MT2PathSettings.h"
 
 #if WITH_EDITOR
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -67,7 +68,7 @@ namespace
 	{
 		TArray<FAssetData> ExternalActors;
 		AssetRegistry.GetAssetsByPath(
-			FName(TEXT("/Game/__ExternalActors__/Maps/Game")), ExternalActors, true, true);
+			FName(UMT2PathSettings::Path(TEXT("__ExternalActors___Maps_Game"))), ExternalActors, true, true);
 		for (const FAssetData& Asset : ExternalActors)
 		{
 			FString ActorClass;
@@ -149,8 +150,7 @@ FString MT2MapUtils::ResolvePIEWorldPackage(const TArray<FString>& MapAliases)
 		Candidate.TrimStartAndEndInline();
 		if (!Candidate.StartsWith(TEXT("/")))
 		{
-			Candidate = FString::Printf(
-				TEXT("/Game/Maps/Game/%s"), *FPaths::GetCleanFilename(Candidate));
+			Candidate = UMT2PathSettings::Format(TEXT("GameMapTemplate"), TEXT("%s"), *FPaths::GetCleanFilename(Candidate));
 		}
 		if (!FPackageName::DoesPackageExist(Candidate))
 		{

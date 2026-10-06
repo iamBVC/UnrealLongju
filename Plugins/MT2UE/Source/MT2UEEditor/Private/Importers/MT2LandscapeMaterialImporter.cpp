@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2LandscapeMaterialImporter.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/Texture2D.h"
@@ -44,7 +45,7 @@ namespace
 	{
 		FLandscapeMaterialPaths Paths;
 		const FString SanitizedMapName = FMT2AssetScanner::SanitizePackagePathSegment(MapName);
-		const FString Folder = Context.DestinationRoot / TEXT("Materials") / SanitizedMapName;
+		const FString Folder = Context.DestinationRoot / UMT2PathSettings::Path(TEXT("Part_Materials")) / SanitizedMapName;
 		Paths.MaterialAssetName = TEXT("M_") + SanitizedMapName + TEXT("_Landscape");
 		Paths.MaterialPackage = Folder / Paths.MaterialAssetName;
 		Paths.MaterialObject = Paths.MaterialPackage + TEXT(".") + Paths.MaterialAssetName;

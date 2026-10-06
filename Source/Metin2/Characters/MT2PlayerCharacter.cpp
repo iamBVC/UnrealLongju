@@ -8,6 +8,7 @@
 */
 
 #include "Characters/MT2PlayerCharacter.h"
+#include "Config/MT2PathSettings.h"
 #include "World/MT2MapAttributes.h"
 #include "Audio/MT2SoundPlaybackSubsystem.h"
 #include "World/MT2WorldSimulationSubsystem.h"
@@ -1180,7 +1181,7 @@ void AMT2PlayerCharacter::HandleDeath()
 			// /Game/UI/MT2Respawn is authored by MT2GenerateUIBlueprintsCommandlet, same as every other
 			// real UI window in this project (taskbar, inventory, HUD) - not the raw C++ class.
 			const TSubclassOf<UMT2RespawnWidget> RespawnWidgetClass =
-				LoadClass<UMT2RespawnWidget>(nullptr, TEXT("/Game/UI/MT2Respawn.MT2Respawn_C"));
+				LoadClass<UMT2RespawnWidget>(nullptr, UMT2PathSettings::Path(TEXT("UI_MT2Respawn")));
 			if (!RespawnWidgetClass)
 			{
 				UE_LOG(LogMT2Targeting, Error, TEXT("Required UI asset /Game/UI/MT2Respawn is missing or invalid."));
@@ -1444,8 +1445,7 @@ FString AMT2PlayerCharacter::BuildUnarmedAttackAnimationPath(int32 ComboIndex) c
 		(Appearance.Race == EMT2CharacterRace::Shaman && Appearance.Sex == EMT2CharacterSex::Female);
 	const TCHAR* Folder = bPrimaryFolder ? TEXT("pc") : TEXT("pc2");
 	const TCHAR* Animation = (ComboIndex % 2) == 0 ? TEXT("A_attack") : TEXT("A_attack_1");
-	return FString::Printf(
-		TEXT("/Game/ymir_work/%s/%s/general/%s.%s"), Folder, *Race, Animation, Animation);
+	return UMT2PathSettings::Format(TEXT("ymir_work_Name_Name_general_Name"), TEXT("%s%s%s%s"), Folder, *Race, Animation, Animation);
 }
 
 void AMT2PlayerCharacter::HandleBasicAttackPerformed(int32 ComboIndex)

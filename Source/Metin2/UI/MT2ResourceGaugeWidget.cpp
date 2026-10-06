@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2ResourceGaugeWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/CanvasPanel.h"
@@ -23,7 +24,7 @@ namespace
 	// Old client uiscript/taskbar.py: the gauge board is game/taskbar/gauge.sub, which is the
 	// region (0,0)-(158,47) of ui/taskbar.tga (imported as T_taskbar). The fill bars are the
 	// animated HPGauge/SPGauge/STGauge frame folders.
-	const TCHAR* TaskbarTexturePath = TEXT("/Game/ymir_work/ui/T_taskbar.T_taskbar");
+	const TCHAR* TaskbarTexturePath() { return UMT2PathSettings::Path(TEXT("UI_TaskbarAtlas")); }
 	const FMT2AtlasRegion GaugeBoardRegion(0.0f, 0.0f, 158.0f, 47.0f);
 }
 
@@ -35,14 +36,14 @@ void UMT2ResourceGaugeWidget::NativeConstruct()
 	// changes - the classic "gauge board disappeared after a texture re-import").
 	if (GaugeBackground)
 	{
-		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(TaskbarTexturePath);
+		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(TaskbarTexturePath());
 		if (Taskbar)
 		{
 			GaugeBackground->SetBrush(FMT2UIStyle::AtlasBrush(Taskbar, GaugeBoardRegion));
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("MT2ResourceGauge: gauge board texture '%s' not found."), TaskbarTexturePath);
+			UE_LOG(LogTemp, Warning, TEXT("MT2ResourceGauge: gauge board texture '%s' not found."), TaskbarTexturePath());
 		}
 	}
 	LoadAnimationFrames();
@@ -98,7 +99,7 @@ void UMT2ResourceGaugeWidget::LoadAnimationFrames()
 		Frames.Reset();
 		for (int32 Index = 1; Index <= 7; ++Index)
 		{
-			const FString Path = FString::Printf(TEXT("/Game/ymir_work/ui/pattern/%s/T_%02d.T_%02d"), Folder, Index, Index);
+			const FString Path = UMT2PathSettings::Format(TEXT("ymir_work_ui_pattern_Name_T_Index"), TEXT("%s%02d%02d"), Folder, Index, Index);
 			UTexture2D* Frame = FMT2UIStyle::LoadTexture(*Path);
 			// Keep gauge fill textures fully resident; otherwise the first PIE shows streamed-in mips as
 			// garbage until a play forces them in.

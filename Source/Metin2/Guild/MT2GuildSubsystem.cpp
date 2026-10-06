@@ -8,6 +8,7 @@
 */
 
 #include "Guild/MT2GuildSubsystem.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Dom/JsonObject.h"
 #include "Misc/FileHelper.h"
@@ -368,7 +369,7 @@ void UMT2GuildSubsystem::BroadcastUpdate(int32 GuildId)
 
 FString UMT2GuildSubsystem::GetSaveFilePath() const
 {
-	return FPaths::ProjectSavedDir() / TEXT("MT2Guilds.json");
+	return FString(UMT2PathSettings::Path(TEXT("GuildStateFile")));
 }
 
 void UMT2GuildSubsystem::SaveGuilds()

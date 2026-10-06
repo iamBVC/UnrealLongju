@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2QuestArrowComponent.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetTree.h"
@@ -25,7 +26,7 @@ namespace
 {
 	// Reuses the minimap atlas's arrow art, flipped to point down at the NPC. Swap this region (or the
 	// texture) if dedicated quest-marker art is imported later.
-	const TCHAR* ArrowTexturePath = TEXT("/Game/ymir_work/ui/T_minimap.T_minimap");
+	const TCHAR* ArrowTexturePath() { return UMT2PathSettings::Path(TEXT("ymir_work_ui_T_minimap")); }
 	const FMT2AtlasRegion ArrowRegion(240.0f, 152.0f, 250.0f, 163.0f);
 	constexpr float ArrowDrawSize = 34.0f;
 
@@ -36,7 +37,7 @@ TSharedRef<SWidget> UMT2QuestArrowWidget::RebuildWidget()
 	if (WidgetTree && !WidgetTree->RootWidget)
 	{
 		UImage* Arrow = WidgetTree->ConstructWidget<UImage>(UImage::StaticClass(), TEXT("QuestArrow"));
-		if (UTexture2D* Atlas = FMT2UIStyle::LoadTexture(ArrowTexturePath))
+		if (UTexture2D* Atlas = FMT2UIStyle::LoadTexture(ArrowTexturePath()))
 		{
 			FSlateBrush Brush = FMT2UIStyle::AtlasBrush(Atlas, ArrowRegion);
 			Brush.ImageSize = FVector2D(ArrowDrawSize);

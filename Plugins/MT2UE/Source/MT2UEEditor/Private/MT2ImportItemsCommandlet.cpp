@@ -8,6 +8,7 @@
 */
 
 #include "MT2ImportItemsCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Importers/MT2ItemImporter.h"
 #include "Misc/Parse.h"
@@ -23,8 +24,8 @@ UMT2ImportItemsCommandlet::UMT2ImportItemsCommandlet()
 int32 UMT2ImportItemsCommandlet::Main(const FString& Params)
 {
 	// English client data is the canonical import source. The reader decodes its MIPX v1 container.
-	FString SourceRoot = TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump");
-	FString DestinationRoot = TEXT("/Game");
+	FString SourceRoot = UMT2PathSettings::Path(TEXT("LegacyDumpRoot"));
+	FString DestinationRoot = UMT2PathSettings::Path(TEXT("ImportDestinationRoot"));
 	FParse::Value(*Params, TEXT("Source="), SourceRoot);
 	FParse::Value(*Params, TEXT("Destination="), DestinationRoot);
 

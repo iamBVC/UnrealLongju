@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "Engine/DeveloperSettings.h"
 #include "Items/MT2ItemTypes.h"
 #include "Player/MT2PlayerTypes.h"
@@ -71,17 +72,16 @@ struct METIN2_API FMT2RefinementGlitterSet
 		: RefinementLevel(InLevel)
 	{
 		const FString Tier = FString::FromInt(InLevel);
-		const FString Root = TEXT("/Game/ymir_work/pc/common/effect/");
 		Sword = TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			Root + TEXT("sword/PS_sword_") + Tier + TEXT(".PS_sword_") + Tier));
+			UMT2PathSettings::Format(TEXT("RefinementSwordTemplate"), TEXT("%s%s"), *Tier, *Tier)));
 		Bow = TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			Root + TEXT("sword/PS_sword_") + Tier + TEXT("_b.PS_sword_") + Tier + TEXT("_b")));
+			UMT2PathSettings::Format(TEXT("RefinementBowTemplate"), TEXT("%s%s"), *Tier, *Tier)));
 		FanBell = TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			Root + TEXT("sword/PS_sword_") + Tier + TEXT("_f.PS_sword_") + Tier + TEXT("_f")));
+			UMT2PathSettings::Format(TEXT("RefinementFanBellTemplate"), TEXT("%s%s"), *Tier, *Tier)));
 		SmallWeapon = TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			Root + TEXT("sword/PS_sword_") + Tier + TEXT("_s.PS_sword_") + Tier + TEXT("_s")));
+			UMT2PathSettings::Format(TEXT("RefinementSmallWeaponTemplate"), TEXT("%s%s"), *Tier, *Tier)));
 		BodyArmor = TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			Root + TEXT("armor/PS_armor_") + Tier + TEXT(".PS_armor_") + Tier));
+			UMT2PathSettings::Format(TEXT("RefinementBodyTemplate"), TEXT("%s%s"), *Tier, *Tier)));
 	}
 };
 
@@ -127,7 +127,7 @@ public:
 	// Old IntroEmpire.dds atlas used for compact empire flags beside player names.
 	UPROPERTY(EditAnywhere, config, Category = "UI|Empire")
 	TSoftObjectPtr<UTexture2D> EmpireFlagAtlas = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(
-		TEXT("/Game/ymir_work/ui/T_introempire.T_introempire")));
+		UMT2PathSettings::Path(TEXT("ymir_work_ui_T_introempire"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "UI|Empire")
 	TMap<EMT2Empire, FMT2AtlasRect> EmpireFlagRegions = {
@@ -147,7 +147,7 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Targeting",
 		meta = (AllowedClasses = "/Script/Engine.StaticMesh"))
 	TSoftObjectPtr<UStaticMesh> TargetIndicatorMesh =
-		TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
+		TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("Engine_BasicShapes_Cylinder"))));
 
 	// Optional material override for the indicator mesh (e.g. the imported additive ring material).
 	UPROPERTY(EditAnywhere, config, Category = "Targeting",
@@ -178,33 +178,33 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "World Items",
 		meta = (AllowedClasses = "/Script/Engine.StaticMesh"))
 	TSoftObjectPtr<UStaticMesh> FallbackWorldItemMesh =
-		TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(TEXT("/Game/ymir_work/item/etc/SM_item_bag.SM_item_bag")));
+		TSoftObjectPtr<UStaticMesh>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("ymir_work_item_etc_SM_item_bag"))));
 
 	// Spatial sounds emitted by AMT2WorldItem when a drop enters the world. The item family
 	// selection matches the old inventory sounds, but playback belongs to the replicated world
 	// actor so mob and player drops are heard by every nearby player.
 	UPROPERTY(EditAnywhere, config, Category = "World Items|Audio")
 	TSoftObjectPtr<USoundBase> WorldItemDefaultDropSound =
-		TSoftObjectPtr<USoundBase>(FSoftObjectPath(TEXT("/Game/sound/ui/drop.drop")));
+		TSoftObjectPtr<USoundBase>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("sound_ui_drop"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "World Items|Audio")
 	TSoftObjectPtr<USoundBase> WorldItemWeaponDropSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/ui/equip_metal_weapon.equip_metal_weapon")));
+			UMT2PathSettings::Path(TEXT("sound_ui_equip_metal_weapon"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "World Items|Audio")
 	TSoftObjectPtr<USoundBase> WorldItemBowDropSound =
-		TSoftObjectPtr<USoundBase>(FSoftObjectPath(TEXT("/Game/sound/ui/equip_bow.equip_bow")));
+		TSoftObjectPtr<USoundBase>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("sound_ui_equip_bow"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "World Items|Audio")
 	TSoftObjectPtr<USoundBase> WorldItemArmorDropSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/ui/equip_metal_armor.equip_metal_armor")));
+			UMT2PathSettings::Path(TEXT("sound_ui_equip_metal_armor"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "World Items|Audio")
 	TSoftObjectPtr<USoundBase> WorldItemAccessoryDropSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/ui/equip_ring_amulet.equip_ring_amulet")));
+			UMT2PathSettings::Path(TEXT("sound_ui_equip_ring_amulet"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "World Items|Audio",
 		meta = (ClampMin = "0.0", Units = "cm"))
@@ -236,41 +236,41 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Progression")
 	TSoftObjectPtr<USoundBase> ExperienceStepSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/effect/etc/levelup_2/levelup1_2.levelup1_2")));
+			UMT2PathSettings::Path(TEXT("sound_effect_etc_levelup_2_levelup1_2"))));
 
 	// Old POINT_LEVEL_STEP visual (EFFECT_SKILLUP).
 	UPROPERTY(EditAnywhere, config, Category = "Progression")
 	TSoftObjectPtr<UParticleSystem> ExperienceStepEffect =
 		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			TEXT("/Game/ymir_work/effect/etc/skillup/PS_skillup_1.PS_skillup_1")));
+			UMT2PathSettings::Path(TEXT("ymir_work_effect_etc_skillup_PS_skillup_1"))));
 
 	// Played when the fourth EXP step completes and the character gains a level.
 	UPROPERTY(EditAnywhere, config, Category = "Progression")
 	TSoftObjectPtr<USoundBase> LevelUpSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/effect/etc/levelup_1/levelup1_1.levelup1_1")));
+			UMT2PathSettings::Path(TEXT("sound_effect_etc_levelup_1_levelup1_1"))));
 
 	// Old POINT_LEVEL visual (EFFECT_LEVELUP).
 	UPROPERTY(EditAnywhere, config, Category = "Progression")
 	TSoftObjectPtr<UParticleSystem> LevelUpEffect =
 		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			TEXT("/Game/ymir_work/effect/etc/levelup_1/PS_level_up.PS_level_up")));
+			UMT2PathSettings::Path(TEXT("ymir_work_effect_etc_levelup_1_PS_level_up"))));
 
 	// Cosmetic particles that fly from a defeated mob to every player who actually receives EXP.
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs")
 	TSoftObjectPtr<UParticleSystem> ExperienceOrbEffect =
 		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			TEXT("/Game/ymir_work/effect/etc/gathering/PS_ga_piece_yellow2.PS_ga_piece_yellow2")));
+			UMT2PathSettings::Path(TEXT("ymir_work_effect_etc_gathering_PS_ga_piece_yellow2"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs")
 	TSoftObjectPtr<UParticleSystem> ExperienceOrbImpactEffect =
 		TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(
-			TEXT("/Game/ymir_work/effect/etc/gathering/PS_ga_center_small_yellow.PS_ga_center_small_yellow")));
+			UMT2PathSettings::Path(TEXT("ymir_work_effect_etc_gathering_PS_ga_center_small_yellow"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs")
 	TSoftObjectPtr<UMaterialInterface> ExperienceOrbMaterial =
 		TSoftObjectPtr<UMaterialInterface>(FSoftObjectPath(
-			TEXT("/Game/ymir_work/effect/etc/gathering/M_PS_ga_piece_yellow2_00.M_PS_ga_piece_yellow2_00")));
+			UMT2PathSettings::Path(TEXT("ymir_work_effect_etc_gathering_M_PS_ga_piece_yellow2_00"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs",
 		meta = (ClampMin = "1", ClampMax = "12"))
@@ -360,32 +360,32 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Items|Refinement")
 	TSoftObjectPtr<USoundBase> RefinementSuccessSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/ui/make_soket.make_soket")));
+			UMT2PathSettings::Path(TEXT("sound_ui_make_soket"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "Items|Refinement")
 	TSoftObjectPtr<USoundBase> RefinementFailureSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/ui/jaeryun_fail.jaeryun_fail")));
+			UMT2PathSettings::Path(TEXT("sound_ui_jaeryun_fail"))));
 
 	// The old critical.mss plays gicheon_effect.wav with the critical hit effect. The stock client
 	// has no separate penetration sound, so both default to it but remain independently replaceable.
 	UPROPERTY(EditAnywhere, config, Category = "Combat|Hit Feedback")
 	TSoftObjectPtr<USoundBase> CriticalHitSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/pc/shaman/skill/gicheon_effect.gicheon_effect")));
+			UMT2PathSettings::Path(TEXT("sound_pc_shaman_skill_gicheon_effect"))));
 
 	UPROPERTY(EditAnywhere, config, Category = "Combat|Hit Feedback")
 	TSoftObjectPtr<USoundBase> PenetratingHitSound =
 		TSoftObjectPtr<USoundBase>(FSoftObjectPath(
-			TEXT("/Game/sound/pc/shaman/skill/gicheon_effect.gicheon_effect")));
+			UMT2PathSettings::Path(TEXT("sound_pc_shaman_skill_gicheon_effect"))));
 
 	// The old impact effects select a common sword-hit sample when the attack actually connects.
 	// These are separate from swing sounds authored in the attack animation's .mss file.
 	UPROPERTY(EditAnywhere, config, Category = "Combat|Hit Feedback")
 	TArray<TSoftObjectPtr<USoundBase>> BasicHitSounds = {
-		TSoftObjectPtr<USoundBase>(FSoftObjectPath(TEXT("/Game/sound/common/hit/hit_sword_1.hit_sword_1"))),
-		TSoftObjectPtr<USoundBase>(FSoftObjectPath(TEXT("/Game/sound/common/hit/hit_sword_2.hit_sword_2"))),
-		TSoftObjectPtr<USoundBase>(FSoftObjectPath(TEXT("/Game/sound/common/hit/hit_sword_3.hit_sword_3")))
+		TSoftObjectPtr<USoundBase>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("sound_common_hit_hit_sword_1")))),
+		TSoftObjectPtr<USoundBase>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("sound_common_hit_hit_sword_2")))),
+		TSoftObjectPtr<USoundBase>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("sound_common_hit_hit_sword_3"))))
 	};
 
 	// Persistent +7/+8/+9 equipment glitter effects. Weapon subtypes select the matching old-client

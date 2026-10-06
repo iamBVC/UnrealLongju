@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "Player/MT2PlayerTypes.h"
 #include "MT2ServerRuntimeTypes.generated.h"
 
@@ -88,8 +89,8 @@ struct FMT2ServerRuntimeConfig
 
 	FString CoordinatorIp = TEXT("127.0.0.1");
 	FString CoordinatorBindIp = TEXT("127.0.0.1");
-	FString CoordinatorMapPath = TEXT("/Game/Maps/System/Coordinator");
-	FString GatewayMapPath = TEXT("/Game/Maps/System/Gateway");
+	FString CoordinatorMapPath = UMT2PathSettings::Path(TEXT("Maps_System_Coordinator"));
+	FString GatewayMapPath = UMT2PathSettings::Path(TEXT("Maps_System_Gateway"));
 	int32 CoordinatorPort = 11099;
 	FString CoordinatorToken;
 	float HeartbeatIntervalSeconds = 5.0f;
@@ -99,7 +100,7 @@ struct FMT2ServerRuntimeConfig
 	bool bAllowAccountRegistration = false;
 
 	FString DatabaseRoot;
-	FString DatabaseFile = TEXT("metin2.db");
+	FString DatabaseFile = UMT2PathSettings::Path(TEXT("DatabaseFilename"));
 	FString DatabaseSynchronousMode = TEXT("FULL");
 	int32 DatabaseBusyTimeoutMilliseconds = 5000;
 	bool bCheckDatabaseIntegrity = true;

@@ -8,6 +8,7 @@
 */
 
 #include "MT2ValidateGrannyRoundTripCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Animation/AnimData/IAnimationDataController.h"
 #include "Animation/AnimData/IAnimationDataModel.h"
@@ -532,9 +533,9 @@ int32 UMT2ValidateGrannyRoundTripCommandlet::Main(const FString& Params)
 		return 1;
 	}
 
-	const FString DiagnosticRoot = FPaths::ProjectSavedDir() / TEXT("Diagnostics/GrannyRoundTrip");
-	const FString GltfPath = DiagnosticRoot / TEXT("warrior_4_1.gltf");
-	const FString AnimationModelGltfPath = DiagnosticRoot / TEXT("animation_model.gltf");
+	const FString DiagnosticRoot = UMT2PathSettings::Path(TEXT("GrannyDiagnosticsDirectory"));
+	const FString GltfPath = DiagnosticRoot / UMT2PathSettings::Path(TEXT("Part_warrior_4_1"));
+	const FString AnimationModelGltfPath = DiagnosticRoot / UMT2PathSettings::Path(TEXT("Part_animation_model"));
 	TArray<FMT2GrannyMaterialSlot> MaterialSlots;
 	if (!FMT2GrannyMeshConverter::ConvertGrannyToGltf(
 		ModelPath,
@@ -560,7 +561,7 @@ int32 UMT2ValidateGrannyRoundTripCommandlet::Main(const FString& Params)
 	}
 	USkeletalMesh* UnrealMesh = ExistingMesh ? ExistingMesh : ImportTemporaryMesh(
 		GltfPath,
-		TEXT("/Game/__MT2Validation/Warrior41"),
+		UMT2PathSettings::Path(TEXT("__MT2Validation_Warrior41")),
 		TEXT("SK_Warrior41_RoundTrip"));
 	if (!UnrealMesh)
 	{
@@ -571,7 +572,7 @@ int32 UMT2ValidateGrannyRoundTripCommandlet::Main(const FString& Params)
 		? UnrealMesh
 		: ImportTemporaryMesh(
 			AnimationModelGltfPath,
-			TEXT("/Game/__MT2Validation/AnimationModel"),
+			UMT2PathSettings::Path(TEXT("__MT2Validation_AnimationModel")),
 			TEXT("SK_AnimationModel_RoundTrip"));
 	if (!AnimationModelMesh)
 	{
@@ -1005,7 +1006,7 @@ int32 UMT2ValidateGrannyRoundTripCommandlet::Main(const FString& Params)
 
 	const double RmsError = ComparedVertices > 0
 		? FMath::Sqrt(TotalSquaredError / static_cast<double>(ComparedVertices)) : 0.0;
-	const FString CsvPath = DiagnosticRoot / TEXT("warrior_4_1_vertex_diff.csv");
+	const FString CsvPath = DiagnosticRoot / UMT2PathSettings::Path(TEXT("GrannyVertexReportFilename"));
 	FFileHelper::SaveStringArrayToFile(CsvLines, *CsvPath);
 	UE_LOG(LogTemp, Display,
 		TEXT("MT2_GRANNY_ROUNDTRIP vertices=%lld frames=%d rms_cm=%.9f max_cm=%.9f front_max_cm=%.9f max_context=\"%s\" report=%s"),

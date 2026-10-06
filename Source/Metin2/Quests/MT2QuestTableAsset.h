@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "Engine/DataAsset.h"
 #include "MT2QuestTableAsset.generated.h"
 
@@ -190,6 +191,6 @@ public:
 	// Path the importer writes to and the runtime loads from.
 	static const TCHAR* GetAssetPath()
 	{
-		return TEXT("/Game/Quests/DA_MT2QuestTables.DA_MT2QuestTables");
+		return UMT2PathSettings::Path(TEXT("QuestTables"));
 	}
 };

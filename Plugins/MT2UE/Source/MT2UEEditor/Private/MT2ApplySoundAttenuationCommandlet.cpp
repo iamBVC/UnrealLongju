@@ -8,6 +8,7 @@
 */
 
 #include "MT2ApplySoundAttenuationCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Misc/PackageName.h"
@@ -18,11 +19,10 @@
 
 namespace
 {
-	const TCHAR* SharedAttenuationPackage = TEXT("/Game/sound/SA_MT2_CharacterSounds");
+	const TCHAR* SharedAttenuationPackage() { return UMT2PathSettings::Path(TEXT("CharacterAttenuationPackage")); }
 	const TCHAR* SharedAttenuationName = TEXT("SA_MT2_CharacterSounds");
 
 	// UI feedback must stay 2D, and ambience beds are placed/managed separately.
-	const TCHAR* ExcludedRoots[] = { TEXT("/Game/sound/ui"), TEXT("/Game/sound/ambience") };
 
 	bool SavePackageToDisk(UPackage* Package, UObject* Asset)
 	{
@@ -44,14 +44,15 @@ UMT2ApplySoundAttenuationCommandlet::UMT2ApplySoundAttenuationCommandlet()
 
 int32 UMT2ApplySoundAttenuationCommandlet::Main(const FString& Params)
 {
+	const TCHAR* ExcludedRoots[] = { UMT2PathSettings::Path(TEXT("sound_ui")), UMT2PathSettings::Path(TEXT("sound_ambience")) };
 	// The one attenuation profile every character sound shares. Created only if missing, so hand
 	// tuning it in the editor survives re-runs of this pass.
 	const FString AttenuationObjectPath =
-		FString(SharedAttenuationPackage) + TEXT(".") + SharedAttenuationName;
+		FString(SharedAttenuationPackage()) + TEXT(".") + SharedAttenuationName;
 	USoundAttenuation* Attenuation = LoadObject<USoundAttenuation>(nullptr, *AttenuationObjectPath);
 	if (!Attenuation)
 	{
-		UPackage* Package = CreatePackage(SharedAttenuationPackage);
+		UPackage* Package = CreatePackage(SharedAttenuationPackage());
 		Attenuation = NewObject<USoundAttenuation>(
 			Package, SharedAttenuationName, RF_Public | RF_Standalone | RF_Transactional);
 		// A realistic character-sound profile: full volume up to 4m, natural falloff, inaudible
@@ -76,7 +77,7 @@ int32 UMT2ApplySoundAttenuationCommandlet::Main(const FString& Params)
 	AssetRegistry.Get().SearchAllAssets(true);
 
 	TArray<FAssetData> SoundAssets;
-	AssetRegistry.Get().GetAssetsByPath(TEXT("/Game/sound"), SoundAssets, true);
+	AssetRegistry.Get().GetAssetsByPath(UMT2PathSettings::Path(TEXT("sound")), SoundAssets, true);
 
 	int32 Assigned = 0;
 	int32 AlreadySet = 0;

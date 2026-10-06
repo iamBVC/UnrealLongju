@@ -8,6 +8,7 @@
 */
 
 #include "MT2ImportMobsCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Importers/MT2MobImporter.h"
 #include "Misc/Parse.h"
@@ -22,8 +23,8 @@ UMT2ImportMobsCommandlet::UMT2ImportMobsCommandlet()
 
 int32 UMT2ImportMobsCommandlet::Main(const FString& Params)
 {
-	FString SourceRoot = TEXT("D:/Giochi/Metin2/Development/Dumps/my_dump");
-	FString DestinationRoot = TEXT("/Game");
+	FString SourceRoot = UMT2PathSettings::Path(TEXT("LegacyDumpRoot"));
+	FString DestinationRoot = UMT2PathSettings::Path(TEXT("ImportDestinationRoot"));
 	FParse::Value(*Params, TEXT("Source="), SourceRoot);
 	FParse::Value(*Params, TEXT("Destination="), DestinationRoot);
 	if (FParse::Param(*Params, TEXT("LootOnly")))

@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2SkillSlotWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Button.h"
@@ -45,8 +46,8 @@ TSharedRef<SWidget> UMT2SkillSlotWidget::RebuildWidget()
 		RootCanvas = WidgetTree->ConstructWidget<UCanvasPanel>(UCanvasPanel::StaticClass(), TEXT("SlotCanvas"));
 		WidgetTree->RootWidget = RootCanvas;
 
-		UTexture2D* PublicTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
-		UTexture2D* WindowsTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_windows.T_windows"));
+		UTexture2D* PublicTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
+		UTexture2D* WindowsTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_WindowsAtlas")));
 
 		BackgroundImage = WidgetTree->ConstructWidget<UMT2AtlasImage>(UMT2AtlasImage::StaticClass(), TEXT("SlotBase"));
 		BackgroundImage->SetAtlas(PublicTexture, FMT2AtlasRect(

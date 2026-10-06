@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2InventoryWidget.h"
+#include "Config/MT2PathSettings.h"
 #include "Audio/MT2SoundPlaybackSubsystem.h"
 
 #include "Characters/MT2PlayerCharacter.h"
@@ -39,14 +40,14 @@ UMT2InventoryWidget::UMT2InventoryWidget(const FObjectInitializer& ObjectInitial
 	{
 		return TSoftObjectPtr<USoundBase>(FSoftObjectPath(Path));
 	};
-	PickupItemSound = Sound(TEXT("/Game/sound/ui/pickup_item_in_inventory.pickup_item_in_inventory"));
-	DefaultItemSound = Sound(TEXT("/Game/sound/ui/drop.drop"));
-	ArmorItemSound = Sound(TEXT("/Game/sound/ui/equip_metal_armor.equip_metal_armor"));
-	WeaponItemSound = Sound(TEXT("/Game/sound/ui/equip_metal_weapon.equip_metal_weapon"));
-	BowItemSound = Sound(TEXT("/Game/sound/ui/equip_bow.equip_bow"));
-	AccessoryItemSound = Sound(TEXT("/Game/sound/ui/equip_ring_amulet.equip_ring_amulet"));
-	PotionItemSound = Sound(TEXT("/Game/sound/ui/eat_potion.eat_potion"));
-	PortalItemSound = Sound(TEXT("/Game/sound/ui/potal_scroll.potal_scroll"));
+	PickupItemSound = Sound(UMT2PathSettings::Path(TEXT("sound_ui_pickup_item_in_inventory")));
+	DefaultItemSound = Sound(UMT2PathSettings::Path(TEXT("sound_ui_drop")));
+	ArmorItemSound = Sound(UMT2PathSettings::Path(TEXT("sound_ui_equip_metal_armor")));
+	WeaponItemSound = Sound(UMT2PathSettings::Path(TEXT("sound_ui_equip_metal_weapon")));
+	BowItemSound = Sound(UMT2PathSettings::Path(TEXT("sound_ui_equip_bow")));
+	AccessoryItemSound = Sound(UMT2PathSettings::Path(TEXT("sound_ui_equip_ring_amulet")));
+	PotionItemSound = Sound(UMT2PathSettings::Path(TEXT("sound_ui_eat_potion")));
+	PortalItemSound = Sound(UMT2PathSettings::Path(TEXT("sound_ui_potal_scroll")));
 }
 
 void UMT2InventoryWidget::ToggleInventory()
@@ -121,7 +122,7 @@ void UMT2InventoryWidget::RefreshPageSlots()
 	static const FMT2AtlasRegion TabUp(324.0f, 227.0f, 356.0f, 246.0f);
 	static const FMT2AtlasRegion TabOver(356.0f, 227.0f, 388.0f, 246.0f);
 	static const FMT2AtlasRegion TabDown(388.0f, 227.0f, 420.0f, 246.0f);
-	UTexture2D* WindowsTexture = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_windows.T_windows"));
+	UTexture2D* WindowsTexture = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_WindowsAtlas")));
 	for (int32 Index = 0; Index < PageButtons.Num(); ++Index)
 	{
 		const bool bSelected = Index == ActivePage;
@@ -523,7 +524,7 @@ void UMT2InventoryWidget::OpenDropDialogForSlot(int32 SlotIndex)
 	if (!DropDialogWidget)
 	{
 		UClass* DialogClass = LoadClass<UMT2ItemDropDialogWidget>(
-			nullptr, TEXT("/Game/UI/MT2ItemDropDialog.MT2ItemDropDialog_C"));
+			nullptr, UMT2PathSettings::Path(TEXT("UI_MT2ItemDropDialog")));
 		if (!DialogClass)
 		{
 			UE_LOG(LogTemp, Error, TEXT("Required UI asset /Game/UI/MT2ItemDropDialog is missing or invalid."));
@@ -565,7 +566,7 @@ void UMT2InventoryWidget::OpenMetinAttachDialog(
 	if (!DropDialogWidget)
 	{
 		UClass* DialogClass = LoadClass<UMT2ItemDropDialogWidget>(
-			nullptr, TEXT("/Game/UI/MT2ItemDropDialog.MT2ItemDropDialog_C"));
+			nullptr, UMT2PathSettings::Path(TEXT("UI_MT2ItemDropDialog")));
 		if (!DialogClass)
 		{
 			UE_LOG(LogTemp, Error,

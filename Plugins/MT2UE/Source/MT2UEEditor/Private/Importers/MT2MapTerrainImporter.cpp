@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2MapTerrainImporter.h"
+#include "Config/MT2PathSettings.h"
 #include "MT2MapAttributeReader.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
@@ -91,7 +92,7 @@ namespace
 	bool LoadServerMapBounds(const FString& MapDirectory, FServerMapBounds& OutBounds)
 	{
 		FString Text;
-		if (!FFileHelper::LoadFileToString(Text, *(MapDirectory / TEXT("Setting.txt"))))
+		if (!FFileHelper::LoadFileToString(Text, *(MapDirectory / UMT2PathSettings::Path(TEXT("Part_Setting")))))
 		{
 			return false;
 		}
@@ -141,10 +142,10 @@ namespace
 		const FString& LocaleRoot, const FMT2AssetScanResult* ScanResult,
 		TArray<FServerMapBounds>& OutBounds)
 	{
-		const FString MapRoot = LocaleRoot / TEXT("map");
+		const FString MapRoot = LocaleRoot / UMT2PathSettings::Path(TEXT("Part_map"));
 		TArray<FString> IndexedMapNames;
 		TArray<FString> IndexLines;
-		if (FFileHelper::LoadFileToStringArray(IndexLines, *(MapRoot / TEXT("index"))))
+		if (FFileHelper::LoadFileToStringArray(IndexLines, *(MapRoot / UMT2PathSettings::Path(TEXT("Part_index")))))
 		{
 			for (FString Line : IndexLines)
 			{
@@ -305,7 +306,7 @@ namespace
 		FString& OutBgmFileName, FString& OutSettingsPath)
 	{
 		OutBgmFileName.Reset();
-		OutSettingsPath = FindServerLocaleRoot(Context) / TEXT("settings.lua");
+		OutSettingsPath = FindServerLocaleRoot(Context) / UMT2PathSettings::Path(TEXT("Part_settings"));
 		if (MapIndex <= 0)
 		{
 			return false;
@@ -441,7 +442,7 @@ namespace
 			{
 				FMT2MapAttributes Attributes;
 				FString Error;
-				const FString AttributeFile = FindServerMapDirectory(FindServerLocaleRoot(Context), Map.MapName) / TEXT("server_attr");
+				const FString AttributeFile = FindServerMapDirectory(FindServerLocaleRoot(Context), Map.MapName) / UMT2PathSettings::Path(TEXT("Part_server_attr"));
 				const bool bServerAttributes = FMT2MapAttributeReader::Read(AttributeFile, Attributes, Error) &&
 					Attributes.Size == FIntPoint(Map.MapSizeX, Map.MapSizeY) * 512;
 				if (bServerAttributes || FMT2MapAttributeReader::ReadClient(Map.MapDirectory,
@@ -542,7 +543,7 @@ namespace
 			DefaultTownSpawn, EmpireTownSpawns);
 		FString AttributeError;
 		FMT2MapAttributes Attributes;
-		const FString AttributeFile = FindServerMapDirectory(FindServerLocaleRoot(Context), Map.MapName) / TEXT("server_attr");
+		const FString AttributeFile = FindServerMapDirectory(FindServerLocaleRoot(Context), Map.MapName) / UMT2PathSettings::Path(TEXT("Part_server_attr"));
 		const bool bServerAttributes = FMT2MapAttributeReader::Read(AttributeFile, Attributes, AttributeError) &&
 			Attributes.Size == FIntPoint(Map.MapSizeX, Map.MapSizeY) * 512;
 		if (!bServerAttributes && !FMT2MapAttributeReader::ReadClient(Map.MapDirectory,
@@ -738,25 +739,25 @@ namespace
 	FString FindServerLocaleRoot(const FMT2ImportContext& Context)
 	{
 		const TArray<FString> Candidates = {
-			Context.SourceRoot / TEXT("server_src/share/locale/italy"),
-			TEXT("D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy")
+			Context.SourceRoot / UMT2PathSettings::Path(TEXT("Part_server_src_share_locale_italy")),
+			UMT2PathSettings::Path(TEXT("LegacyServerLocaleRoot"))
 		};
 		for (const FString& Candidate : Candidates)
 		{
-			if (FPaths::DirectoryExists(Candidate / TEXT("map"))) return Candidate;
+			if (FPaths::DirectoryExists(Candidate / UMT2PathSettings::Path(TEXT("Part_map")))) return Candidate;
 		}
 		return FString();
 	}
 
 	FString FindServerMapDirectory(const FString& LocaleRoot, const FString& MapName)
 	{
-		const FString Exact = LocaleRoot / TEXT("map") / MapName;
+		const FString Exact = LocaleRoot / UMT2PathSettings::Path(TEXT("Part_map")) / MapName;
 		if (FPaths::DirectoryExists(Exact)) return Exact;
 		TArray<FString> Directories;
-		IFileManager::Get().FindFiles(Directories, *(LocaleRoot / TEXT("map") / TEXT("*")), false, true);
+		IFileManager::Get().FindFiles(Directories, *(LocaleRoot / UMT2PathSettings::Path(TEXT("Part_map")) / TEXT("*")), false, true);
 		for (const FString& Directory : Directories)
 		{
-			if (Directory.Equals(MapName, ESearchCase::IgnoreCase)) return LocaleRoot / TEXT("map") / Directory;
+			if (Directory.Equals(MapName, ESearchCase::IgnoreCase)) return LocaleRoot / UMT2PathSettings::Path(TEXT("Part_map")) / Directory;
 		}
 		return FString();
 	}
@@ -768,7 +769,7 @@ namespace
 		OutMapIdentifier = SourceMapName;
 		OutMapIndex = 0;
 		TArray<FString> Lines;
-		const FString IndexPath = FindServerLocaleRoot(Context) / TEXT("map") / TEXT("index");
+		const FString IndexPath = FindServerLocaleRoot(Context) / UMT2PathSettings::Path(TEXT("Part_map")) / UMT2PathSettings::Path(TEXT("Part_index"));
 		if (!FFileHelper::LoadFileToStringArray(Lines, *IndexPath))
 		{
 			return false;
@@ -798,7 +799,7 @@ namespace
 
 		TMap<FString, FString> LocalizedTextByKey;
 		TArray<FString> LocaleLines;
-		const FString LocaleGamePath = Context.SourceRoot / TEXT("locale/en/locale_game.txt");
+		const FString LocaleGamePath = Context.SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_locale_game"));
 		if (!FFileHelper::LoadFileToStringArray(LocaleLines, *LocaleGamePath))
 		{
 			return false;
@@ -829,7 +830,7 @@ namespace
 		TMap<int32, FString> LocaleKeyByMapIndex;
 		TArray<FString> LocaleInfoLines;
 		if (FFileHelper::LoadFileToStringArray(
-			LocaleInfoLines, *(Context.SourceRoot / TEXT("localeinfo.py"))))
+			LocaleInfoLines, *(Context.SourceRoot / UMT2PathSettings::Path(TEXT("Part_localeinfo")))))
 		{
 			enum class EMapDictionary : uint8 { None, Identifier, Index };
 			EMapDictionary Dictionary = EMapDictionary::None;
@@ -911,7 +912,7 @@ namespace
 		const FString MapDirectory = FindServerMapDirectory(LocaleRoot, Map.MapName);
 		FString Text;
 		if (MapDirectory.IsEmpty() ||
-			!FFileHelper::LoadFileToString(Text, *(MapDirectory / TEXT("Town.txt"))))
+			!FFileHelper::LoadFileToString(Text, *(MapDirectory / UMT2PathSettings::Path(TEXT("Part_Town")))))
 		{
 			return false;
 		}
@@ -1124,7 +1125,7 @@ namespace
 
 		FMT2MobProtoReadResult Proto;
 		FString ProtoError;
-		if (!FMT2MobProtoReader::Read(Context.SourceRoot / TEXT("locale/en/mob_proto"), Proto, ProtoError))
+		if (!FMT2MobProtoReader::Read(Context.SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_mob_proto")), Proto, ProtoError))
 		{
 			OutResult.AddWarning(FString::Printf(
 				TEXT("Could not read mob_proto while importing portals for %s: %s"), *Map.MapName, *ProtoError));
@@ -1147,7 +1148,7 @@ namespace
 		TArray<FServerMapBounds> MapBounds;
 		LoadAllServerMapBounds(LocaleRoot, Context.ScanResult, MapBounds);
 		const UMT2VnumRegistry* Registry = LoadObject<UMT2VnumRegistry>(
-			nullptr, TEXT("/Game/Logic/DA_MT2VnumRegistry.DA_MT2VnumRegistry"));
+			nullptr, UMT2PathSettings::Path(TEXT("VnumRegistry")));
 		int32 PlacedCount = 0;
 		int32 UpdatedCount = 0;
 		const FScopedTransaction Transaction(LOCTEXT("ImportPortals", "Import Metin2 Portals"));
@@ -1277,8 +1278,8 @@ namespace
 
 		TMap<int32, FImportedMobGroup> Groups;
 		TMap<int32, TArray<FImportedMobGroupChoice>> GroupChoices;
-		LoadMobGroups(LocaleRoot / TEXT("group.txt"), Groups);
-		LoadMobGroupChoices(LocaleRoot / TEXT("group_group.txt"), GroupChoices);
+		LoadMobGroups(LocaleRoot / UMT2PathSettings::Path(TEXT("Part_group")), Groups);
+		LoadMobGroupChoices(LocaleRoot / UMT2PathSettings::Path(TEXT("Part_group_group")), GroupChoices);
 
 		TArray<FMT2MobSpawnEntry> Entries;
 		TArray<FMT2MobSpawnExclusion> Exclusions;
@@ -1295,7 +1296,7 @@ namespace
 		const int32 ImportedPortalCount = ImportPortalsForMap(Context, Map, LocaleRoot, Entries, OutResult);
 
 		if (const UMT2VnumRegistry* Registry = LoadObject<UMT2VnumRegistry>(
-			nullptr, TEXT("/Game/Logic/DA_MT2VnumRegistry.DA_MT2VnumRegistry")))
+			nullptr, UMT2PathSettings::Path(TEXT("VnumRegistry"))))
 		{
 			TSet<int32> MissingVnums;
 			for (const FMT2MobSpawnEntry& Entry : Entries)
@@ -1601,7 +1602,7 @@ bool FMT2MapTerrainImporter::Import(const FMT2ImportRequest& Request, FMT2Import
 		return Progress.ShouldCancel() || (OriginalShouldCancel && OriginalShouldCancel());
 	};
 
-	const FString OutputRoot = FMT2StaticMeshImporter::GetWorkingRoot(EffectiveContext) / TEXT("LandscapeSources");
+	const FString OutputRoot = FMT2StaticMeshImporter::GetWorkingRoot(EffectiveContext) / UMT2PathSettings::Path(TEXT("Part_LandscapeSources"));
 	FPlatformFileManager::Get().GetPlatformFile().CreateDirectoryTree(*OutputRoot);
 
 	FMT2ResolvedWorldResult SharedResolvedWorld;
@@ -1854,7 +1855,7 @@ bool FMT2MapTerrainImporter::CreateLandscapeActor(const FMT2ImportContext& Conte
 	{
 		const FString SanitizedLayerName = FMT2AssetScanner::SanitizePackagePathSegment(LayerName.ToString());
 		const FString LayerAssetName = TEXT("LI_") + SanitizedLayerName;
-		const FString LayerPackagePath = Context.DestinationRoot / TEXT("LandscapeLayers");
+		const FString LayerPackagePath = Context.DestinationRoot / UMT2PathSettings::Path(TEXT("Part_LandscapeLayers"));
 		const FString LayerPackageName = LayerPackagePath / LayerAssetName;
 		const FString LayerObjectPath = LayerPackageName + TEXT(".") + LayerAssetName;
 

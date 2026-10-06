@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2MeshUsageClassifier.h"
+#include "Config/MT2PathSettings.h"
 
 #include "HAL/FileManager.h"
 #include "Misc/FileHelper.h"
@@ -66,7 +67,7 @@ namespace
 	void ReadNpcResources(const FString& SourceRoot, TSet<FString>& OutResources, TArray<FString>& OutWarnings)
 	{
 		FString Text;
-		const FString NpcListPath = SourceRoot / TEXT("npclist.txt");
+		const FString NpcListPath = SourceRoot / UMT2PathSettings::Path(TEXT("Part_npclist"));
 		if (!FFileHelper::LoadFileToString(Text, *NpcListPath))
 		{
 			OutWarnings.Add(FString::Printf(TEXT("Could not read NPC mesh usage table: %s"), *NpcListPath));

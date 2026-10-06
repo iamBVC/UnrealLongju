@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2GatewayHUD.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Audio/MT2AudioUserSettings.h"
 #include "Authentication/MT2ClientSessionSubsystem.h"
@@ -109,7 +110,7 @@ void AMT2GatewayHUD::EndPlay(const EEndPlayReason::Type EndPlayReason)
 template <typename WidgetType>
 WidgetType* AMT2GatewayHUD::CreateGatewayWidget(const TCHAR* AssetName)
 {
-	const FString ClassPath = FString::Printf(TEXT("/Game/UI/%s.%s_C"), AssetName, AssetName);
+	const FString ClassPath = UMT2PathSettings::Format(TEXT("WidgetClassTemplate"), TEXT("%s%s"), AssetName, AssetName);
 	const TSubclassOf<WidgetType> WidgetClass = LoadClass<WidgetType>(nullptr, *ClassPath);
 	if (!WidgetClass)
 	{

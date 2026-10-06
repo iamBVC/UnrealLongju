@@ -8,6 +8,7 @@
 */
 
 #include "MT2GeneratePreviewMaterialCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Materials/Material.h"
@@ -26,7 +27,7 @@ UMT2GeneratePreviewMaterialCommandlet::UMT2GeneratePreviewMaterialCommandlet()
 
 int32 UMT2GeneratePreviewMaterialCommandlet::Main(const FString& Params)
 {
-	static const FString PackageName = TEXT("/Game/UI/Materials/M_MT2CharacterPreviewComposite");
+	static const FString PackageName = UMT2PathSettings::Path(TEXT("CharacterPreviewMaterialPackage"));
 	static const FName AssetName(TEXT("M_MT2CharacterPreviewComposite"));
 	UPackage* Package = LoadPackage(nullptr, *PackageName, LOAD_None);
 	if (!Package)
@@ -60,7 +61,7 @@ int32 UMT2GeneratePreviewMaterialCommandlet::Main(const FString& Params)
 	Texture->Material = Material;
 	Texture->ParameterName = TEXT("PreviewTexture");
 	Texture->Texture = LoadObject<UTexture>(
-		nullptr, TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
+		nullptr, UMT2PathSettings::Path(TEXT("Engine_EngineResources_WhiteSquareTexture")));
 	Texture->SamplerType = SAMPLERTYPE_Color;
 	Texture->MaterialExpressionEditorX = -300;
 	Data->ExpressionCollection.AddExpression(Texture);

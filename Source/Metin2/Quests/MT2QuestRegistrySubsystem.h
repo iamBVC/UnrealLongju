@@ -38,7 +38,7 @@ public:
 	void ReloadQuests();
 
 	// Folder scanned for quest Blueprints.
-	static const TCHAR* QuestRoot;
+	static const TCHAR* QuestRoot();
 
 private:
 	friend class FMT2QuestTargetDispatchTest;

@@ -8,6 +8,7 @@
 */
 
 #include "MT2GenerateUIBlueprintsCommandlet.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -90,11 +91,11 @@
 
 namespace
 {
-	constexpr TCHAR UIPath[] = TEXT("/Game/UI/");
+	const TCHAR* UIPath() { return UMT2PathSettings::Path(TEXT("UIRoot")); }
 
 	UWidgetBlueprint* LoadBP(const TCHAR* Name)
 	{
-		return LoadObject<UWidgetBlueprint>(nullptr, *FString::Printf(TEXT("%s%s.%s"), UIPath, Name, Name));
+		return LoadObject<UWidgetBlueprint>(nullptr, *FString::Printf(TEXT("%s%s.%s"), UIPath(), Name, Name));
 	}
 
 	bool Prepare(UWidgetBlueprint* BP)
@@ -124,7 +125,7 @@ namespace
 
 	UWidget* MakeChild(UWidgetTree* Tree, const TCHAR* AssetName, UClass* ExpectedClass, const TCHAR* Name)
 	{
-		const FString ClassPath = FString::Printf(TEXT("%s%s.%s_C"), UIPath, AssetName, AssetName);
+		const FString ClassPath = FString::Printf(TEXT("%s%s.%s_C"), UIPath(), AssetName, AssetName);
 		UClass* ChildClass = LoadClass<UUserWidget>(nullptr, *ClassPath);
 		if (!ChildClass || !ChildClass->IsChildOf(ExpectedClass))
 		{
@@ -207,7 +208,7 @@ namespace
 			Button->AddChild(MakeText(Tree, *FString::Printf(TEXT("%sLabel"), Name), Label));
 		}
 
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		switch (Size)
 		{
 		case EMT2GeneratedButtonSize::Small:
@@ -252,7 +253,7 @@ namespace
 		{
 			UMT2AtlasImage* Frame = Make<UMT2AtlasImage>(Tree,
 				*FString::Printf(TEXT("%sFrame"), *TextBox->GetName()));
-			SetImageAtlas(Frame, FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public")),
+			SetImageAtlas(Frame, FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas"))),
 				FMT2AtlasRegion(0, 106, 220, 124));
 			Place(Root, Frame, Position, Size, Anchors, Alignment);
 		}
@@ -323,7 +324,7 @@ namespace
 		BP = LoadBP(Name);
 		if (!BP)
 		{
-			const FString PackageName = FString::Printf(TEXT("%s%s"), UIPath, Name);
+			const FString PackageName = FString::Printf(TEXT("%s%s"), UIPath(), Name);
 			UPackage* Package = CreatePackage(*PackageName);
 			BP = Cast<UWidgetBlueprint>(FKismetEditorUtilities::CreateBlueprint(
 				ParentClass, Package, FName(Name), BPTYPE_Normal,
@@ -339,7 +340,7 @@ namespace
 
 	UMaterial* BuildMinimapCircleMaterial()
 	{
-		const FString PackageName = TEXT("/Game/UI/Materials/M_MT2MinimapCircle");
+		const FString PackageName = UMT2PathSettings::Path(TEXT("UI_Materials_M_MT2MinimapCircle"));
 		const FString ObjectPath = PackageName + TEXT(".M_MT2MinimapCircle");
 		UPackage* Package = CreatePackage(*PackageName);
 		UMaterial* Material = LoadObject<UMaterial>(nullptr, *ObjectPath);
@@ -372,7 +373,7 @@ namespace
 			NewObject<UMaterialExpressionTextureSampleParameter2D>(Material);
 		Texture->ParameterName = TEXT("Texture");
 		Texture->Texture = LoadObject<UTexture>(nullptr,
-			TEXT("/Engine/EngineResources/WhiteSquareTexture.WhiteSquareTexture"));
+			UMT2PathSettings::Path(TEXT("Engine_EngineResources_WhiteSquareTexture")));
 		Texture->SamplerType = SAMPLERTYPE_Color;
 		AddExpression(Texture, -500, -100);
 
@@ -417,15 +418,15 @@ namespace
 		if (!Begin(TEXT("MT2Board"), BP, Tree)) return false;
 		UCanvasPanel* Root = Make<UCanvasPanel>(Tree, TEXT("BoardRoot"));
 		Tree->RootWidget = Root;
-		UImage* Base = Make<UImage>(Tree, TEXT("BoardBase")); SetImageTexture(Base, TEXT("/Game/ymir_work/ui/pattern/T_board_base.T_board_base"), true, true);
-		UImage* Top = Make<UImage>(Tree, TEXT("BoardTop")); SetImageTexture(Top, TEXT("/Game/ymir_work/ui/pattern/T_board_line_top.T_board_line_top"), true, false);
-		UImage* Bottom = Make<UImage>(Tree, TEXT("BoardBottom")); SetImageTexture(Bottom, TEXT("/Game/ymir_work/ui/pattern/T_board_line_bottom.T_board_line_bottom"), true, false);
-		UImage* Left = Make<UImage>(Tree, TEXT("BoardLeft")); SetImageTexture(Left, TEXT("/Game/ymir_work/ui/pattern/T_board_line_left.T_board_line_left"), false, true);
-		UImage* Right = Make<UImage>(Tree, TEXT("BoardRight")); SetImageTexture(Right, TEXT("/Game/ymir_work/ui/pattern/T_board_line_right.T_board_line_right"), false, true);
-		UImage* LT = Make<UImage>(Tree, TEXT("BoardLT")); SetImageTexture(LT, TEXT("/Game/ymir_work/ui/pattern/T_board_corner_lefttop.T_board_corner_lefttop"));
-		UImage* RT = Make<UImage>(Tree, TEXT("BoardRT")); SetImageTexture(RT, TEXT("/Game/ymir_work/ui/pattern/T_board_corner_righttop.T_board_corner_righttop"));
-		UImage* LB = Make<UImage>(Tree, TEXT("BoardLB")); SetImageTexture(LB, TEXT("/Game/ymir_work/ui/pattern/T_board_corner_leftbottom.T_board_corner_leftbottom"));
-		UImage* RB = Make<UImage>(Tree, TEXT("BoardRB")); SetImageTexture(RB, TEXT("/Game/ymir_work/ui/pattern/T_board_corner_rightbottom.T_board_corner_rightbottom"));
+		UImage* Base = Make<UImage>(Tree, TEXT("BoardBase")); SetImageTexture(Base, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_base")), true, true);
+		UImage* Top = Make<UImage>(Tree, TEXT("BoardTop")); SetImageTexture(Top, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_line_top")), true, false);
+		UImage* Bottom = Make<UImage>(Tree, TEXT("BoardBottom")); SetImageTexture(Bottom, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_line_bottom")), true, false);
+		UImage* Left = Make<UImage>(Tree, TEXT("BoardLeft")); SetImageTexture(Left, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_line_left")), false, true);
+		UImage* Right = Make<UImage>(Tree, TEXT("BoardRight")); SetImageTexture(Right, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_line_right")), false, true);
+		UImage* LT = Make<UImage>(Tree, TEXT("BoardLT")); SetImageTexture(LT, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_corner_lefttop")));
+		UImage* RT = Make<UImage>(Tree, TEXT("BoardRT")); SetImageTexture(RT, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_corner_righttop")));
+		UImage* LB = Make<UImage>(Tree, TEXT("BoardLB")); SetImageTexture(LB, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_corner_leftbottom")));
+		UImage* RB = Make<UImage>(Tree, TEXT("BoardRB")); SetImageTexture(RB, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_corner_rightbottom")));
 		Place(Root, Base, FVector2D::ZeroVector, FVector2D::ZeroVector, FAnchors(0,0,1,1))->SetOffsets(FMargin(0));
 		Place(Root, Top, FVector2D::ZeroVector, FVector2D::ZeroVector, FAnchors(0,0,1,0))->SetOffsets(FMargin(32,0,32,32));
 		Place(Root, Bottom, FVector2D::ZeroVector, FVector2D::ZeroVector, FAnchors(0,1,1,1))->SetOffsets(FMargin(32,-32,32,32));
@@ -441,15 +442,15 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!Begin(TEXT("MT2TitleBar"), BP, Tree)) return false;
 		UCanvasPanel* Root = Make<UCanvasPanel>(Tree, TEXT("TitleBarRoot")); Tree->RootWidget = Root;
-		UImage* Left = Make<UImage>(Tree, TEXT("TitleLeft")); SetImageTexture(Left, TEXT("/Game/ymir_work/ui/pattern/T_titlebar_left.T_titlebar_left"));
-		UImage* Center = Make<UImage>(Tree, TEXT("TitleCenter")); SetImageTexture(Center, TEXT("/Game/ymir_work/ui/pattern/T_titlebar_center.T_titlebar_center"), true, false);
-		UImage* Right = Make<UImage>(Tree, TEXT("TitleRight")); SetImageTexture(Right, TEXT("/Game/ymir_work/ui/pattern/T_titlebar_right.T_titlebar_right"));
+		UImage* Left = Make<UImage>(Tree, TEXT("TitleLeft")); SetImageTexture(Left, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_titlebar_left")));
+		UImage* Center = Make<UImage>(Tree, TEXT("TitleCenter")); SetImageTexture(Center, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_titlebar_center")), true, false);
+		UImage* Right = Make<UImage>(Tree, TEXT("TitleRight")); SetImageTexture(Right, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_titlebar_right")));
 		Place(Root, Left, FVector2D::ZeroVector, FVector2D(32,23));
 		Place(Root, Center, FVector2D::ZeroVector, FVector2D::ZeroVector, FAnchors(0,0,1,0))->SetOffsets(FMargin(32,0,32,23));
 		Place(Root, Right, FVector2D::ZeroVector, FVector2D(32,23), FAnchors(1,0), FVector2D(1,0));
 		Place(Root, MakeText(Tree, TEXT("TitleText"), TEXT("Window"), 10), FVector2D::ZeroVector, FVector2D::ZeroVector, FAnchors(0,0,1,0))->SetOffsets(FMargin(20,2,20,18));
 		UButton* Close = Make<UMT2AtlasButton>(Tree, TEXT("CloseButton"));
-		SetButtonAtlas(Close, FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public")), FMT2AtlasRegion(25,425,40,440), FMT2AtlasRegion(40,425,55,440), FMT2AtlasRegion(55,425,70,440));
+		SetButtonAtlas(Close, FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas"))), FMT2AtlasRegion(25,425,40,440), FMT2AtlasRegion(40,425,55,440), FMT2AtlasRegion(55,425,70,440));
 		Place(Root, Close, FVector2D(-4,3), FVector2D(15), FAnchors(1,0), FVector2D(1,0));
 		return CompileAndSave(BP);
 	}
@@ -460,7 +461,7 @@ namespace
 		if (!Begin(TEXT("MT2InventorySlot"), BP, Tree)) return false;
 		UOverlay* Root = Make<UOverlay>(Tree, TEXT("InventorySlotRoot")); Tree->RootWidget = Root;
 		UMT2AtlasImage* Border = Make<UMT2AtlasImage>(Tree, TEXT("SlotBackground"));
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		SetImageAtlas(Border, Public, FMT2AtlasRegion(0,348,32,380));
 		Root->AddChild(Border);
 		UImage* Icon = Make<UImage>(Tree, TEXT("IconImage")); Icon->SetVisibility(ESlateVisibility::Hidden); Root->AddChild(Icon);
@@ -487,7 +488,7 @@ namespace
 		if (!Begin(TEXT("MT2QuickSlot"), BP, Tree)) return false;
 		UOverlay* Root = Make<UOverlay>(Tree, TEXT("QuickSlotRoot")); Tree->RootWidget = Root;
 		UBorder* Background = Make<UBorder>(Tree, TEXT("SlotBackground"));
-		Background->SetBrush(FMT2UIStyle::AtlasBrush(FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public")), FMT2AtlasRegion(0,348,32,380)));
+		Background->SetBrush(FMT2UIStyle::AtlasBrush(FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas"))), FMT2AtlasRegion(0,348,32,380)));
 		Root->AddChild(Background);
 		UImage* Icon = Make<UImage>(Tree, TEXT("IconImage")); Icon->SetVisibility(ESlateVisibility::Hidden); Root->AddChild(Icon);
 		UTextBlock* Hotkey = MakeText(Tree, TEXT("HotkeyText"), TEXT("1"), 8);
@@ -502,8 +503,8 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!Begin(TEXT("MT2CurrencyPanel"), BP, Tree)) return false;
 		UCanvasPanel* Root = Make<UCanvasPanel>(Tree, TEXT("CurrencyRoot")); Tree->RootWidget = Root;
-		UTexture2D* Windows = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_windows.T_windows"));
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* Windows = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_WindowsAtlas")));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		UImage* ChequeIcon = Make<UMT2AtlasImage>(Tree, TEXT("ChequeIcon")); SetImageAtlas(ChequeIcon, Windows, FMT2AtlasRegion(496,317,512,333)); Place(Root, ChequeIcon, FVector2D(0,1), FVector2D(16));
 		UButton* Cheque = Make<UMT2AtlasButton>(Tree, TEXT("ChequeButton")); SetButtonAtlas(Cheque, Public, FMT2AtlasRegion(0,506,35,524), FMT2AtlasRegion(0,506,35,524), FMT2AtlasRegion(0,506,35,524));
 		Cheque->AddChild(MakeText(Tree, TEXT("ChequeText"), TEXT("0"), 9)); Place(Root, Cheque, FVector2D(18,0), FVector2D(35,18));
@@ -518,7 +519,7 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!Begin(TEXT("MT2ResourceGauge"), BP, Tree)) return false;
 		UCanvasPanel* Root = Make<UCanvasPanel>(Tree, TEXT("ResourceGaugeRoot")); Tree->RootWidget = Root;
-		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_taskbar.T_taskbar"));
+		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_TaskbarAtlas")));
 		UImage* Background = Make<UMT2AtlasImage>(Tree, TEXT("GaugeBackground")); SetImageAtlas(Background, Taskbar, FMT2AtlasRegion(0,0,158,47)); Place(Root, Background, FVector2D::ZeroVector, FVector2D(158,47));
 		auto AddGauge = [&](const TCHAR* Name, FVector2D Pos, FVector2D Size)
 		{
@@ -535,7 +536,7 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!Begin(TEXT("MT2ExperienceGauge"), BP, Tree)) return false;
 		UCanvasPanel* Root = Make<UCanvasPanel>(Tree, TEXT("ExperienceRoot")); Tree->RootWidget = Root;
-		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_taskbar.T_taskbar"));
+		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_TaskbarAtlas")));
 		UImage* Background = Make<UMT2AtlasImage>(Tree, TEXT("ExperienceBackground")); SetImageAtlas(Background, Taskbar, FMT2AtlasRegion(158,0,263,37)); Place(Root, Background, FVector2D::ZeroVector, FVector2D(105,37));
 		for (int32 Index = 0; Index < 4; ++Index)
 		{
@@ -609,7 +610,7 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!Begin(TEXT("MT2EquipmentPanel"), BP, Tree)) return false;
 		UCanvasPanel* Root = Make<UCanvasPanel>(Tree, TEXT("EquipmentRoot")); Tree->RootWidget = Root;
-		UImage* Background = Make<UImage>(Tree, TEXT("EquipmentBackground")); SetImageTexture(Background, TEXT("/Game/ymir_work/ui/T_equipment_bg_without_ring.T_equipment_bg_without_ring")); Place(Root, Background, FVector2D::ZeroVector, FVector2D(157,223));
+		UImage* Background = Make<UImage>(Tree, TEXT("EquipmentBackground")); SetImageTexture(Background, UMT2PathSettings::Path(TEXT("ymir_work_ui_T_equipment_bg_without_ring"))); Place(Root, Background, FVector2D::ZeroVector, FVector2D(157,223));
 		struct FSlotDef { const TCHAR* Name; FVector2D Position; FVector2D Size; };
 		const FSlotDef Slots[] = {
 			{TEXT("ArmorSlot"),{42,40},{32,64}}, {TEXT("HeadSlot"),{42,5},{32,32}}, {TEXT("BootsSlot"),{42,148},{32,32}},
@@ -624,7 +625,7 @@ namespace
 			if (!Slot) return false;
 			Place(Root, Slot, Def.Position, Def.Size);
 		}
-		UButton* DSS = MakeButton(Tree, TEXT("DragonSoulButton")); SetButtonTextures(DSS, TEXT("/Game/ymir_work/ui/dragonsoul/T_dss_inventory_button_01.T_dss_inventory_button_01"), TEXT("/Game/ymir_work/ui/dragonsoul/T_dss_inventory_button_02.T_dss_inventory_button_02"), TEXT("/Game/ymir_work/ui/dragonsoul/T_dss_inventory_button_03.T_dss_inventory_button_03")); Place(Root, DSS, FVector2D(117,148), FVector2D(15));
+		UButton* DSS = MakeButton(Tree, TEXT("DragonSoulButton")); SetButtonTextures(DSS, UMT2PathSettings::Path(TEXT("ymir_work_ui_dragonsoul_T_dss_inventory_button_01")), UMT2PathSettings::Path(TEXT("ymir_work_ui_dragonsoul_T_dss_inventory_button_02")), UMT2PathSettings::Path(TEXT("ymir_work_ui_dragonsoul_T_dss_inventory_button_03"))); Place(Root, DSS, FVector2D(117,148), FVector2D(15));
 		UButton* Mall = MakeButton(Tree, TEXT("MallButton")); Place(Root, Mall, FVector2D(133,148), FVector2D(15));
 		UButton* Costume = MakeButton(Tree, TEXT("CostumeButton")); Place(Root, Costume, FVector2D(78,5), FVector2D(32));
 		Place(Root, MakeButton(Tree, TEXT("EquipmentPageOneButton"), TEXT("I")), FVector2D(86,161), FVector2D(32,19));
@@ -643,7 +644,7 @@ namespace
 			if (!Slot) return false;
 			Place(Root, Slot, FVector2D(Index < 4 ? Index * 32 : 142 + (Index - 4) * 32, 3), FVector2D(32));
 		}
-		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_taskbar.T_taskbar"));
+		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_TaskbarAtlas")));
 		UButton* Chat = Make<UMT2AtlasButton>(Tree, TEXT("ChatButton")); SetButtonAtlas(Chat, Taskbar, FMT2AtlasRegion(0,159,14,194), FMT2AtlasRegion(14,159,28,194), FMT2AtlasRegion(28,159,42,194)); Place(Root, Chat, FVector2D(128,1), FVector2D(14,35));
 		UButton* Previous = Make<UMT2AtlasButton>(Tree, TEXT("PreviousPageButton")); SetButtonAtlas(Previous, Taskbar, FMT2AtlasRegion(272,32,281,37), FMT2AtlasRegion(281,32,290,37), FMT2AtlasRegion(290,32,299,37)); Place(Root, Previous, FVector2D(273,9), FVector2D(9,5));
 		UButton* Next = Make<UMT2AtlasButton>(Tree, TEXT("NextPageButton")); SetButtonAtlas(Next, Taskbar, FMT2AtlasRegion(487,27,496,32), FMT2AtlasRegion(496,26,505,31), FMT2AtlasRegion(263,32,272,37)); Place(Root, Next, FVector2D(273,24), FVector2D(9,5));
@@ -680,20 +681,20 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!Begin(TEXT("MT2TaskBar"), BP, Tree)) return false;
 		UCanvasPanel* Root = Make<UCanvasPanel>(Tree, TEXT("TaskbarRoot")); Tree->RootWidget = Root;
-		UImage* Base = Make<UImage>(Tree, TEXT("TaskbarBase")); SetImageTexture(Base, TEXT("/Game/ymir_work/ui/pattern/T_taskbar_base.T_taskbar_base"), true, false);
+		UImage* Base = Make<UImage>(Tree, TEXT("TaskbarBase")); SetImageTexture(Base, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_taskbar_base")), true, false);
 		// Fills the (now 42px-tall) taskbar from the left section to the right edge - right inset 0.
 		UCanvasPanelSlot* BaseSlot = Place(Root, Base, FVector2D(263,0), FVector2D(0,37), FAnchors(0,0,1,1)); if (BaseSlot) BaseSlot->SetOffsets(FMargin(263,0,0,0));
 		UWidget* Resources = MakeChild(Tree, TEXT("MT2ResourceGauge"), UMT2ResourceGaugeWidget::StaticClass(), TEXT("ResourceGaugeWidget")); if (!Resources) return false; Place(Root, Resources, FVector2D(0,-10), FVector2D(158,47));
 		UWidget* Experience = MakeChild(Tree, TEXT("MT2ExperienceGauge"), UMT2ExperienceGaugeWidget::StaticClass(), TEXT("ExperienceGaugeWidget")); if (!Experience) return false; Place(Root, Experience, FVector2D(158,0), FVector2D(105,37));
 		UWidget* Quick = MakeChild(Tree, TEXT("MT2QuickSlotBar"), UMT2QuickSlotBarWidget::StaticClass(), TEXT("QuickSlotBarWidget")); if (!Quick) return false; Place(Root, Quick, FVector2D(-86,0), FVector2D(283,37), FAnchors(0.5f,0));
-		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_taskbar.T_taskbar"));
+		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_TaskbarAtlas")));
 		auto AtlasButton = [&](const TCHAR* Name, FVector2D Pos, FAnchors Anchors, FMT2AtlasRegion N, FMT2AtlasRegion H, FMT2AtlasRegion P)
 		{
 			UButton* Button = Make<UMT2AtlasButton>(Tree, Name); SetButtonAtlas(Button, Taskbar, N,H,P); Place(Root, Button, Pos, FVector2D(32), Anchors);
 		};
 		AtlasButton(TEXT("LeftMouseButton"), FVector2D(-128,3), FAnchors(0.5f,0), {32,127,64,159},{64,127,96,159},{96,127,128,159});
 		AtlasButton(TEXT("RightMouseButton"), FVector2D(198,3), FAnchors(0.5f,0), {32,127,64,159},{64,127,96,159},{96,127,128,159});
-		UButton* Money = MakeButton(Tree, TEXT("MoneyButton")); SetButtonTextures(Money, TEXT("/Game/ymir_work/ui/game/taskbar/T_ex_gemshop_button_01.T_ex_gemshop_button_01"), TEXT("/Game/ymir_work/ui/game/taskbar/T_ex_gemshop_button_02.T_ex_gemshop_button_02"), TEXT("/Game/ymir_work/ui/game/taskbar/T_ex_gemshop_button_03.T_ex_gemshop_button_03")); Place(Root, Money, FVector2D(-168,3), FVector2D(32), FAnchors(1,0));
+		UButton* Money = MakeButton(Tree, TEXT("MoneyButton")); SetButtonTextures(Money, UMT2PathSettings::Path(TEXT("ymir_work_ui_game_taskbar_T_ex_gemshop_button_01")), UMT2PathSettings::Path(TEXT("ymir_work_ui_game_taskbar_T_ex_gemshop_button_02")), UMT2PathSettings::Path(TEXT("ymir_work_ui_game_taskbar_T_ex_gemshop_button_03"))); Place(Root, Money, FVector2D(-168,3), FVector2D(32), FAnchors(1,0));
 		AtlasButton(TEXT("CharacterButton"), FVector2D(-134,3), FAnchors(1,0), {263,0,295,32},{295,0,327,32},{327,0,359,32});
 		AtlasButton(TEXT("InventoryButton"), FVector2D(-100,3), FAnchors(1,0), {455,0,487,32},{480,47,512,79},{200,87,232,119});
 		AtlasButton(TEXT("MessengerButton"), FVector2D(-66,3), FAnchors(1,0), {359,0,391,32},{391,0,423,32},{423,0,455,32});
@@ -719,8 +720,8 @@ namespace
 		Place(Root, EmotionsPage, FVector2D(8,30), FVector2D(237,294));
 		Place(Root, QuestsPage, FVector2D(8,30), FVector2D(237,294));
 
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
-		UTexture2D* Windows = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_windows.T_windows"));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
+		UTexture2D* Windows = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_WindowsAtlas")));
 		auto AtlasImage = [&](UCanvasPanel* Parent, const TCHAR* Name, UTexture2D* Texture,
 			const FMT2AtlasRegion& Region, FVector2D Position, FVector2D Size)
 		{
@@ -741,18 +742,18 @@ namespace
 		auto HorizontalBar = [&](UCanvasPanel* Parent, const TCHAR* Prefix, float Y)
 		{
 			UImage* Left = Make<UImage>(Tree, *FString::Printf(TEXT("%sLeft"), Prefix));
-			SetImageTexture(Left, TEXT("/Game/ymir_work/ui/pattern/T_horizontalbar_left.T_horizontalbar_left"));
+			SetImageTexture(Left, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_horizontalbar_left")));
 			Place(Parent, Left, FVector2D(15,Y), FVector2D(16,17));
 			UImage* Center = Make<UImage>(Tree, *FString::Printf(TEXT("%sCenter"), Prefix));
-			SetImageTexture(Center, TEXT("/Game/ymir_work/ui/pattern/T_horizontalbar_center.T_horizontalbar_center"), true, false);
+			SetImageTexture(Center, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_horizontalbar_center")), true, false);
 			Place(Parent, Center, FVector2D(31,Y), FVector2D(191,17));
 			UImage* Right = Make<UImage>(Tree, *FString::Printf(TEXT("%sRight"), Prefix));
-			SetImageTexture(Right, TEXT("/Game/ymir_work/ui/pattern/T_horizontalbar_right.T_horizontalbar_right"));
+			SetImageTexture(Right, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_horizontalbar_right")));
 			Place(Parent, Right, FVector2D(222,Y), FVector2D(16,17));
 		};
 
 		UImage* Face = Make<UImage>(Tree, TEXT("FaceImage"));
-		SetImageTexture(Face, TEXT("/Game/icon/face/T_warrior_m.T_warrior_m"));
+		SetImageTexture(Face, UMT2PathSettings::Path(TEXT("icon_face_T_warrior_m")));
 		Place(StatsPage, Face, FVector2D(11,11), FVector2D(45,45));
 		AtlasImage(StatsPage, TEXT("FaceFrame"), Windows, FMT2AtlasRegion(227,0,280,53), FVector2D(7,7), FVector2D(53));
 		ValueSlot(TEXT("GuildNameSlot"), TEXT("GuildNameText"), FVector2D(60,34), FMT2AtlasRegion(106,163,196,181), TEXT("-"));
@@ -893,19 +894,19 @@ namespace
 			UImage* Image = Make<UImage>(Tree, Name); SetImageTexture(Image, Path, false, true); Image->SetColorAndOpacity(ThinBoardTint);
 			Place(Root, Image, Center + FVector2D(LocalX, FrameTile), FVector2D(FrameTile, DialogHeight - FrameTile * 2.0f), ScreenCenter);
 		};
-		Corner(TEXT("FrameLT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_lefttop.T_thinboard_corner_lefttop"), FVector2D(0.0f, 0.0f));
-		Corner(TEXT("FrameRT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_righttop.T_thinboard_corner_righttop"), FVector2D(DialogWidth - FrameTile, 0.0f));
-		Corner(TEXT("FrameLB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_leftbottom.T_thinboard_corner_leftbottom"), FVector2D(0.0f, DialogHeight - FrameTile));
-		Corner(TEXT("FrameRB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_rightbottom.T_thinboard_corner_rightbottom"), FVector2D(DialogWidth - FrameTile, DialogHeight - FrameTile));
-		EdgeH(TEXT("FrameTop"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_top.T_thinboard_line_top"), 0.0f);
-		EdgeH(TEXT("FrameBottom"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_bottom.T_thinboard_line_bottom"), DialogHeight - FrameTile);
-		EdgeV(TEXT("FrameLeft"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_left.T_thinboard_line_left"), 0.0f);
-		EdgeV(TEXT("FrameRight"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_right.T_thinboard_line_right"), DialogWidth - FrameTile);
+		Corner(TEXT("FrameLT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_lefttop")), FVector2D(0.0f, 0.0f));
+		Corner(TEXT("FrameRT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_righttop")), FVector2D(DialogWidth - FrameTile, 0.0f));
+		Corner(TEXT("FrameLB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_leftbottom")), FVector2D(0.0f, DialogHeight - FrameTile));
+		Corner(TEXT("FrameRB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_rightbottom")), FVector2D(DialogWidth - FrameTile, DialogHeight - FrameTile));
+		EdgeH(TEXT("FrameTop"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_top")), 0.0f);
+		EdgeH(TEXT("FrameBottom"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_bottom")), DialogHeight - FrameTile);
+		EdgeV(TEXT("FrameLeft"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_left")), 0.0f);
+		EdgeV(TEXT("FrameRight"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_right")), DialogWidth - FrameTile);
 
 		// XLarge_Button_01/02/03.sub (default/over/down) are sub-images of Public.dds - same texture
 		// this project already imported as T_public. Regions come straight from the .sub files'
 		// left/top/right/bottom fields.
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		auto RestartButton = [&](const TCHAR* Name, float LocalY, const FString& Label)
 		{
 			UButton* Button = Make<UMT2AtlasButton>(Tree, Name);
@@ -989,14 +990,14 @@ namespace
 			Image->SetColorAndOpacity(ThinBoardTint);
 			Place(Page, Image, Pos, Size);
 		};
-		Frame(TEXT("FrameLT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_lefttop.T_thinboard_corner_lefttop"), FVector2D(0, 0), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameRT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_righttop.T_thinboard_corner_righttop"), FVector2D(DialogWidth - FrameTile, 0), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameLB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_leftbottom.T_thinboard_corner_leftbottom"), FVector2D(0, DialogHeight - FrameTile), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameRB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_rightbottom.T_thinboard_corner_rightbottom"), FVector2D(DialogWidth - FrameTile, DialogHeight - FrameTile), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameTop"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_top.T_thinboard_line_top"), FVector2D(FrameTile, 0), FVector2D(DialogWidth - FrameTile * 2.0f, FrameTile), true, false);
-		Frame(TEXT("FrameBottom"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_bottom.T_thinboard_line_bottom"), FVector2D(FrameTile, DialogHeight - FrameTile), FVector2D(DialogWidth - FrameTile * 2.0f, FrameTile), true, false);
-		Frame(TEXT("FrameLeft"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_left.T_thinboard_line_left"), FVector2D(0, FrameTile), FVector2D(FrameTile, DialogHeight - FrameTile * 2.0f), false, true);
-		Frame(TEXT("FrameRight"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_right.T_thinboard_line_right"), FVector2D(DialogWidth - FrameTile, FrameTile), FVector2D(FrameTile, DialogHeight - FrameTile * 2.0f), false, true);
+		Frame(TEXT("FrameLT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_lefttop")), FVector2D(0, 0), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameRT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_righttop")), FVector2D(DialogWidth - FrameTile, 0), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameLB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_leftbottom")), FVector2D(0, DialogHeight - FrameTile), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameRB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_rightbottom")), FVector2D(DialogWidth - FrameTile, DialogHeight - FrameTile), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameTop"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_top")), FVector2D(FrameTile, 0), FVector2D(DialogWidth - FrameTile * 2.0f, FrameTile), true, false);
+		Frame(TEXT("FrameBottom"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_bottom")), FVector2D(FrameTile, DialogHeight - FrameTile), FVector2D(DialogWidth - FrameTile * 2.0f, FrameTile), true, false);
+		Frame(TEXT("FrameLeft"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_left")), FVector2D(0, FrameTile), FVector2D(FrameTile, DialogHeight - FrameTile * 2.0f), false, true);
+		Frame(TEXT("FrameRight"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_right")), FVector2D(DialogWidth - FrameTile, FrameTile), FVector2D(FrameTile, DialogHeight - FrameTile * 2.0f), false, true);
 
 		UTextBlock* MessageText = MakeText(Tree, TEXT("MessageText"), TEXT("Friend request"), 10);
 		MessageText->SetAutoWrapText(true);
@@ -1067,17 +1068,17 @@ namespace
 			Image->SetColorAndOpacity(ThinBoardTint);
 			Place(Root, Image, Pos, Size);
 		};
-		Frame(TEXT("FrameLT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_lefttop.T_thinboard_corner_lefttop"), FVector2D(0, 0), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameRT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_righttop.T_thinboard_corner_righttop"), FVector2D(WindowWidth - FrameTile, 0), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameLB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_leftbottom.T_thinboard_corner_leftbottom"), FVector2D(0, WindowHeight - FrameTile), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameRB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_rightbottom.T_thinboard_corner_rightbottom"), FVector2D(WindowWidth - FrameTile, WindowHeight - FrameTile), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameTop"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_top.T_thinboard_line_top"), FVector2D(FrameTile, 0), FVector2D(WindowWidth - FrameTile * 2.0f, FrameTile), true, false);
-		Frame(TEXT("FrameBottom"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_bottom.T_thinboard_line_bottom"), FVector2D(FrameTile, WindowHeight - FrameTile), FVector2D(WindowWidth - FrameTile * 2.0f, FrameTile), true, false);
-		Frame(TEXT("FrameLeft"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_left.T_thinboard_line_left"), FVector2D(0, FrameTile), FVector2D(FrameTile, WindowHeight - FrameTile * 2.0f), false, true);
-		Frame(TEXT("FrameRight"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_right.T_thinboard_line_right"), FVector2D(WindowWidth - FrameTile, FrameTile), FVector2D(FrameTile, WindowHeight - FrameTile * 2.0f), false, true);
+		Frame(TEXT("FrameLT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_lefttop")), FVector2D(0, 0), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameRT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_righttop")), FVector2D(WindowWidth - FrameTile, 0), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameLB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_leftbottom")), FVector2D(0, WindowHeight - FrameTile), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameRB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_rightbottom")), FVector2D(WindowWidth - FrameTile, WindowHeight - FrameTile), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameTop"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_top")), FVector2D(FrameTile, 0), FVector2D(WindowWidth - FrameTile * 2.0f, FrameTile), true, false);
+		Frame(TEXT("FrameBottom"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_bottom")), FVector2D(FrameTile, WindowHeight - FrameTile), FVector2D(WindowWidth - FrameTile * 2.0f, FrameTile), true, false);
+		Frame(TEXT("FrameLeft"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_left")), FVector2D(0, FrameTile), FVector2D(FrameTile, WindowHeight - FrameTile * 2.0f), false, true);
+		Frame(TEXT("FrameRight"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_right")), FVector2D(WindowWidth - FrameTile, FrameTile), FVector2D(FrameTile, WindowHeight - FrameTile * 2.0f), false, true);
 
 		// "name_slot" at (10,10) with "titlename" inside it at (3,3).
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		UImage* NameSlot = Make<UImage>(Tree, TEXT("NameSlot"));
 		SetImageAtlas(NameSlot, Public, {0, 124, 130, 142});
 		Place(Root, NameSlot, FVector2D(10.0f, 10.0f), FVector2D(130.0f, 18.0f));
@@ -1193,14 +1194,14 @@ namespace
 			Image->SetColorAndOpacity(ThinBoardTint);
 			Place(Root, Image, Pos, Size);
 		};
-		Frame(TEXT("FrameLT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_lefttop.T_thinboard_corner_lefttop"), FVector2D(0, 0), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameRT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_righttop.T_thinboard_corner_righttop"), FVector2D(WindowWidth - FrameTile, 0), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameLB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_leftbottom.T_thinboard_corner_leftbottom"), FVector2D(0, WindowHeight - FrameTile), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameRB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_rightbottom.T_thinboard_corner_rightbottom"), FVector2D(WindowWidth - FrameTile, WindowHeight - FrameTile), FVector2D(FrameTile), false, false);
-		Frame(TEXT("FrameTop"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_top.T_thinboard_line_top"), FVector2D(FrameTile, 0), FVector2D(WindowWidth - FrameTile * 2.0f, FrameTile), true, false);
-		Frame(TEXT("FrameBottom"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_bottom.T_thinboard_line_bottom"), FVector2D(FrameTile, WindowHeight - FrameTile), FVector2D(WindowWidth - FrameTile * 2.0f, FrameTile), true, false);
-		Frame(TEXT("FrameLeft"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_left.T_thinboard_line_left"), FVector2D(0, FrameTile), FVector2D(FrameTile, WindowHeight - FrameTile * 2.0f), false, true);
-		Frame(TEXT("FrameRight"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_right.T_thinboard_line_right"), FVector2D(WindowWidth - FrameTile, FrameTile), FVector2D(FrameTile, WindowHeight - FrameTile * 2.0f), false, true);
+		Frame(TEXT("FrameLT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_lefttop")), FVector2D(0, 0), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameRT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_righttop")), FVector2D(WindowWidth - FrameTile, 0), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameLB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_leftbottom")), FVector2D(0, WindowHeight - FrameTile), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameRB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_rightbottom")), FVector2D(WindowWidth - FrameTile, WindowHeight - FrameTile), FVector2D(FrameTile), false, false);
+		Frame(TEXT("FrameTop"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_top")), FVector2D(FrameTile, 0), FVector2D(WindowWidth - FrameTile * 2.0f, FrameTile), true, false);
+		Frame(TEXT("FrameBottom"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_bottom")), FVector2D(FrameTile, WindowHeight - FrameTile), FVector2D(WindowWidth - FrameTile * 2.0f, FrameTile), true, false);
+		Frame(TEXT("FrameLeft"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_left")), FVector2D(0, FrameTile), FVector2D(FrameTile, WindowHeight - FrameTile * 2.0f), false, true);
+		Frame(TEXT("FrameRight"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_right")), FVector2D(WindowWidth - FrameTile, FrameTile), FVector2D(FrameTile, WindowHeight - FrameTile * 2.0f), false, true);
 
 		// "board_with_titlebar", titled MESSENGER_TITLE.
 		if (UWidget* TitleBar = MakeChild(Tree, TEXT("MT2TitleBar"), UMT2TitleBarWidget::StaticClass(), TEXT("TitleBarWidget")))
@@ -1214,7 +1215,7 @@ namespace
 		UScrollBox* FriendsBox = Make<UScrollBox>(Tree, TEXT("FriendsBox"));
 		Place(Root, FriendsBox, FVector2D(20.0f, 40.0f), FVector2D(126.0f, 206.0f));
 
-		UTexture2D* Windows = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_windows.T_windows"));
+		UTexture2D* Windows = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_WindowsAtlas")));
 		auto MessengerButton = [&](const TCHAR* Name, float X, FMT2AtlasRegion Normal, FMT2AtlasRegion Hovered, FMT2AtlasRegion Pressed)
 		{
 			UButton* Button = Make<UMT2AtlasButton>(Tree, Name);
@@ -1260,14 +1261,14 @@ namespace
 				Image->SetColorAndOpacity(ThinBoardTint);
 				Place(Page, Image, Pos, Size);
 			};
-			Frame(TEXT("FrameLT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_lefttop.T_thinboard_corner_lefttop"), FVector2D(0, 0), FVector2D(FrameTile), false, false);
-			Frame(TEXT("FrameRT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_righttop.T_thinboard_corner_righttop"), FVector2D(DialogWidth - FrameTile, 0), FVector2D(FrameTile), false, false);
-			Frame(TEXT("FrameLB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_leftbottom.T_thinboard_corner_leftbottom"), FVector2D(0, Height - FrameTile), FVector2D(FrameTile), false, false);
-			Frame(TEXT("FrameRB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_rightbottom.T_thinboard_corner_rightbottom"), FVector2D(DialogWidth - FrameTile, Height - FrameTile), FVector2D(FrameTile), false, false);
-			Frame(TEXT("FrameTop"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_top.T_thinboard_line_top"), FVector2D(FrameTile, 0), FVector2D(DialogWidth - FrameTile * 2.0f, FrameTile), true, false);
-			Frame(TEXT("FrameBottom"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_bottom.T_thinboard_line_bottom"), FVector2D(FrameTile, Height - FrameTile), FVector2D(DialogWidth - FrameTile * 2.0f, FrameTile), true, false);
-			Frame(TEXT("FrameLeft"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_left.T_thinboard_line_left"), FVector2D(0, FrameTile), FVector2D(FrameTile, Height - FrameTile * 2.0f), false, true);
-			Frame(TEXT("FrameRight"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_right.T_thinboard_line_right"), FVector2D(DialogWidth - FrameTile, FrameTile), FVector2D(FrameTile, Height - FrameTile * 2.0f), false, true);
+			Frame(TEXT("FrameLT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_lefttop")), FVector2D(0, 0), FVector2D(FrameTile), false, false);
+			Frame(TEXT("FrameRT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_righttop")), FVector2D(DialogWidth - FrameTile, 0), FVector2D(FrameTile), false, false);
+			Frame(TEXT("FrameLB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_leftbottom")), FVector2D(0, Height - FrameTile), FVector2D(FrameTile), false, false);
+			Frame(TEXT("FrameRB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_rightbottom")), FVector2D(DialogWidth - FrameTile, Height - FrameTile), FVector2D(FrameTile), false, false);
+			Frame(TEXT("FrameTop"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_top")), FVector2D(FrameTile, 0), FVector2D(DialogWidth - FrameTile * 2.0f, FrameTile), true, false);
+			Frame(TEXT("FrameBottom"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_bottom")), FVector2D(FrameTile, Height - FrameTile), FVector2D(DialogWidth - FrameTile * 2.0f, FrameTile), true, false);
+			Frame(TEXT("FrameLeft"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_left")), FVector2D(0, FrameTile), FVector2D(FrameTile, Height - FrameTile * 2.0f), false, true);
+			Frame(TEXT("FrameRight"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_right")), FVector2D(DialogWidth - FrameTile, FrameTile), FVector2D(FrameTile, Height - FrameTile * 2.0f), false, true);
 			return Page;
 		};
 		auto PageButton = [&](UCanvasPanel* Page, const TCHAR* Name, const FString& Label, float Y)
@@ -1592,7 +1593,7 @@ namespace
 		Place(Root, MakeText(Tree, TEXT("MessageText"), TEXT("Drop this item on the ground?"), 10),
 			FVector2D(0.0f, -14.0f), FVector2D(310.0f, 24.0f), Center, CenterAlignment);
 
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		auto DialogButton = [&](const TCHAR* Name, const TCHAR* Label, float X)
 		{
 			UButton* Button = Make<UMT2AtlasButton>(Tree, Name);
@@ -1622,7 +1623,7 @@ namespace
 		Place(Content, Background, FVector2D::ZeroVector, FVector2D(190.0f, 46.0f));
 
 		UImage* Face = Make<UImage>(Tree, TEXT("FaceImage"));
-		SetImageTexture(Face, TEXT("/Game/icon/face/T_warrior_m.T_warrior_m"));
+		SetImageTexture(Face, UMT2PathSettings::Path(TEXT("icon_face_T_warrior_m")));
 		Place(Content, Face, FVector2D(4.0f, 4.0f), FVector2D(38.0f, 38.0f));
 
 		UTextBlock* Name = MakeText(Tree, TEXT("NameText"), TEXT("Party member"), 9);
@@ -1720,13 +1721,13 @@ namespace
 		Place(HistoryPanel, HistoryBg, FVector2D(0.0f, 9.0f), FVector2D(PanelWidth, HistoryHeight - 9.0f));
 
 		UImage* ChatBarLeft = Make<UImage>(Tree, TEXT("ChatBarLeft"));
-		SetImageTexture(ChatBarLeft, TEXT("/Game/ymir_work/ui/pattern/T_chat_bar_left.T_chat_bar_left"));
+		SetImageTexture(ChatBarLeft, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_chat_bar_left")));
 		Place(HistoryPanel, ChatBarLeft, FVector2D::ZeroVector, FVector2D(18.0f, 12.0f));
 		UImage* ChatBarMiddle = Make<UImage>(Tree, TEXT("ChatBarMiddle"));
-		SetImageTexture(ChatBarMiddle, TEXT("/Game/ymir_work/ui/pattern/T_chat_bar_middle.T_chat_bar_middle"), true, false);
+		SetImageTexture(ChatBarMiddle, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_chat_bar_middle")), true, false);
 		Place(HistoryPanel, ChatBarMiddle, FVector2D(18.0f, 0.0f), FVector2D(PanelWidth - 36.0f, 12.0f));
 		UImage* ChatBarRight = Make<UImage>(Tree, TEXT("ChatBarRight"));
-		SetImageTexture(ChatBarRight, TEXT("/Game/ymir_work/ui/pattern/T_chat_bar_right.T_chat_bar_right"));
+		SetImageTexture(ChatBarRight, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_chat_bar_right")));
 		Place(HistoryPanel, ChatBarRight, FVector2D(PanelWidth - 18.0f, 0.0f), FVector2D(18.0f, 12.0f));
 
 		UScrollBox* HistoryBox = Make<UScrollBox>(Tree, TEXT("HistoryBox"));
@@ -1777,7 +1778,7 @@ namespace
 		InputBox->SetWidgetStyle(InputStyle);
 		Place(InputControls, InputBox, FVector2D(50.0f, 2.0f), FVector2D(482.0f, 16.0f));
 
-		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_taskbar.T_taskbar"));
+		UTexture2D* Taskbar = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_TaskbarAtlas")));
 		UButton* SendButton = Make<UMT2AtlasButton>(Tree, TEXT("SendButton"));
 		SendButton->IsFocusable = false;
 		SetButtonAtlas(SendButton, Taskbar, {62,159,82,177}, {82,159,102,177}, {102,159,122,177});
@@ -1811,14 +1812,14 @@ namespace
 			SetImageTexture(Image, Path, bTileX, bTileY);
 			Place(Root, Image, Position, Size);
 		};
-		FrameImage(TEXT("FrameTop"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_top.T_thinboard_line_top"), FVector2D(16,0), FVector2D(350,16), true);
-		FrameImage(TEXT("FrameBottom"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_bottom.T_thinboard_line_bottom"), FVector2D(16,32), FVector2D(350,16), true);
-		FrameImage(TEXT("FrameLeft"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_left.T_thinboard_line_left"), FVector2D(0,16), FVector2D(16,16), false, true);
-		FrameImage(TEXT("FrameRight"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_line_right.T_thinboard_line_right"), FVector2D(366,16), FVector2D(16,16), false, true);
-		FrameImage(TEXT("FrameLT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_lefttop.T_thinboard_corner_lefttop"), FVector2D(0,0), FVector2D(16));
-		FrameImage(TEXT("FrameRT"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_righttop.T_thinboard_corner_righttop"), FVector2D(366,0), FVector2D(16));
-		FrameImage(TEXT("FrameLB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_leftbottom.T_thinboard_corner_leftbottom"), FVector2D(0,32), FVector2D(16));
-		FrameImage(TEXT("FrameRB"), TEXT("/Game/ymir_work/ui/pattern/T_thinboard_corner_rightbottom.T_thinboard_corner_rightbottom"), FVector2D(366,32), FVector2D(16));
+		FrameImage(TEXT("FrameTop"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_top")), FVector2D(16,0), FVector2D(350,16), true);
+		FrameImage(TEXT("FrameBottom"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_bottom")), FVector2D(16,32), FVector2D(350,16), true);
+		FrameImage(TEXT("FrameLeft"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_left")), FVector2D(0,16), FVector2D(16,16), false, true);
+		FrameImage(TEXT("FrameRight"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_line_right")), FVector2D(366,16), FVector2D(16,16), false, true);
+		FrameImage(TEXT("FrameLT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_lefttop")), FVector2D(0,0), FVector2D(16));
+		FrameImage(TEXT("FrameRT"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_righttop")), FVector2D(366,0), FVector2D(16));
+		FrameImage(TEXT("FrameLB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_leftbottom")), FVector2D(0,32), FVector2D(16));
+		FrameImage(TEXT("FrameRB"), UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_thinboard_corner_rightbottom")), FVector2D(366,32), FVector2D(16));
 
 		UTextBlock* TargetName = MakeText(Tree, TEXT("TargetNameText"), TEXT("Target"), 10);
 		TargetName->SetJustification(ETextJustify::Left);
@@ -1831,7 +1832,7 @@ namespace
 		Place(Root, HealthBar, FVector2D(211,19), FVector2D(137,11));
 
 		UMT2AtlasButton* Close = Make<UMT2AtlasButton>(Tree, TEXT("CloseButton"));
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		SetButtonAtlas(Close, Public, FMT2AtlasRegion(25,425,40,440),
 			FMT2AtlasRegion(40,425,55,440), FMT2AtlasRegion(55,425,70,440));
 		Place(Root, Close, FVector2D(352,16), FVector2D(15));
@@ -2037,7 +2038,7 @@ namespace
 		Place(Guild, MakeMT2Button(Tree, TEXT("DisbandGuildButton"), TEXT("Disband"), EMT2GeneratedButtonSize::Large), FVector2D(267.0f, 263.0f), FVector2D(88.0f, 21.0f));
 
 		UMT2AtlasImage* Tabs = Make<UMT2AtlasImage>(Tree, TEXT("GuildTabImage"));
-		Tabs->SetAtlas(FMT2UIStyle::LoadTexture(TEXT("/Game/locale/en/ui/guild/T_guild.T_guild")), FMT2AtlasRect(0, 0, 376, 37));
+		Tabs->SetAtlas(FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("locale_en_ui_guild_T_guild"))), FMT2AtlasRect(0, 0, 376, 37));
 		Tabs->SetVisibility(ESlateVisibility::HitTestInvisible);
 		Place(Root, Tabs, FVector2D(0.0f, 319.0f), FVector2D(376.0f, 37.0f));
 		const TCHAR* TabNames[] = {TEXT("InfoTabButton"), TEXT("BoardTabButton"), TEXT("MemberTabButton"), TEXT("RankTabButton"), TEXT("SkillTabButton"), TEXT("BaseInfoTabButton")};
@@ -2090,7 +2091,7 @@ namespace
 		UCanvasPanel* Map = Make<UCanvasPanel>(Tree, TEXT("MapCanvas"));
 		Place(Clip, Map, FVector2D::ZeroVector, FVector2D(128));
 
-		UTexture2D* Atlas = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_minimap.T_minimap"));
+		UTexture2D* Atlas = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("ymir_work_ui_T_minimap")));
 		UMT2AtlasImage* Frame = Make<UMT2AtlasImage>(Tree, TEXT("MinimapFrame"));
 		Frame->SetAtlas(Atlas, FMT2AtlasRect(0,0,136,137));
 		Frame->SetVisibility(ESlateVisibility::HitTestInvisible);
@@ -2137,12 +2138,12 @@ namespace
 		if (!BeginOrCreate(TEXT("MT2FullMap"), UMT2FullMapWidget::StaticClass(), BP, Tree)) return false;
 		UCanvasPanel* Root = Make<UCanvasPanel>(Tree, TEXT("FullMapRoot")); Tree->RootWidget = Root;
 		UImage* Background = Make<UImage>(Tree, TEXT("Background"));
-		SetImageTexture(Background, TEXT("/Game/ymir_work/ui/pattern/T_board_base.T_board_base"), true, true);
+		SetImageTexture(Background, UMT2PathSettings::Path(TEXT("ymir_work_ui_pattern_T_board_base")), true, true);
 		Place(Root, Background, FVector2D::ZeroVector, FVector2D(271,294));
 		UTextBlock* Title = MakeText(Tree, TEXT("MapNameText"), TEXT("Zone Map"), 10);
 		Place(Root, Title, FVector2D(20,7), FVector2D(231,20));
 		UMT2AtlasButton* Close = Make<UMT2AtlasButton>(Tree, TEXT("CloseButton"));
-		UTexture2D* Public = FMT2UIStyle::LoadTexture(TEXT("/Game/ymir_work/ui/T_public.T_public"));
+		UTexture2D* Public = FMT2UIStyle::LoadTexture(UMT2PathSettings::Path(TEXT("UI_PublicAtlas")));
 		SetButtonAtlas(Close, Public, FMT2AtlasRegion(25,425,40,440),
 			FMT2AtlasRegion(40,425,55,440), FMT2AtlasRegion(55,425,70,440));
 		Place(Root, Close, FVector2D(249,7), FVector2D(15));
@@ -2173,11 +2174,11 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!BeginOrCreate(TEXT("MT2Login"), UMT2LoginWidget::StaticClass(), BP, Tree)) return false;
 		UCanvasPanel* Root = BuildGatewayRoot(Tree, TEXT("LoginRoot"), TEXT("LoginBackground"),
-			TEXT("/Game/ymir_work/ui/T_intrologin.T_intrologin"));
+			UMT2PathSettings::Path(TEXT("ymir_work_ui_T_intrologin")));
 		const FAnchors Center(0.5f);
 		const FVector2D CenterAlign(0.5f);
 		UImage* Panel = Make<UImage>(Tree, TEXT("LoginPanel"));
-		SetImageTexture(Panel, TEXT("/Game/locale/en/ui/login/T_login.T_login"));
+		SetImageTexture(Panel, UMT2PathSettings::Path(TEXT("locale_en_ui_login_T_login")));
 		Place(Root, Panel, FVector2D::ZeroVector, FVector2D(312, 146), Center, CenterAlign);
 		UEditableTextBox* Username = Make<UEditableTextBox>(Tree, TEXT("UsernameBox"));
 		Username->SetHintText(FText::FromString(TEXT("Account name")));
@@ -2199,7 +2200,7 @@ namespace
 		if (!BeginOrCreate(TEXT("MT2AccountRegistration"),
 			UMT2AccountRegistrationWidget::StaticClass(), BP, Tree)) return false;
 		UCanvasPanel* Root = BuildGatewayRoot(Tree, TEXT("RegistrationRoot"), TEXT("RegistrationBackground"),
-			TEXT("/Game/ymir_work/ui/T_intrologin.T_intrologin"));
+			UMT2PathSettings::Path(TEXT("ymir_work_ui_T_intrologin")));
 		const FAnchors Center(0.5f);
 		const FVector2D CenterAlign(0.5f);
 		UBorder* Panel = Make<UBorder>(Tree, TEXT("RegistrationPanel"));
@@ -2241,7 +2242,7 @@ namespace
 			return false;
 		}
 		UCanvasPanel* Root = BuildGatewayRoot(Tree, TEXT("LoadingRoot"), TEXT("LoadingBackground"),
-			TEXT("/Game/ymir_work/ui/T_introloading.T_introloading"));
+			UMT2PathSettings::Path(TEXT("ymir_work_ui_T_introloading")));
 		const FAnchors Center(0.5f);
 		const FVector2D CenterAlign(0.5f);
 		UProgressBar* Progress = Make<UProgressBar>(Tree, TEXT("LoadingProgress"));
@@ -2260,7 +2261,7 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!BeginOrCreate(TEXT("MT2CharacterSelect"), UMT2CharacterSelectWidget::StaticClass(), BP, Tree)) return false;
 		UCanvasPanel* Root = BuildGatewayRoot(Tree, TEXT("CharacterSelectRoot"), TEXT("CharacterSelectBackground"),
-			TEXT("/Game/ymir_work/ui/T_introselect.T_introselect"));
+			UMT2PathSettings::Path(TEXT("ymir_work_ui_T_introselect")));
 		const FAnchors Center(0.5f);
 		const FVector2D CenterAlign(0.5f);
 		UBorder* Panel = Make<UBorder>(Tree, TEXT("CharacterSelectPanel")); Panel->SetBrushColor(FLinearColor(0.025f, 0.02f, 0.015f, 0.9f));
@@ -2286,7 +2287,7 @@ namespace
 		UWidgetBlueprint* BP; UWidgetTree* Tree;
 		if (!BeginOrCreate(TEXT("MT2CharacterCreate"), UMT2CharacterCreateWidget::StaticClass(), BP, Tree)) return false;
 		UCanvasPanel* Root = BuildGatewayRoot(Tree, TEXT("CharacterCreateRoot"), TEXT("CharacterCreateBackground"),
-			TEXT("/Game/ymir_work/ui/T_introempire.T_introempire"));
+			UMT2PathSettings::Path(TEXT("ymir_work_ui_T_introempire")));
 		const FAnchors Center(0.5f);
 		const FVector2D CenterAlign(0.5f);
 		UBorder* Panel = Make<UBorder>(Tree, TEXT("CharacterCreatePanel")); Panel->SetBrushColor(FLinearColor(0.025f, 0.02f, 0.015f, 0.9f));

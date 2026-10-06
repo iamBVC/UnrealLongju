@@ -8,6 +8,7 @@
 */
 
 #include "MT2VnumRegistryBuilder.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Core/MT2VnumRegistry.h"
@@ -19,8 +20,8 @@
 
 namespace
 {
-	const TCHAR* RegistryPackageName = TEXT("/Game/Logic/DA_MT2VnumRegistry");
-	const TCHAR* RegistryObjectPath = TEXT("/Game/Logic/DA_MT2VnumRegistry.DA_MT2VnumRegistry");
+	const TCHAR* RegistryPackageName() { return UMT2PathSettings::Path(TEXT("VnumRegistryPackage")); }
+	const TCHAR* RegistryObjectPath() { return UMT2PathSettings::Path(TEXT("VnumRegistry")); }
 
 	bool AddMob(
 		TMap<int32, TSoftClassPtr<AMT2Mob>>& Entries,
@@ -76,7 +77,7 @@ namespace
 
 bool FMT2VnumRegistryBuilder::RegistryExists()
 {
-	return LoadObject<UMT2VnumRegistry>(nullptr, RegistryObjectPath) != nullptr;
+	return LoadObject<UMT2VnumRegistry>(nullptr, RegistryObjectPath()) != nullptr;
 }
 
 bool FMT2VnumRegistryBuilder::RebuildAndSave(
@@ -90,10 +91,10 @@ bool FMT2VnumRegistryBuilder::RebuildAndSave(
 	// NPCs and metin stones are mob_proto rows too (just AMT2Npc / AMT2MetinStone subclasses), so
 	// they belong in the vnum registry alongside monsters - that is what lets "/m <vnum>" spawn them
 	// and lets metin waves resolve their group members.
-	Filter.PackagePaths.Add(TEXT("/Game/Mobs/Blueprints"));
-	Filter.PackagePaths.Add(TEXT("/Game/Npcs/Blueprints"));
-	Filter.PackagePaths.Add(TEXT("/Game/Metins/Blueprints"));
-	Filter.PackagePaths.Add(TEXT("/Game/Items/Blueprints"));
+	Filter.PackagePaths.Add(UMT2PathSettings::Path(TEXT("Mobs_Blueprints")));
+	Filter.PackagePaths.Add(UMT2PathSettings::Path(TEXT("Npcs_Blueprints")));
+	Filter.PackagePaths.Add(UMT2PathSettings::Path(TEXT("Metins_Blueprints")));
+	Filter.PackagePaths.Add(UMT2PathSettings::Path(TEXT("Items_Blueprints")));
 	Filter.ClassPaths.Add(UBlueprint::StaticClass()->GetClassPathName());
 	Filter.bRecursivePaths = true;
 	TArray<FAssetData> Assets;
@@ -133,8 +134,8 @@ bool FMT2VnumRegistryBuilder::RebuildAndSave(
 		return false;
 	}
 
-	UPackage* Package = CreatePackage(RegistryPackageName);
-	UMT2VnumRegistry* Registry = LoadObject<UMT2VnumRegistry>(nullptr, RegistryObjectPath);
+	UPackage* Package = CreatePackage(RegistryPackageName());
+	UMT2VnumRegistry* Registry = LoadObject<UMT2VnumRegistry>(nullptr, RegistryObjectPath());
 	if (!Registry)
 	{
 		Registry = NewObject<UMT2VnumRegistry>(

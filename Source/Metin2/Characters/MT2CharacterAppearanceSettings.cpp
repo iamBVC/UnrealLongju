@@ -8,6 +8,7 @@
 */
 
 #include "Characters/MT2CharacterAppearanceSettings.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Engine/SkeletalMesh.h"
 #include "Engine/Texture2D.h"
@@ -67,8 +68,7 @@ namespace
 		const FString TextureName = FString::Printf(
 			TEXT("T_%s_%s"), GetRaceName(Race),
 			Sex == EMT2CharacterSex::Female ? TEXT("w") : TEXT("m"));
-		return FString::Printf(
-			TEXT("/Game/ymir_work/icon/face/%s.%s"), *TextureName, *TextureName);
+		return UMT2PathSettings::Format(TEXT("ymir_work_icon_face_Name"), TEXT("%s%s"), *TextureName, *TextureName);
 	}
 }
 
@@ -93,8 +93,7 @@ UMT2CharacterAppearanceSettings::UMT2CharacterAppearanceSettings()
 				AnimationProfile.Sex = Sex;
 				const FString AnimBlueprintName = FString::Printf(
 					TEXT("ABP_%s_%s"), GetRaceDisplayName(Race), GetSexName(Sex));
-				AnimationProfile.AnimInstanceClass = TSoftClassPtr<UAnimInstance>(FSoftObjectPath(FString::Printf(
-					TEXT("/Game/Characters/Animations/%s.%s_C"), *AnimBlueprintName, *AnimBlueprintName)));
+				AnimationProfile.AnimInstanceClass = TSoftClassPtr<UAnimInstance>(FSoftObjectPath(UMT2PathSettings::Format(TEXT("Characters_Animations_Name_Prefix"), TEXT("%s%s"), *AnimBlueprintName, *AnimBlueprintName)));
 			}
 
 			for (uint8 StyleIndex = 0; bBuildDefaultAppearances && StyleIndex < 2; ++StyleIndex)
@@ -106,29 +105,25 @@ UMT2CharacterAppearanceSettings::UMT2CharacterAppearanceSettings()
 				Asset.Appearance.Style = Style;
 
 				const FString MeshName = FString::Printf(TEXT("SK_%s_novice"), *RaceName);
-				const FString MeshPath = FString::Printf(
-					TEXT("/Game/ymir_work/%s/%s/%s_novice/SkeletalMeshes/%s.%s"),
+				const FString MeshPath = UMT2PathSettings::Format(TEXT("ymir_work_Name_Name_Name_novice_SkeletalMeshes_Name"), TEXT("%s%s%s%s%s"),
 					*RootFolder, *RaceName, *RaceName, *MeshName, *MeshName);
 				Asset.Mesh = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(MeshPath));
 
 				const FString TextureName = FString::Printf(
 					TEXT("T_%s_novice_%s"), *RaceName, GetStyleTextureName(Race, Style));
-				const FString TexturePath = FString::Printf(
-					TEXT("/Game/ymir_work/%s/%s/%s.%s"),
+				const FString TexturePath = UMT2PathSettings::Format(TEXT("ymir_work_Name_Name_Name"), TEXT("%s%s%s%s"),
 					*RootFolder, *RaceName, *TextureName, *TextureName);
 				Asset.DiffuseTexture = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(TexturePath));
 				Asset.FaceTexture = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(
 					GetFaceTexturePath(Race, Sex)));
 
 				const FString HairMeshName = TEXT("SK_hair_1_1");
-				const FString HairMeshPath = FString::Printf(
-					TEXT("/Game/ymir_work/%s/%s/hair/hair_1_1/SkeletalMeshes/%s.%s"),
+				const FString HairMeshPath = UMT2PathSettings::Format(TEXT("ymir_work_Name_Name_hair_hair_1_1_SkeletalMeshes_Name"), TEXT("%s%s%s%s"),
 					*RootFolder, *RaceName, *HairMeshName, *HairMeshName);
 				Asset.DefaultHairMesh = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(HairMeshPath));
 
 				const FString HairTextureName = FString::Printf(TEXT("T_%s_hair_01"), *RaceName);
-				const FString HairTexturePath = FString::Printf(
-					TEXT("/Game/ymir_work/%s/%s/%s.%s"),
+				const FString HairTexturePath = UMT2PathSettings::Format(TEXT("ymir_work_Name_Name_Name"), TEXT("%s%s%s%s"),
 					*RootFolder, *RaceName, *HairTextureName, *HairTextureName);
 				Asset.DefaultHairTexture = TSoftObjectPtr<UTexture2D>(FSoftObjectPath(HairTexturePath));
 			}

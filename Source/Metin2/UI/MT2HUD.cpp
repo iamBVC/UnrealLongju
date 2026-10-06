@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2HUD.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Player/MT2PlayerController.h"
 #include "Player/MT2PlayerState.h"
@@ -167,7 +168,7 @@ void AMT2HUD::ToggleSystemMenu()
 
 TSubclassOf<UMT2GameHUDWidget> AMT2HUD::ResolveGameHUDClass() const
 {
-	if (UClass* WidgetClass = LoadClass<UMT2GameHUDWidget>(nullptr, TEXT("/Game/UI/MT2GameHUD.MT2GameHUD_C")))
+	if (UClass* WidgetClass = LoadClass<UMT2GameHUDWidget>(nullptr, UMT2PathSettings::Path(TEXT("UI_MT2GameHUD"))))
 	{
 		return WidgetClass;
 	}

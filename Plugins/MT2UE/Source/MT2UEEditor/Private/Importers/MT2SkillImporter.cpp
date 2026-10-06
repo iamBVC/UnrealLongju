@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2SkillImporter.h"
+#include "Config/MT2PathSettings.h"
 #include "Importers/MT2MotionScriptParser.h"
 
 #include "Animation/AnimSequence.h"
@@ -67,33 +68,37 @@ namespace
 		bool bAttachToWeaponMesh = false;
 	};
 
-	const FSkillPersistentVisualRule SkillPersistentVisualRules[] = {
-		{4, TEXT("d:/ymir work/pc/warrior/effect/geom_sword_loop.mse"),
+	TConstArrayView<FSkillPersistentVisualRule> GetSkillPersistentVisualRules()
+	{
+	static const FSkillPersistentVisualRule SkillPersistentVisualRules[] = {
+		{4, UMT2PathSettings::Path(TEXT("Legacy_pc_warrior_effect_geom_sword_loop")),
 			TEXT("equip_right_hand"), EMT2SkillVisualWeaponMode::OneHanded},
-		{4, TEXT("d:/ymir work/pc/warrior/effect/geom_spear_loop.mse"),
+		{4, UMT2PathSettings::Path(TEXT("Legacy_pc_warrior_effect_geom_spear_loop")),
 			TEXT("equip_right_hand"), EMT2SkillVisualWeaponMode::TwoHanded},
-		{19, TEXT("d:/ymir work/pc/warrior/effect/gyeokgongjang_loop.mse"), TEXT("")},
-		{49, TEXT("d:/ymir work/pc/assassin/effect/gyeonggong_loop.mse"), TEXT(""),
+		{19, UMT2PathSettings::Path(TEXT("Legacy_pc_warrior_effect_gyeokgongjang_loop")), TEXT("")},
+		{49, UMT2PathSettings::Path(TEXT("Legacy_pc_assassin_effect_gyeonggong_loop")), TEXT(""),
 			EMT2SkillVisualWeaponMode::Any, true},
-		{63, TEXT("d:/ymir work/pc/sura/effect/gwigeom_loop.mse"), TEXT("Bip01_R_Finger2")},
-		{64, TEXT("d:/ymir work/pc/sura/effect/fear_loop.mse"), TEXT("")},
-		{65, TEXT("d:/ymir work/pc/sura/effect/jumagap_loop.mse"), TEXT("")},
-		{78, TEXT("d:/ymir work/pc/sura/effect/muyeong_loop.mse"), TEXT("")},
-		{79, TEXT("d:/ymir work/pc/sura/effect/heuksin_loop.mse"), TEXT("")},
-		{94, TEXT("d:/ymir work/pc/shaman/effect/3hosin_loop.mse"), TEXT("")},
-		{95, TEXT("d:/ymir work/pc/shaman/effect/boho_loop.mse"), TEXT("")},
-		{96, TEXT("d:/ymir work/pc/shaman/effect/6gicheon_hand.mse"), TEXT("Bip01_R_Hand")},
-		{110, TEXT("d:/ymir work/pc/shaman/effect/10kwaesok_loop.mse"), TEXT(""),
+		{63, UMT2PathSettings::Path(TEXT("Legacy_pc_sura_effect_gwigeom_loop")), TEXT("Bip01_R_Finger2")},
+		{64, UMT2PathSettings::Path(TEXT("Legacy_pc_sura_effect_fear_loop")), TEXT("")},
+		{65, UMT2PathSettings::Path(TEXT("Legacy_pc_sura_effect_jumagap_loop")), TEXT("")},
+		{78, UMT2PathSettings::Path(TEXT("Legacy_pc_sura_effect_muyeong_loop")), TEXT("")},
+		{79, UMT2PathSettings::Path(TEXT("Legacy_pc_sura_effect_heuksin_loop")), TEXT("")},
+		{94, UMT2PathSettings::Path(TEXT("Legacy_pc_shaman_effect_3hosin_loop")), TEXT("")},
+		{95, UMT2PathSettings::Path(TEXT("Legacy_pc_shaman_effect_boho_loop")), TEXT("")},
+		{96, UMT2PathSettings::Path(TEXT("Legacy_pc_shaman_effect_6gicheon_hand")), TEXT("Bip01_R_Hand")},
+		{110, UMT2PathSettings::Path(TEXT("Legacy_pc_shaman_effect_10kwaesok_loop")), TEXT(""),
 			EMT2SkillVisualWeaponMode::Any, true},
-		{111, TEXT("d:/ymir work/pc/shaman/effect/jeungryeok_hand.mse"), TEXT("Bip01_L_Hand")},
-		{66, TEXT("d:/ymir work/pc/sura/effect/pabeop_loop.mse"), TEXT("Bip01_Head")},
+		{111, UMT2PathSettings::Path(TEXT("Legacy_pc_shaman_effect_jeungryeok_hand")), TEXT("Bip01_L_Hand")},
+		{66, UMT2PathSettings::Path(TEXT("Legacy_pc_sura_effect_pabeop_loop")), TEXT("Bip01_Head")},
 	};
+	return MakeArrayView(SkillPersistentVisualRules);
+	}
 
 	void ResolvePersistentVisuals(
 		const FString& DestinationRoot, UMT2SkillDefinition* Definition)
 	{
 		Definition->PersistentVisuals.Reset();
-		for (const FSkillPersistentVisualRule& Rule : SkillPersistentVisualRules)
+		for (const FSkillPersistentVisualRule& Rule : GetSkillPersistentVisualRules())
 		{
 			if (Rule.SkillVnum != Definition->Vnum)
 			{
@@ -381,7 +386,7 @@ namespace
 		// locale/en first: English names/descriptions AND the formulas matching this client
 		// version. The 936* files are the Chinese-locale copies (last resort).
 		const FString Candidates[] = {
-			SourceRoot / TEXT("locale/en") / BaseName,
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en")) / BaseName,
 			SourceRoot / BaseName,
 			SourceRoot / FString::Printf(TEXT("936%s"), BaseName)};
 		for (const FString& Candidate : Candidates)
@@ -578,7 +583,7 @@ namespace
 
 		// Actives (and Riding, PythonSkill's special case) use per-grade _01.._03 icons; the rest a
 		// single icon. Fall back to the other naming when the preferred one is absent.
-		const FString IconRoot = SourceRoot / TEXT("ymir work/ui/skill") / Folder;
+		const FString IconRoot = SourceRoot / UMT2PathSettings::Path(TEXT("Part_ymir_work_ui_skill")) / Folder;
 		const bool bPreferGradeIcons = Definition->SkillType == EMT2SkillType::Active ||
 			Desc.IconName == TEXT("riding");
 		TArray<FString> SubPaths;
@@ -880,7 +885,7 @@ bool FMT2SkillImporter::Import(
 		const FSkillDescRow* Desc = DescRows.Find(Row.Vnum);
 
 		const FString AssetName = FString::Printf(TEXT("DA_Skill_%05d"), Row.Vnum);
-		const FString PackageName = DestinationRoot / TEXT("Skills/Definitions") / AssetName;
+		const FString PackageName = DestinationRoot / UMT2PathSettings::Path(TEXT("Relative_Skills_Definitions")) / AssetName;
 		if (bLegacyMetadataOnly)
 		{
 			UMT2SkillDefinition* Existing = LoadObject<UMT2SkillDefinition>(nullptr, *(PackageName + TEXT(".") + AssetName));
@@ -1031,7 +1036,7 @@ bool FMT2SkillImporter::Import(
 		const UEnum* RaceEnum = StaticEnum<EMT2CharacterRace>();
 		const FString RaceName = RaceEnum->GetNameStringByValue(static_cast<int64>(Layout.Race));
 		const FString AssetName = FString::Printf(TEXT("DA_SkillSet_%s_G%d"), *RaceName, Layout.Group);
-		const FString PackageName = DestinationRoot / TEXT("Skills/Sets") / AssetName;
+		const FString PackageName = DestinationRoot / UMT2PathSettings::Path(TEXT("Relative_Skills_Sets")) / AssetName;
 		bool bCreated = false;
 		UMT2SkillSet* SkillSet = FindOrCreateAsset<UMT2SkillSet>(PackageName, AssetName, bCreated);
 		if (!SkillSet)

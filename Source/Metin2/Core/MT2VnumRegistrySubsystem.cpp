@@ -8,6 +8,7 @@
 */
 
 #include "Core/MT2VnumRegistrySubsystem.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Core/MT2VnumRegistry.h"
 #include "Items/MT2ItemTemplate.h"
@@ -15,7 +16,7 @@
 
 namespace
 {
-	const TCHAR* RegistryObjectPath = TEXT("/Game/Logic/DA_MT2VnumRegistry.DA_MT2VnumRegistry");
+	const TCHAR* RegistryObjectPath() { return UMT2PathSettings::Path(TEXT("VnumRegistry")); }
 }
 
 void UMT2VnumRegistrySubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -28,12 +29,12 @@ bool UMT2VnumRegistrySubsystem::ReloadRegistryAsset()
 {
 	SortedItemVnums.Reset();
 	ResolvedItemAliases.Reset();
-	Registry = LoadObject<UMT2VnumRegistry>(nullptr, RegistryObjectPath);
+	Registry = LoadObject<UMT2VnumRegistry>(nullptr, RegistryObjectPath());
 	if (!Registry)
 	{
 		UE_LOG(LogTemp, Error,
 			TEXT("MT2 VNUM registry is missing at %s. Open the editor or rebuild it from the MT2UE menu."),
-			RegistryObjectPath);
+			RegistryObjectPath());
 		return false;
 	}
 	Registry->GetItemTemplates().GenerateKeyArray(SortedItemVnums);

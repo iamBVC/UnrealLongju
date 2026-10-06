@@ -10,6 +10,7 @@
 #if WITH_DEV_AUTOMATION_TESTS
 
 #include "Misc/AutomationTest.h"
+#include "Config/MT2PathSettings.h"
 #include "Misc/ScopeExit.h"
 #include "Abilities/MT2CoreAttributeSet.h"
 #include "AbilitySystemComponent.h"
@@ -1331,11 +1332,11 @@ bool FMT2QuestItemCopyTest::RunTest(const FString& Parameters)
 
 	// Verify the actual imported equipment metadata and a surviving stone, without editing CDOs.
 	UClass* ImportedSource = LoadClass<UMT2ItemTemplate>(nullptr,
-		TEXT("/Game/Items/Blueprints/BP_Item_11299.BP_Item_11299_C"));
+		UMT2PathSettings::Path(TEXT("Items_Blueprints_BP_Item_11299")));
 	UClass* ImportedResult = LoadClass<UMT2ItemTemplate>(nullptr,
-		TEXT("/Game/Items/Blueprints/BP_Item_20000.BP_Item_20000_C"));
+		UMT2PathSettings::Path(TEXT("Items_Blueprints_BP_Item_20000")));
 	UClass* Stone = LoadClass<UMT2ItemMetinStoneTemplate>(nullptr,
-		TEXT("/Game/Items/Blueprints/BP_Item_28030.BP_Item_28030_C"));
+		UMT2PathSettings::Path(TEXT("Items_Blueprints_BP_Item_28030")));
 	if (TestNotNull(TEXT("Imported source item"), ImportedSource) &&
 		TestNotNull(TEXT("Imported replacement item"), ImportedResult) && TestNotNull(TEXT("Imported stone"), Stone))
 	{

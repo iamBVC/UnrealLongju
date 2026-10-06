@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "Persistence/MT2PersistenceTypes.h"
 #include "Messenger/MT2MessengerTypes.h"
 #include "Guild/MT2GuildTypes.h"
@@ -18,7 +19,7 @@
 struct FMT2PersistenceBackendConfig
 {
 	FString RootDirectory;
-	FString Filename = TEXT("metin2.db");
+	FString Filename = UMT2PathSettings::Path(TEXT("DatabaseFilename"));
 	FString SynchronousMode = TEXT("FULL");
 	int32 BusyTimeoutMilliseconds = 5000;
 	bool bCheckIntegrity = true;

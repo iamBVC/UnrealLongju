@@ -10,6 +10,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Config/MT2PathSettings.h"
 #include "UI/MT2UserWidget.h"
 #include "MT2NotificationsWidget.generated.h"
 
@@ -38,11 +39,11 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Notifications|Style")
 	TSoftObjectPtr<UTexture2D> QuestIcon =
-		TSoftObjectPtr<UTexture2D>(FSoftObjectPath(TEXT("/Game/ymir_work/icon/item/T_scroll_open.T_scroll_open")));
+		TSoftObjectPtr<UTexture2D>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("ymir_work_icon_item_T_scroll_open"))));
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Notifications|Style")
 	TSoftObjectPtr<UTexture2D> MessageIcon =
-		TSoftObjectPtr<UTexture2D>(FSoftObjectPath(TEXT("/Game/ymir_work/icon/action/T_letter.T_letter")));
+		TSoftObjectPtr<UTexture2D>(FSoftObjectPath(UMT2PathSettings::Path(TEXT("ymir_work_icon_action_T_letter"))));
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Notifications|Style")
 	FVector2D IconSize = FVector2D(32.0, 32.0);

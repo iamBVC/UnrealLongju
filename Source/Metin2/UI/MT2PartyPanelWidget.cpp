@@ -8,6 +8,7 @@
 */
 
 #include "UI/MT2PartyPanelWidget.h"
+#include "Config/MT2PathSettings.h"
 
 #include "Components/Button.h"
 #include "Components/VerticalBox.h"
@@ -20,7 +21,7 @@ UMT2PartyPanelWidget::UMT2PartyPanelWidget(const FObjectInitializer& ObjectIniti
 	: Super(ObjectInitializer)
 {
 	MemberWidgetClass = TSoftClassPtr<UMT2PartyMemberWidget>(
-		FSoftObjectPath(TEXT("/Game/UI/MT2PartyMember.MT2PartyMember_C")));
+		FSoftObjectPath(UMT2PathSettings::Path(TEXT("UI_MT2PartyMember"))));
 }
 
 void UMT2PartyPanelWidget::NativeConstruct()

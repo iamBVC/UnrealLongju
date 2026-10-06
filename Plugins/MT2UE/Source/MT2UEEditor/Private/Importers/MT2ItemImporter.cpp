@@ -8,6 +8,7 @@
 */
 
 #include "Importers/MT2ItemImporter.h"
+#include "Config/MT2PathSettings.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "MT2AssetScanner.h"
@@ -78,10 +79,10 @@ namespace
 	{
 		const FString DevelopmentRoot = FPaths::ConvertRelativePathToFull(SourceRoot / TEXT("../.."));
 		const TArray<FString> QuestRoots = {
-			SourceRoot / TEXT("locale/en/quest"),
-			SourceRoot / TEXT("quest"),
-			DevelopmentRoot / TEXT("my_server/server_src/share/locale/italy/quest"),
-			TEXT("D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy/quest")
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_quest")),
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_quest")),
+			DevelopmentRoot / UMT2PathSettings::Path(TEXT("Part_my_server_server_src_share_locale_italy_quest")),
+			UMT2PathSettings::Path(TEXT("Legacy_quest"))
 		};
 
 		TMap<int32, FParsedMountItem> Result;
@@ -126,7 +127,7 @@ namespace
 	TMap<int32, FMT2RefinementRecipe> LoadRefinementRecipes(
 		const FString& SourceRoot, TArray<FString>& Warnings)
 	{
-		const FString DatabasePath = SourceRoot / TEXT("db.sql");
+		const FString DatabasePath = SourceRoot / UMT2PathSettings::Path(TEXT("Part_db"));
 		FString Content;
 		if (!FFileHelper::LoadFileToString(Content, *DatabasePath))
 		{
@@ -193,9 +194,9 @@ namespace
 		TArray<FString>& Warnings)
 	{
 		const TArray<FString> Candidates = {
-			SourceRoot / TEXT("locale/en/special_item_group.txt"),
-			SourceRoot / TEXT("special_item_group.txt"),
-			TEXT("D:/Giochi/Metin2/Development/my_server/server_src/share/locale/italy/special_item_group.txt")
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_special_item_group")),
+			SourceRoot / UMT2PathSettings::Path(TEXT("Part_special_item_group")),
+			UMT2PathSettings::Path(TEXT("Legacy_special_item_group"))
 		};
 		FString Path;
 		for (const FString& Candidate : Candidates)
@@ -384,7 +385,7 @@ namespace
 	TMap<int32, int32> LoadServerAddonTypes(const FString& SourceRoot, TArray<FString>& Warnings)
 	{
 		TMap<int32, int32> Result;
-		const FString DatabaseDumpPath = SourceRoot / TEXT("db.sql");
+		const FString DatabaseDumpPath = SourceRoot / UMT2PathSettings::Path(TEXT("Part_db"));
 		FString Content;
 		if (!FFileHelper::LoadFileToString(Content, *DatabaseDumpPath))
 		{
@@ -466,8 +467,8 @@ namespace
 		const FString AssetName = TEXT("SK_") + BaseName;
 		const TArray<FString> Candidates = {
 			BasePackagePath / AssetName + TEXT(".") + AssetName,
-			BasePackagePath / TEXT("SkeletalMeshes") / AssetName + TEXT(".") + AssetName,
-			BasePackagePath / BaseName / TEXT("SkeletalMeshes") / AssetName + TEXT(".") + AssetName
+			BasePackagePath / UMT2PathSettings::Path(TEXT("Part_SkeletalMeshes")) / AssetName + TEXT(".") + AssetName,
+			BasePackagePath / BaseName / UMT2PathSettings::Path(TEXT("Part_SkeletalMeshes")) / AssetName + TEXT(".") + AssetName
 		};
 		for (const FString& Candidate : Candidates)
 		{
@@ -749,7 +750,7 @@ namespace
 
 	FString NormalizeItemDestinationRoot(const FString& DestinationRoot)
 	{
-		FString Result = DestinationRoot.IsEmpty() ? TEXT("/Game") : DestinationRoot;
+		FString Result = DestinationRoot.IsEmpty() ? UMT2PathSettings::Path(TEXT("ImportDestinationRoot")) : DestinationRoot;
 		Result.ReplaceInline(TEXT("\\"), TEXT("/"));
 		while (Result.EndsWith(TEXT("/")))
 		{
@@ -931,15 +932,14 @@ namespace
 			const FString IconStem = FPaths::GetBaseFilename(Tokens[2]);
 			if (!IconStem.IsEmpty())
 			{
-				Entry.IconObjectPath = FString::Printf(TEXT("/Game/ymir_work/icon/item/T_%s.T_%s"), *IconStem, *IconStem);
+				Entry.IconObjectPath = UMT2PathSettings::Format(TEXT("ymir_work_icon_item_T_Name"), TEXT("%s%s"), *IconStem, *IconStem);
 			}
 			if (Tokens.Num() >= 4 && Tokens[3].Contains(TEXT("item/weapon")))
 			{
 				const FString MeshStem = FPaths::GetBaseFilename(Tokens[3]);
 				if (!MeshStem.IsEmpty())
 				{
-					Entry.WorldMeshObjectPath = FString::Printf(
-						TEXT("/Game/ymir_work/item/weapon/SM_%s.SM_%s"), *MeshStem, *MeshStem);
+					Entry.WorldMeshObjectPath = UMT2PathSettings::Format(TEXT("ymir_work_item_weapon_SM_Name"), TEXT("%s%s"), *MeshStem, *MeshStem);
 				}
 			}
 			OutEntries.Add(Vnum, Entry);
@@ -1012,7 +1012,7 @@ namespace
 	{
 		const FMT2ItemDefinition& Definition = Record.Definition;
 		const FString Name = FString::Printf(TEXT("BP_Item_%05d"), Definition.Vnum);
-		const FString PackageName = NormalizeItemDestinationRoot(DestinationRoot) / TEXT("Items/Blueprints") / Name;
+		const FString PackageName = NormalizeItemDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Items_Blueprints")) / Name;
 		const FString ObjectPath = PackageName + TEXT(".") + Name;
 		UClass* ParentClass = Definition.Vnum >= 50051 && Definition.Vnum <= 50053
 			? UMT2HorseBookItemTemplate::StaticClass()
@@ -1289,7 +1289,7 @@ namespace
 		}
 
 		const UMT2VnumRegistry* Registry = LoadObject<UMT2VnumRegistry>(
-			nullptr, TEXT("/Game/Logic/DA_MT2VnumRegistry.DA_MT2VnumRegistry"));
+			nullptr, UMT2PathSettings::Path(TEXT("VnumRegistry")));
 		const TSoftClassPtr<AMT2Mob>* MobClassPtr = Registry
 			? Registry->GetMobClasses().Find(MountVnum) : nullptr;
 		UClass* MobClass = MobClassPtr ? MobClassPtr->LoadSynchronous() : nullptr;
@@ -1335,7 +1335,7 @@ namespace
 	{
 		const FString Name = FString::Printf(TEXT("LT_Item_%05d"), Vnum);
 		const FString PackageName =
-			NormalizeItemDestinationRoot(DestinationRoot) / TEXT("Items/LootTables") / Name;
+			NormalizeItemDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Items_LootTables")) / Name;
 		const FString ObjectPath = PackageName + TEXT(".") + Name;
 		UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *ObjectPath);
 		if (!Blueprint)
@@ -1368,7 +1368,7 @@ bool FMT2ItemImporter::Discover(
 	OutWarnings.Reset();
 	OutError.Reset();
 
-	const FString ProtoPath = SourceRoot / TEXT("locale/en/item_proto");
+	const FString ProtoPath = SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_item_proto"));
 	if (!FPaths::FileExists(ProtoPath))
 	{
 		OutError = FString::Printf(TEXT("Could not find item_proto under %s"), *SourceRoot);
@@ -1396,7 +1396,7 @@ bool FMT2ItemImporter::Discover(
 	}
 
 	TMap<int32, FItemListEntry> ItemList;
-	const FString ListPath = SourceRoot / TEXT("locale/en/item_list.txt");
+	const FString ListPath = SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_item_list"));
 	if (!LoadItemList(ListPath, ItemList))
 	{
 		OutWarnings.Add(FString::Printf(
@@ -1413,7 +1413,7 @@ bool FMT2ItemImporter::Discover(
 	TMap<int32, FItemDescEntry> ItemDescs;
 	{
 		FString DescContent;
-		const FString DescPath = SourceRoot / TEXT("locale/en/itemdesc.txt");
+		const FString DescPath = SourceRoot / UMT2PathSettings::Path(TEXT("Part_locale_en_itemdesc"));
 		if (FFileHelper::LoadFileToString(DescContent, *DescPath))
 		{
 			TArray<FString> Lines;
@@ -1561,7 +1561,7 @@ bool FMT2ItemImporter::Import(
 	TArray<UPackage*> PackagesToSave;
 	TSet<int32> CreatedMountDefinitions;
 	const UMT2VnumRegistry* VnumRegistry = LoadObject<UMT2VnumRegistry>(
-		nullptr, TEXT("/Game/Logic/DA_MT2VnumRegistry.DA_MT2VnumRegistry"));
+		nullptr, UMT2PathSettings::Path(TEXT("VnumRegistry")));
 	TArray<int32> RegisteredItemVnums;
 	if (VnumRegistry)
 	{
@@ -1572,7 +1572,7 @@ bool FMT2ItemImporter::Import(
 	{
 		const FString RewardName = FString::Printf(TEXT("BP_Item_%05d"), RewardVnum);
 		const FString RewardObjectPath = NormalizeItemDestinationRoot(DestinationRoot) /
-			TEXT("Items/Blueprints") / RewardName + TEXT(".") + RewardName;
+			UMT2PathSettings::Path(TEXT("Relative_Items_Blueprints")) / RewardName + TEXT(".") + RewardName;
 		UBlueprint* ExactBlueprint = nullptr;
 		if (FPackageName::DoesPackageExist(FPackageName::ObjectPathToPackageName(RewardObjectPath)))
 		{
@@ -1791,5 +1791,5 @@ FString FMT2ItemImportResult::BuildSummary() const
 FString FMT2ItemImporter::BuildBlueprintObjectPath(const FString& DestinationRoot, const FMT2ItemDefinition& Definition)
 {
 	const FString Name = FString::Printf(TEXT("BP_Item_%05d"), Definition.Vnum);
-	return NormalizeItemDestinationRoot(DestinationRoot) / TEXT("Items/Blueprints") / Name + TEXT(".") + Name;
+	return NormalizeItemDestinationRoot(DestinationRoot) / UMT2PathSettings::Path(TEXT("Relative_Items_Blueprints")) / Name + TEXT(".") + Name;
 }
