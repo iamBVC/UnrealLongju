@@ -17,6 +17,8 @@
 #include "Misc/CommandLine.h"
 #include "Misc/Guid.h"
 #include "Misc/Parse.h"
+#include "Misc/ConfigCacheIni.h"
+#include "Server/MT2ProfilingPorts.h"
 #include "Modules/ModuleManager.h"
 #include "Performance/MaxTickRateHandlerModule.h"
 
@@ -102,6 +104,25 @@ public:
 	virtual void StartupModule() override
 	{
 		FDefaultGameModuleImpl::StartupModule();
+
+		// UE reads FrameProPort at its first frame. Selecting it here avoids rebinding
+		// a live listener or modifying FramePro's port buffer from a world callback.
+		int32 ExplicitFrameProPort = 0;
+		if (!FParse::Value(FCommandLine::Get(), TEXT("FrameProPort="), ExplicitFrameProPort))
+		{
+			int32 DefaultGamePort = 0;
+			if (GConfig) { GConfig->GetInt(TEXT("URL"), TEXT("Port"), DefaultGamePort, GEngineIni); }
+			int32 FrameProPort = 0;
+			if (MT2ProfilingPorts::TryDeriveFrameProPort(FCommandLine::Get(), DefaultGamePort, FrameProPort))
+			{
+				FCommandLine::Append(*FString::Printf(TEXT(" -FrameProPort=%d"), FrameProPort));
+				UE_LOG(LogMT2Module, Display, TEXT("FramePro TCP port configured to %d (startup game port + 200)."), FrameProPort);
+			}
+			else
+			{
+				UE_LOG(LogMT2Module, Warning, TEXT("Cannot derive FramePro port: game port must be 1..65335. Supply -FrameProPort= explicitly."));
+			}
+		}
 
 #if UE_BUILD_SHIPPING && !UE_SERVER
 		if (!IsAuthorizedPatcherLaunch())

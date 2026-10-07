@@ -225,7 +225,10 @@ Local packaged defaults include:
 | Coordinator service port | `11099` |
 | Map game ports | Sequential, starting at `11001` |
 | Map voice ports | Sequential, starting at `11101` |
+| Map FramePro TCP ports | Game port + `200`, starting at `11201` |
 | Database directory | `Saved\LocalServer\Database` |
+
+FramePro uses the process's startup `-port=` plus `200`, or `[URL] Port` from the merged engine configuration when no game port is supplied. An explicit `-FrameProPort=` overrides this default. The port is selected before the first FramePro frame; client travel does not change it. FramePro is process-wide, so in-process PIE worlds share one listener. This does not enable FramePro in builds where it is disabled. Game ports above `65335` cannot use the offset and produce a warning; supply an explicit profiler port instead.
 
 The launchers enable registration and set a fixed development cluster token. **These are local development defaults, not production configuration.** Before exposing any service, review authentication, registration policy, bind/public addresses, firewall rules, ports, and secret handling. Keep the coordinator and database private, and use the documented environment-variable token mechanism instead of committing production credentials.
 

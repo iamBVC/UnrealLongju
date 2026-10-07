@@ -5,7 +5,7 @@ Test names, behaviour, and automation categories are unchanged by the move.
 
 | Files | Compiling module |
 | --- | --- |
-| `MT2DamageFeedbackTests.cpp`, `MT2DuelTests.cpp`, `MT2MapAttributeTests.cpp`, `MT2PathSettingsTests.cpp`, `MT2QuestPlayerApiTests.cpp` | `Metin2` runtime module |
+| `MT2DamageFeedbackTests.cpp`, `MT2DuelTests.cpp`, `MT2MapAttributeTests.cpp`, `MT2PathSettingsTests.cpp`, `MT2ProfilingPortsTests.cpp`, `MT2QuestPlayerApiTests.cpp` | `Metin2` runtime module |
 | `MT2AreaPaintTests.h`, `MT2PIETravelTests.h` | `MT2UEEditor`, through `Private/MT2TestRegistration.cpp` |
 | `MT2QuestImporterTests.h` | `MT2UEEditor`, included at the end of `Private/Importers/MT2QuestImporter.cpp` |
 
@@ -32,3 +32,7 @@ were not rebuilt for this source-only reorganization.
 Duel coverage includes `Metin2.Combat.Duels.Lifecycle`, `.DeathPenalties`, and
 `.ButtonLabels`. See [duels](../../../Docs/Duels.md) for the latest validation
 scope and log.
+
+`Metin2.Config.FrameProPort` covers the startup game-port offset, independent
+voice-port overrides, engine URL defaults, explicit profiler overrides, and
+TCP port bounds.
