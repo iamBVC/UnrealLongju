@@ -40,14 +40,31 @@ are multiplied once by the map's `Setting.txt` `HeightScale`, matching terrain
 conversion. The format filename is configured through `Part_water_wtr` in the
 project path catalogue.
 
-The map importer bakes water whenever it imports attributes, including when it
-keeps an existing presentation actor. It preserves the exact attribute-grid
-footprint (50-unit server cells or the existing client-attribute fallback), height
-boundaries, holes, and mixed flags. Adjacent equal-height cells merge into
-rectangles within 128-attribute-cell culling chunks; no mask downsampling occurs.
-`WaterGridSize`, `WaterRectangles`, and an attribute checksum are serialized in
-the map-presentation actor. Missing or malformed heights fail the bake without
-inventing terrain-following or zero-height water.
+The map importer bakes the client's **visual water-layer coverage**, independently
+of the server's gameplay water/fishing flags. A walkable bridge is not a hole in
+the visual surface merely because the server water bit is clear. The native
+128-cell tile grid and height boundaries are preserved; server attributes retain
+their original resolution and values. Equal-height cells merge into rectangles
+within culling chunks without overlapping translucent surfaces.
+
+`WaterShorelinePaddingCells` (Project Settings > Water; default 1, range 0..4)
+extends visual coverage under riverbanks by a bounded number of native water
+cells. At the usual source scale one cell is 200 centimetres. Terrain occlusion
+and the material's depth fade define the visible bank instead of exposing the
+gameplay mask's stair-stepped cutout. Padding does not propagate repeatedly,
+replace source heights, or join equally near surfaces at different levels. It is
+a **bake setting**: re-bake maps after changing it. It cannot hide a genuine
+raised terrain ridge above water; that requires inspecting/sculpting the terrain,
+not disabling depth testing on the water material.
+
+`WaterGridSize` and `WaterRectangles` are serialized in the map-presentation actor.
+All visual tile files must be available and valid. Water rendering validates the
+native grid dimensions and rectangles, without bake-version fields or gameplay
+attribute checksums. Safezone/no-walk edits do not invalidate visual water.
+The obsolete attribute-mask compatibility path has been removed; all 28 launcher
+maps already contain independent visual-water bakes. Existing saved geometry
+fields retain their names and types. Rebuild/cook packaged targets after changing
+reflected source code rather than mixing old cooked packages with new binaries.
 
 For existing maps, bake only water without reimporting landscapes or changing
 lighting/music/spawn settings:
@@ -65,9 +82,11 @@ editor and review the Content submodule diff. `-Inspect` reads sources and
 reports the candidate geometry without saving. `-Verify` compares saved data
 against a fresh bake without saving. Failed maps are not saved.
 
-Re-bake after editing the attribute grid. A checksum mismatch disables stale
-water and logs a warning. New water flags require a valid height layer in the
-corresponding legacy tile; the bit alone cannot define a new surface elevation.
+Re-bake after changing source water files or shoreline padding. Area-painter
+water-bit edits affect gameplay attributes, not the independent visual water
+layer; they neither remove water under crossings nor define new surface heights.
+Editing visual water coverage/heights needs corresponding source water-layer
+changes and a fresh bake.
 
 ## Runtime
 
@@ -80,41 +99,23 @@ Mesh chunks are replaced on refresh and destroyed with their owning actor.
 
 ## Validation
 
-`Metin2.World.Water` covers exact water-cell coverage, overlap with BANPK, holes,
-height boundaries, chunk boundaries, atomic failures, mirrored map coordinates,
-triangle winding, UVs, both height-table formats, malformed data, material
-assignment, collision/replication flags, repeated component rebuilds, and cleanup.
-NullRHI validates data and component setup, not the visual appearance of a user's
-water material. Rebuild/cook packaged targets after source or map-data changes.
+Before cleanup, all eight water tests passed with a real RHI in
+`Saved/Logs/WaterVisualCoverageTests.log`. Coverage included independent visual
+water at crossings, bounded shoreline overlap, height boundaries, unchanged
+gameplay flags, component/settings lifecycle, both legacy height formats, and
+above/below GPU depth readback. All 28 launcher maps were baked and verified
+against their source data (`Saved/Logs/WaterVisualMapBake.log`,
+`Saved/Logs/WaterVisualMapVerification.log`). The user subsequently confirmed
+the water's appearance, including the shoreline and crossing corrections.
 
-Recorded validation (2026-10-07): Editor, Client, and Server Win64 Development built successfully;
-all four water tests passed in `Saved/Logs/WaterRegressionTests.log`. The existing
-world regression group also reported nine successful tests in
-`Saved/Logs/WaterWorldRegressionTests.log`, including safezones and no-walk.
-These NullRHI results do not establish rendered PIE or water-material appearance.
-The existing
-launcher-map batch baked 22 of 28 maps, and all 22 saved bakes matched a fresh
-read-only verification (`Saved/Logs/WaterMapVerification.log`). Map and
-presentation-actor asset changes are in the Content submodule.
+The three water-test source files and obsolete bake-version/checksum logic were
+removed at the user's request after validation. Unrelated automation tests remain
+in place. The manual `-Inspect` and read-only `-Verify` commandlet modes are
+retained for authoring diagnostics. Saved geometry property names and types are
+unchanged; cleanup does not require asset resaving. These records do not establish
+Shipping or freshly cooked packaged-runtime validation.
 
-Six maps were left unchanged because at least one water-flagged attribute cell
-had no valid surface height in the available source: `joan`, `bokjung`,
-`yongbi_desert`, `red_forest`, `snakefield`, and `nephrite_bay`. See
-`Saved/Logs/WaterMapBake.log` for the first offending cell in each map. Resolving
-these source/attribute mismatches or authoring explicit replacement heights is
-required before those maps can be baked; no default elevation was substituted.
-The selected production water material, visual appearance, and packaged runtime
-have not been tested.
-
-Visibility correction (2026-10-07): triangle indices now follow Unreal's
-upward-facing procedural-grid winding instead of a right-handed cross-product
-assumption. Loaded editor maps rebuild their water on component registration;
-water Project Settings changes refresh previews without polling. Unregistration
-clears generated chunks and removes settings delegates, and preview chunks are
-not duplicated into PIE. Editor, Client, and Server Development builds passed.
-All six water tests passed with a real RHI in
-`Saved/Logs/WaterVisibilityDepthTests.log`, including above/below GPU depth
-readback with a two-sided control and editor settings/registration checks.
-Earlier color-capture attempts did not validate visibility; depth readback
-isolates geometry/culling from material color and lighting. This does not prove
-the visual appearance of the selected production translucent material.
+Cleanup validation (2026-10-07): Editor, Client, and Server Win64 Development
+built successfully. All 28 existing saved bakes loaded and matched source data
+in the read-only `Saved/Logs/WaterCleanupAssetVerification.log` run, without
+resaving assets. The configured-path audit and diff whitespace checks passed.

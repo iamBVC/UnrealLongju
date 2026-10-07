@@ -106,6 +106,9 @@ public:
 	float WaterUVTileSize = 1000.f;
 	UPROPERTY(EditAnywhere, config, Category = "Water", meta = (Units = "cm"))
 	float WaterSurfaceOffset = 1.f;
+	// Bake-only visual overlap under banks; never changes server water/no-walk/safezone flags.
+	UPROPERTY(EditAnywhere, config, Category = "Water", meta = (ClampMin = "0", ClampMax = "4"))
+	int32 WaterShorelinePaddingCells = 1;
 
 	// ---- PvP and empire presentation ----
 

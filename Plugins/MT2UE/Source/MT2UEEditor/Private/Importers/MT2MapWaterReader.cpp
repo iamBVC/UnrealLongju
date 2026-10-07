@@ -1,6 +1,7 @@
 #include "MT2MapWaterReader.h"
 #include "World/MT2MapAttributes.h"
 #include "Config/MT2PathSettings.h"
+#include "Config/MT2GameplaySettings.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 
@@ -41,8 +42,48 @@ bool FMT2MapWaterReader::Decode(const TArray<uint8>& File, TArray<float>& Height
 	Heights = MoveTemp(Result); Error.Reset(); return true;
 }
 
+bool FMT2MapWaterReader::BuildVisual(FIntPoint Size, const TArray<float>& Heights, int32 PaddingCells,
+	TArray<FMT2WaterRectangle>& Out, FString& Error)
+{
+	if (Size.X <= 0 || Size.Y <= 0 || int64(Size.X) * Size.Y != Heights.Num() || PaddingCells < 0 || PaddingCells > 4)
+	{
+		Error = TEXT("Invalid visual water grid or shoreline padding (0..4 cells)"); return false;
+	}
+	TArray<float> Padded = Heights;
+	auto Valid = [](float Height) { return Height != -MAX_flt && FMath::IsFinite(Height); };
+	for (int32 Y = 0; Y < Size.Y; ++Y)
+	{
+		for (int32 X = 0; X < Size.X; ++X)
+		{
+			const int32 Index = Y * Size.X + X;
+			if (Valid(Heights[Index])) { continue; }
+			int32 BestDistance = MAX_int32; float Height = -MAX_flt; bool bAmbiguous = false;
+			for (int32 DY = -PaddingCells; DY <= PaddingCells; ++DY)
+			{
+				for (int32 DX = -PaddingCells; DX <= PaddingCells; ++DX)
+				{
+					const int32 NX = X + DX, NY = Y + DY, Distance = DX * DX + DY * DY;
+					if (Distance > PaddingCells * PaddingCells || NX < 0 || NY < 0 || NX >= Size.X || NY >= Size.Y) { continue; }
+					const float Candidate = Heights[NY * Size.X + NX];
+					if (!Valid(Candidate)) { continue; }
+					if (Distance < BestDistance) { BestDistance = Distance; Height = Candidate; bAmbiguous = false; }
+					else if (Distance == BestDistance && Candidate != Height) { bAmbiguous = true; }
+				}
+			}
+			// Do not extend across an ambiguous boundary between different water levels.
+			if (!bAmbiguous) { Padded[Index] = Height; }
+		}
+	}
+	FMT2MapAttributes Visual; Visual.Size = Size; Visual.Flags.SetNumZeroed(Heights.Num());
+	for (int32 Index = 0; Index < Padded.Num(); ++Index) { if (Valid(Padded[Index])) { Visual.Flags[Index] = MT2MapAttribute::Water; } }
+	return MT2MapWater::Bake(Visual, [&](int32 X, int32 Y, float& Z)
+	{
+		Z = Padded[Y * Size.X + X]; return Valid(Z);
+	}, Out, Error);
+}
+
 bool FMT2MapWaterReader::Bake(const FString& Directory, FIntPoint MapCells, float HeightScale,
-	const FMT2MapAttributes& Attributes, TArray<FMT2WaterRectangle>& Out, FString& Error)
+	const FMT2MapAttributes& Attributes, TArray<FMT2WaterRectangle>& Out, FString& Error, FIntPoint& OutGridSize)
 {
 	if (MapCells.X <= 0 || MapCells.Y <= 0 || int64(MapCells.X) * MapCells.Y > 256 ||
 		(Attributes.Size != MapCells * 256 && Attributes.Size != MapCells * 512) ||
@@ -50,32 +91,26 @@ bool FMT2MapWaterReader::Bake(const FString& Directory, FIntPoint MapCells, floa
 	{
 		Error = TEXT("Water map and attribute dimensions do not match"); return false;
 	}
-	const int32 CellsPerTile = Attributes.Size.X / MapCells.X;
-	TMap<FIntPoint, TArray<float>> Tiles;
-	// Read only tiles referenced by the authoritative water bit, not unrelated dry terrain.
-	for (int32 Y = 0; Y < Attributes.Size.Y; ++Y)
+	const FIntPoint Grid = MapCells * 128;
+	TArray<float> Heights; Heights.Init(-MAX_flt, Grid.X * Grid.Y);
+	// Water rendering uses the client's water-layer mask, not fishing/walkability attributes.
+	for (int32 Y = 0; Y < MapCells.Y; ++Y)
 	{
-		for (int32 X = 0; X < Attributes.Size.X; ++X)
+		for (int32 X = 0; X < MapCells.X; ++X)
 		{
-			if (!(Attributes.Flags[Y * Attributes.Size.X + X] & MT2MapAttribute::Water)) { continue; }
-			const FIntPoint Tile(X / CellsPerTile, Y / CellsPerTile);
-			if (Tiles.Contains(Tile)) { continue; }
-			const FString Filename = Directory / FString::Printf(TEXT("%03d%03d"), Tile.X, Tile.Y) /
+			const FString Filename = Directory / FString::Printf(TEXT("%03d%03d"), X, Y) /
 				UMT2PathSettings::Path(TEXT("Part_water_wtr"));
-			TArray<uint8> File; TArray<float> Heights;
-			if (!FFileHelper::LoadFileToArray(File, *Filename) || !Decode(File, Heights, HeightScale, Error))
+			TArray<uint8> File; TArray<float> Tile;
+			if (!FFileHelper::LoadFileToArray(File, *Filename) || !Decode(File, Tile, HeightScale, Error))
 			{
 				Error = Filename + TEXT(": ") + (Error.IsEmpty() ? TEXT("Cannot read water height data") : Error); return false;
 			}
-			Tiles.Add(Tile, MoveTemp(Heights));
+			for (int32 Row = 0; Row < 128; ++Row)
+			{
+				FMemory::Memcpy(Heights.GetData() + (Y * 128 + Row) * Grid.X + X * 128, Tile.GetData() + Row * 128, 128 * sizeof(float));
+			}
 		}
 	}
-	return MT2MapWater::Bake(Attributes, [&](int32 X, int32 Y, float& Height)
-	{
-		const TArray<float>* Tile = Tiles.Find(FIntPoint(X / CellsPerTile, Y / CellsPerTile));
-		if (!Tile) { return false; }
-		const int32 Ratio = CellsPerTile / 128;
-		Height = (*Tile)[((Y % CellsPerTile) / Ratio) * 128 + (X % CellsPerTile) / Ratio];
-		return Height != -MAX_flt;
-	}, Out, Error);
+	if (!BuildVisual(Grid, Heights, UMT2GameplaySettings::Get().WaterShorelinePaddingCells, Out, Error)) { return false; }
+	OutGridSize = Grid; return true;
 }

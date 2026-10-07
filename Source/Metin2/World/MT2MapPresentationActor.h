@@ -150,7 +150,6 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Map|Water")
 	FIntPoint WaterGridSize = FIntPoint::ZeroValue;
 	UPROPERTY() TArray<FMT2WaterRectangle> WaterRectangles;
-	UPROPERTY() uint32 WaterAttributeCRC = 0;
 
 	UFUNCTION(CallInEditor, Category = "Map|Water")
 	void RefreshWaterRendering();

@@ -5,7 +5,6 @@
 #include "Config/MT2PathSettings.h"
 #include "EngineUtils.h"
 #include "FileHelpers.h"
-#include "Misc/Crc.h"
 #include "Misc/PackageName.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
@@ -39,18 +38,17 @@ int32 UMT2BakeMapWaterCommandlet::Main(const FString& Params)
 			FMT2AssetRecord Setting; Setting.AbsolutePath = MapRoot / It->MapId / UMT2PathSettings::Path(TEXT("Part_Setting"));
 			Setting.ContentPath = It->MapId / UMT2PathSettings::Path(TEXT("Part_Setting"));
 			FMT2AssetScanResult Scan; Scan.Records.Add(Setting);
-			TArray<FMT2MapTerrainInfo> Infos; TArray<FMT2WaterRectangle> Rectangles; FString Error;
+			TArray<FMT2MapTerrainInfo> Infos; TArray<FMT2WaterRectangle> Rectangles; FString Error; FIntPoint Grid;
 			if (!FMT2MapTerrainBuilder::DiscoverMaps(Scan, Infos, Error) || Infos.Num() != 1 ||
 				FIntPoint(Infos[0].MapSizeX, Infos[0].MapSizeY) != It->MapCells ||
-				!FMT2MapWaterReader::Bake(Infos[0].MapDirectory, It->MapCells, Infos[0].HeightScale, It->Attributes, Rectangles, Error))
+				!FMT2MapWaterReader::Bake(Infos[0].MapDirectory, It->MapCells, Infos[0].HeightScale, It->Attributes, Rectangles, Error, Grid))
 			{
 				UE_LOG(LogTemp, Error, TEXT("%s: cannot bake water; check Setting.txt dimensions and water.wtr: %s"), *MapPath, *Error);
 				bMapFailed = true; continue;
 			}
-			const uint32 CRC = FCrc::MemCrc32(It->Attributes.Flags.GetData(), It->Attributes.Flags.Num());
 			if (bVerify)
 			{
-				bool bEqual = It->WaterGridSize == It->Attributes.Size && It->WaterAttributeCRC == CRC && It->WaterRectangles.Num() == Rectangles.Num();
+				bool bEqual = It->WaterGridSize == Grid && It->WaterRectangles.Num() == Rectangles.Num();
 				for (int32 Index = 0; bEqual && Index < Rectangles.Num(); ++Index)
 				{
 					const auto& A = Rectangles[Index]; const auto& B = It->WaterRectangles[Index];
@@ -60,7 +58,7 @@ int32 UMT2BakeMapWaterCommandlet::Main(const FString& Params)
 			}
 			else if (!bInspect)
 			{
-				It->Modify(); It->WaterGridSize = It->Attributes.Size; It->WaterRectangles = MoveTemp(Rectangles); It->WaterAttributeCRC = CRC;
+				It->Modify(); It->WaterGridSize = Grid; It->WaterRectangles = MoveTemp(Rectangles);
 				It->MarkPackageDirty();
 			}
 			UE_LOG(LogTemp, Display, TEXT("%s: %d water rectangles (%s)"), *MapPath,

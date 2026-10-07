@@ -47,7 +47,6 @@ public class MT2UEEditor : ModuleRules
 				"Landscape",
 				"LevelEditor",
 				"Projects",
-				"ProceduralMeshComponent",
 				"RenderCore",
 				"RHI",
 				"SkeletalMeshUtilitiesCommon",

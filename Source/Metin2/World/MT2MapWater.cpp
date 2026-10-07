@@ -3,7 +3,6 @@
 #include "Config/MT2GameplaySettings.h"
 #include "Materials/MaterialInterface.h"
 #include "ProceduralMeshComponent.h"
-#include "Misc/Crc.h"
 #include "Engine/World.h"
 #include "UObject/UnrealType.h"
 
@@ -127,12 +126,13 @@ void UMT2MapWaterComponent::Rebuild(const AMT2MapPresentationActor& Map)
 	ClearChunks();
 	if (!IsRegistered() || Map.GetNetMode() == NM_DedicatedServer || Map.WaterRectangles.IsEmpty()) { return; }
 	const FVector2D Extent = Map.WorldMax - Map.WorldMin;
-	if (Map.WaterGridSize != Map.Attributes.Size || Map.WaterGridSize.X <= 0 || Map.WaterGridSize.Y <= 0 ||
+	const bool bValidSource = Map.MapCells.X > 0 && Map.MapCells.Y > 0 &&
+		int64(Map.MapCells.X) * 128 == Map.WaterGridSize.X && int64(Map.MapCells.Y) * 128 == Map.WaterGridSize.Y;
+	if (!bValidSource || Map.WaterGridSize.X <= 0 || Map.WaterGridSize.Y <= 0 ||
 		!FMath::IsFinite(Extent.X) || !FMath::IsFinite(Extent.Y) || Extent.X <= 0 || Extent.Y <= 0 ||
-		int64(Map.Attributes.Size.X) * Map.Attributes.Size.Y != Map.Attributes.Flags.Num() ||
-		Map.WaterAttributeCRC != FCrc::MemCrc32(Map.Attributes.Flags.GetData(), Map.Attributes.Flags.Num()))
+		!FMath::IsFinite(Map.WorldMin.X) || !FMath::IsFinite(Map.WorldMin.Y))
 	{
-		UE_LOG(LogMT2Water, Warning, TEXT("%s: water bake is stale or invalid; re-bake water after editing attributes."), *Map.MapId);
+		UE_LOG(LogMT2Water, Warning, TEXT("%s: invalid visual water grid or map bounds; re-bake water from the source water layers."), *Map.MapId);
 		return;
 	}
 	const UMT2GameplaySettings& Settings = UMT2GameplaySettings::Get();

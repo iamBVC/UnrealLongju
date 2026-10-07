@@ -5,8 +5,8 @@ Test names, behaviour, and automation categories are unchanged by the move.
 
 | Files | Compiling module |
 | --- | --- |
-| `MT2DamageFeedbackTests.cpp`, `MT2DuelTests.cpp`, `MT2MapAttributeTests.cpp`, `MT2MapWaterTests.cpp`, `MT2PathSettingsTests.cpp`, `MT2ProfilingPortsTests.cpp`, `MT2QuestPlayerApiTests.cpp` | `Metin2` runtime module |
-| `MT2AreaPaintTests.h`, `MT2PIETravelTests.h`, `MT2MapWaterReaderTests.h`, `MT2MapWaterVisibilityTests.h` | `MT2UEEditor`, through `Private/MT2TestRegistration.cpp` |
+| `MT2DamageFeedbackTests.cpp`, `MT2DuelTests.cpp`, `MT2MapAttributeTests.cpp`, `MT2PathSettingsTests.cpp`, `MT2ProfilingPortsTests.cpp`, `MT2QuestPlayerApiTests.cpp` | `Metin2` runtime module |
+| `MT2AreaPaintTests.h`, `MT2PIETravelTests.h` | `MT2UEEditor`, through `Private/MT2TestRegistration.cpp` |
 | `MT2QuestImporterTests.h` | `MT2UEEditor`, included at the end of `Private/Importers/MT2QuestImporter.cpp` |
 
 The editor test headers contain implementations, not public APIs. Include each
@@ -37,4 +37,5 @@ scope and log.
 voice-port overrides, engine URL defaults, explicit profiler overrides, and
 TCP port bounds.
 
-See [water](../../../Docs/Water.md) for `Metin2.World.Water` coverage and map-bake workflow.
+Water-specific fixtures were removed at the user's request after validation.
+See [water](../../../Docs/Water.md) for the retained map-bake and read-only verification workflow.
