@@ -99,6 +99,14 @@ public:
 
 	static const UMT2GameplaySettings& Get() { return *GetDefault<UMT2GameplaySettings>(); }
 
+	// A surface material/instance for the client-generated water mesh. Unset disables rendering.
+	UPROPERTY(EditAnywhere, config, Category = "Water")
+	TSoftObjectPtr<UMaterialInterface> WaterMaterial;
+	UPROPERTY(EditAnywhere, config, Category = "Water", meta = (ClampMin = "1.0", Units = "cm"))
+	float WaterUVTileSize = 1000.f;
+	UPROPERTY(EditAnywhere, config, Category = "Water", meta = (Units = "cm"))
+	float WaterSurfaceOffset = 1.f;
+
 	// ---- PvP and empire presentation ----
 
 	UPROPERTY(EditAnywhere, config, Category = "PvP", meta = (ClampMin = "0"))

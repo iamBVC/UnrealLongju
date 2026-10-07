@@ -10,6 +10,8 @@
 #include "Importers/MT2MapTerrainImporter.h"
 #include "Config/MT2PathSettings.h"
 #include "MT2MapAttributeReader.h"
+#include "MT2MapWaterReader.h"
+#include "Misc/Crc.h"
 
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Editor.h"
@@ -52,6 +54,19 @@
 
 namespace
 {
+	void BakeMapWater(AMT2MapPresentationActor& Presentation, const FMT2MapTerrainInfo& Map, FMT2ImportResult& Result)
+	{
+		TArray<FMT2WaterRectangle> Rectangles; FString Error;
+		if (!FMT2MapWaterReader::Bake(Map.MapDirectory, FIntPoint(Map.MapSizeX, Map.MapSizeY),
+			Map.HeightScale, Presentation.Attributes, Rectangles, Error))
+		{
+			Result.AddWarning(TEXT("Water was not baked: ") + Error, Map.MapDirectory); return;
+		}
+		Presentation.WaterGridSize = Presentation.Attributes.Size;
+		Presentation.WaterRectangles = MoveTemp(Rectangles);
+		Presentation.WaterAttributeCRC = FCrc::MemCrc32(Presentation.Attributes.Flags.GetData(), Presentation.Attributes.Flags.Num());
+		Presentation.RefreshWaterRendering();
+	}
 	struct FImportedMobGroup
 	{
 		TArray<int32> Members;
@@ -451,6 +466,7 @@ namespace
 					AMT2MapPresentationActor* Mutable = const_cast<AMT2MapPresentationActor*>(ExistingPresentation);
 					Mutable->Modify();
 					Mutable->Attributes = MoveTemp(Attributes);
+					BakeMapWater(*Mutable, Map, OutResult);
 					Mutable->MarkPackageDirty();
 					if (!bServerAttributes) { OutResult.AddWarning(TEXT("Used client attributes: server data unavailable or dimensions differ."), Map.MapDirectory); }
 				}
@@ -554,6 +570,7 @@ namespace
 		else
 		{
 			PresentationActor->Attributes = MoveTemp(Attributes);
+			BakeMapWater(*PresentationActor, Map, OutResult);
 			if (!bServerAttributes) { OutResult.AddWarning(TEXT("Used client attributes: server data unavailable or dimensions differ."), Map.MapDirectory); }
 		}
 		if (bHasLocalizedMapName)

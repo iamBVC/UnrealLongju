@@ -33,8 +33,9 @@ See the [setup guide](../README.md) for supported commands and configuration cav
 - Coordinator guild core with 15 editable ranks, invitations, membership, guild chat, and owner-client UI state. Local JSON guild code also remains; do not confuse it with cluster authority.
 - Messenger friend requests, presence, stored cluster messages, separate whisper UI, and notifications. Coordinator-free fallback is session-local, not persistent.
 - Mount definition/component/item foundation, with progression and full presentation fidelity still separate work.
-- Imported area-attribute grids and authoritative BANPK safezones. Player chat reports `safezone area` / `unprotected area` on initial status and transitions. BLOCK/OBJECT now constrain player/mob movement through an attribute-aware character movement component; water generation and AI route planning around these cells remain separate work. See the [2026-10-06 validation](OldGameResearch/SafeZones.md).
-- Dedicated editor-only [area painter](AreaPainting.md) with native-resolution bit editing, colored terrain overlays, independent visibility, paint/erase brushes, and sparse undo/redo. The current transient preview uses native Landscape triangles/current terrain LOD with +4-unit world-Z clearance and original byte textures; water surfaces remain separate work.
+- Imported area-attribute grids and authoritative BANPK safezones. Player chat reports `safezone area` / `unprotected area` on initial status and transitions. BLOCK/OBJECT constrain player/mob movement through an attribute-aware character movement component; AI route planning around these cells remains separate work. See the [2026-10-06 validation](OldGameResearch/SafeZones.md).
+- Dedicated editor-only [area painter](AreaPainting.md) with native-resolution bit editing, colored terrain overlays, independent visibility, paint/erase brushes, and sparse undo/redo. The current transient preview uses native Landscape triangles/current terrain LOD with +4-unit world-Z clearance and original byte textures.
+- [Water surfaces](Water.md) (2026-10-07): water-bit coverage and legacy water-layer heights bake into map-presentation data; clients generate non-colliding mesh chunks using a project-configured material. This is not a swimming/buoyancy system or a claim of validated material appearance in packaged builds.
 
 Area-tooling validation (2026-10-06): Editor Development build succeeded and all 36 area-paint/world/quest tests passed (`Saved/Logs/AreaPaintTests.log`). This verifies data editing, editor transactions, and regression fixtures, not live viewport appearance or cooked multiplayer behavior.
 
@@ -104,7 +105,7 @@ The recorded function-result-list validation passed 32 quest/safezone tests. The
 1. Continue quest control-flow/scoping, resumable expression/result-list propagation, table-field assignment, function values, and rejected trigger/gate work.
 2. Build real authoritative backends for unresolved dungeon/instance, cube, safebox/mall, pet, marriage, guild-war/building, and horse APIs rather than accepting placeholders.
 3. Audit already accepted quest bindings and unfinished quest triggers; conversion counts alone do not establish correctness.
-4. Implement water placement, and validate attribute-based movement with live multiplayer, AI routes, and authored spawn/warp destinations.
+4. Validate water material appearance and attribute-based movement with live multiplayer, AI routes, and authored spawn/warp destinations.
 5. Validate current content in cooked client/server builds, multiplayer travel, persistence/reconnect, and complete quest playthroughs.
 6. Establish reproducible engine/dependency revisions, explicit database migration/backup procedures, and reviewed production security/release configuration.
 

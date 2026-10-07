@@ -29,6 +29,8 @@ AMT2MapPresentationActor::AMT2MapPresentationActor()
 
 	SceneRoot = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRoot);
+	WaterComponent = CreateDefaultSubobject<UMT2MapWaterComponent>(TEXT("MapWater"));
+	WaterComponent->SetupAttachment(SceneRoot);
 
 	EnvironmentDirectionalLight = CreateDefaultSubobject<UDirectionalLightComponent>(TEXT("EnvironmentDirectionalLight"));
 	EnvironmentDirectionalLight->SetupAttachment(SceneRoot);
@@ -57,6 +59,7 @@ void AMT2MapPresentationActor::OnConstruction(const FTransform& Transform)
 {
 	Super::OnConstruction(Transform);
 	ApplyEnvironmentComponents();
+	RefreshWaterRendering();
 }
 
 void AMT2MapPresentationActor::BeginPlay()
@@ -64,6 +67,7 @@ void AMT2MapPresentationActor::BeginPlay()
 	Super::BeginPlay();
 	GetWorld()->GetSubsystem<UMT2MapAttributeSubsystem>()->RegisterMap(this);
 	ApplyEnvironmentComponents();
+	RefreshWaterRendering();
 	if (GetNetMode() == NM_DedicatedServer || !DefaultMusic || !MusicComponent) return;
 
 	MusicComponent->SetSound(DefaultMusic);
@@ -84,6 +88,11 @@ void AMT2MapPresentationActor::ConfigureEnvironment(const FMT2MapEnvironmentSett
 {
 	Environment = InEnvironment;
 	ApplyEnvironmentComponents();
+}
+
+void AMT2MapPresentationActor::RefreshWaterRendering()
+{
+	if (WaterComponent) { WaterComponent->Rebuild(*this); }
 }
 
 void AMT2MapPresentationActor::ApplyEnvironmentComponents()

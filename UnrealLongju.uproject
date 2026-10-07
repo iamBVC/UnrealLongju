@@ -16,6 +16,10 @@
 	],
 	"Plugins": [
 		{
+			"Name": "ProceduralMeshComponent",
+			"Enabled": true
+		},
+		{
 			"Name": "MT2UE",
 			"Enabled": true,
 			"TargetAllowList": [

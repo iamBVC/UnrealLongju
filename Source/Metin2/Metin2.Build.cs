@@ -46,7 +46,7 @@ public class Metin2 : ModuleRules
 			"UMG"
 		});
 
-		PrivateDependencyModuleNames.AddRange(new[] { "AssetRegistry", "SSL" });
+		PrivateDependencyModuleNames.AddRange(new[] { "AssetRegistry", "SSL", "ProceduralMeshComponent" });
 		if (Target.Platform == UnrealTargetPlatform.Win64)
 		{
 			PublicSystemLibraries.Add("Comdlg32.lib");

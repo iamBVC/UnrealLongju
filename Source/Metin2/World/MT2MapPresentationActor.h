@@ -13,6 +13,7 @@
 #include "GameFramework/Actor.h"
 #include "Player/MT2PlayerTypes.h"
 #include "World/MT2MapAttributes.h"
+#include "World/MT2MapWater.h"
 #include "MT2MapPresentationActor.generated.h"
 
 class UTexture2D;
@@ -146,6 +147,14 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Map|Attributes")
 	FMT2MapAttributes Attributes;
 
+	UPROPERTY(VisibleAnywhere, Category = "Map|Water")
+	FIntPoint WaterGridSize = FIntPoint::ZeroValue;
+	UPROPERTY() TArray<FMT2WaterRectangle> WaterRectangles;
+	UPROPERTY() uint32 WaterAttributeCRC = 0;
+
+	UFUNCTION(CallInEditor, Category = "Map|Water")
+	void RefreshWaterRendering();
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Map")
 	FVector2D WorldMin = FVector2D::ZeroVector;
 
@@ -171,6 +180,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, Category = "Map|Environment")
 	TObjectPtr<USceneComponent> SceneRoot;
+
+	UPROPERTY(VisibleAnywhere, Category = "Map|Water")
+	TObjectPtr<UMT2MapWaterComponent> WaterComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Map|Environment")
 	TObjectPtr<UDirectionalLightComponent> EnvironmentDirectionalLight;
