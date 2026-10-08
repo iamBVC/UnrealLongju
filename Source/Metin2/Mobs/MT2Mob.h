@@ -121,7 +121,9 @@ public:
 	float GetAttackMotionPlayRate() const;
 
 	UFUNCTION(BlueprintPure, Category = "Mob|Combat")
-	bool IsCombatMotionLocked() const { return bCombatMotionLocked; }
+	bool IsCombatMotionLocked() const { return bCombatMotionLocked || bKnockdownMotionLocked; }
+	bool IsKnockdownMotionLocked() const { return bKnockdownMotionLocked; }
+	void PlayHitReaction(const AActor* Attacker, int32 HittingType, bool bSyncPush = false);
 
 	void SetLastDamageInstigator(AActor* DamageInstigator);
 	// Who last hit this mob; metin stones hand this to the mobs they summon (old SelectStone).
@@ -235,6 +237,8 @@ protected:
 	// Attack/damage/death/knockdown animation variants from the imported .msa motion lists.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mob|Animation")
 	FMT2MobMotionSet MotionSet;
+	float AttackExternalForce = 0.f;
+	int32 AttackHittingType = 2;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Mob|Death", meta = (ClampMin = "0.0", Units = "s"))
 	float CorpseLifetime = 5.0f;
@@ -251,6 +255,8 @@ private:
 	const FMT2MobMotionVariant* ChooseMotion(EMT2MobMotion Motion) const;
 	void LockCombatMovement(float Duration);
 	void UnlockCombatMovement();
+	void AdvanceKnockdownMotion();
+	void ClearKnockdownMotion();
 
 	UFUNCTION()
 	void HandleDeath();
@@ -291,11 +297,18 @@ private:
 	UPROPERTY(Replicated)
 	EMT2MobMotion ReplicatedMotion = EMT2MobMotion::Wait;
 
+	// All peers play the variant selected by authority, including its exact duration.
+	UPROPERTY(Replicated)
+	TSoftObjectPtr<UAnimSequence> ReplicatedMotionAnimation;
+
 	UPROPERTY(ReplicatedUsing = OnRep_MotionSerial)
 	uint8 MotionSerial = 0;
 
 	FTimerHandle AttackCooldownTimer;
 	FTimerHandle CombatMotionLockTimer;
+	FTimerHandle KnockdownMotionTimer;
+	EMT2MobMotion RecoveryMotion = EMT2MobMotion::FrontStandup;
+	bool bKnockdownMotionLocked = false;
 	FTimerHandle DeathAnimFreezeTimer;
 	TWeakObjectPtr<UAnimMontage> DeathAnimMontage;
 	bool bAttackReady = true;

@@ -63,12 +63,13 @@ public:
 	// AMT2PlayerCharacter applies duel, empire, karma and aggressive-mode rules.
 	virtual bool IsPvPEnabledAgainst(const AMT2CharacterBase* Other) const { return false; }
 
-	// Slides this character away from Instigator by Distance (old CRUSH: Sync + Goto, i.e. a
-	// travelled slide rather than a teleport). Server-authoritative, replicated to clients.
-	UFUNCTION(NetMulticast, Unreliable, Category = "Combat")
-	void MulticastKnockback(FVector_NetQuantizeNormal Direction, float Distance);
+	// Collision-aware, authoritative presentation of legacy CRUSH sync and motion pushes.
+	UFUNCTION(NetMulticast, Reliable, Category = "Combat")
+	void MulticastKnockback(FVector_NetQuantizeNormal Direction, float Distance, float Duration);
 
-	void ApplyKnockback(const AActor* Instigator, float Distance);
+	void ApplyKnockback(const AActor* Instigator, float Distance, float Duration = 0, bool bSideways = false);
+	void StartKnockback(const FVector& Direction, float Distance, float Duration);
+	UFUNCTION() void ClearKnockbackOnDeath();
 
 	UFUNCTION(BlueprintPure, Category = "Stats|Combat")
 	UMT2CombatStatsComponent* GetCombatStatsComponent() const { return CombatStatsComponent; }

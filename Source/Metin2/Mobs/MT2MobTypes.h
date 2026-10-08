@@ -97,7 +97,9 @@ enum class EMT2MobMotion : uint8
 	Special2,
 	Special3,
 	Special4,
-	Special5
+	Special5,
+	// Append to preserve existing serialized motion indices.
+	BackStandup
 };
 
 USTRUCT(BlueprintType)

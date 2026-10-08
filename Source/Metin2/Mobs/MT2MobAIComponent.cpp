@@ -111,7 +111,8 @@ void UMT2MobAIComponent::ApplyTickPolicy()
 		|| State == EMT2MobAIState::Chasing
 		|| State == EMT2MobAIState::Fleeing
 		|| State == EMT2MobAIState::ReturningHome;
-	const bool bCanMove = bMovementState && !HasAIFlag(AIFlags, EMT2MobAIFlag::NoMove);
+	const bool bCanMove = ((bMovementState && !Mob->IsCombatMotionLocked()) ||
+		Mob->GetCharacterMovement()->HasRootMotionSources()) && !HasAIFlag(AIFlags, EMT2MobAIFlag::NoMove);
 	if (UCharacterMovementComponent* Movement = Mob->GetCharacterMovement())
 	{
 		if (!bCanMove)

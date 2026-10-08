@@ -14,6 +14,8 @@
 #include "FramePro/FramePro.h"
 #include "GameFramework/Character.h"
 #include "Mobs/MT2MobRuntimeSettings.h"
+#include "Mobs/MT2Mob.h"
+#include "Mobs/MT2MobAIComponent.h"
 
 UMT2MobMovementComponent::UMT2MobMovementComponent()
 {
@@ -38,6 +40,19 @@ void UMT2MobMovementComponent::PhysWalking(float DeltaSeconds, int32 Iterations)
 		return;
 	}
 
+	if (HasRootMotionSources())
+	{
+		bHadKnockbackMovement = true;
+		// Use the full swept walking solver during a shove so AI steering cannot replace its velocity.
+		Super::PhysWalking(DeltaSeconds, Iterations);
+		return;
+	}
+	if (bHadKnockbackMovement)
+	{
+		bHadKnockbackMovement = false;
+		if (auto* Mob = Cast<AMT2Mob>(CharacterOwner)) { Mob->GetMobAIComponent()->ApplyTickPolicy(); }
+		if (!IsComponentTickEnabled()) { return; }
+	}
 	// Mobs only need direct planar steering. Avoid CharacterMovement's floor cache, step solver,
 	// based movement and repeated floor sweeps, while retaining a swept capsule against obstacles.
 	// AI decisions may be distance-throttled, but movement must remain continuous. Preserve the last

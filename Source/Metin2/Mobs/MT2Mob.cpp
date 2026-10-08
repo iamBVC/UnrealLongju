@@ -17,6 +17,8 @@
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimSequence.h"
 #include "Animation/MT2MobAnimInstance.h"
+#include "Animation/MT2AnimationMotionData.h"
+#include "Config/MT2GameplaySettings.h"
 #include "Combat/MT2CombatComponent.h"
 #include "Core/MT2VnumRegistrySubsystem.h"
 #include "Engine/GameInstance.h"
@@ -116,6 +118,7 @@ void AMT2Mob::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeP
 	DOREPLIFETIME(AMT2Mob, MobLevel);
 	DOREPLIFETIME(AMT2Mob, Empire);
 	DOREPLIFETIME(AMT2Mob, ReplicatedMotion);
+	DOREPLIFETIME(AMT2Mob, ReplicatedMotionAnimation);
 	DOREPLIFETIME(AMT2Mob, MotionSerial);
 }
 
@@ -194,6 +197,7 @@ void AMT2Mob::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	}
 	GetWorldTimerManager().ClearTimer(AttackCooldownTimer);
 	GetWorldTimerManager().ClearTimer(CombatMotionLockTimer);
+	ClearKnockdownMotion();
 	GetWorldTimerManager().ClearTimer(DeathAnimFreezeTimer);
 	Super::EndPlay(EndPlayReason);
 }
@@ -234,7 +238,7 @@ void AMT2Mob::Tick(float DeltaSeconds)
 	// replicated), which is what makes the turn actually show: bOrientRotationToMovement otherwise derives
 	// a simulated proxy's rotation from velocity, and the mob is stopped while attacking. Yaw only - a
 	// character capsule must never pitch/roll toward a target above or below it.
-	if (!MobAIComponent || MobAIComponent->GetState() != EMT2MobAIState::Attacking)
+	if (bKnockdownMotionLocked || !MobAIComponent || MobAIComponent->GetState() != EMT2MobAIState::Attacking)
 	{
 		return;
 	}
@@ -329,7 +333,7 @@ void AMT2Mob::SetLootTable(TSubclassOf<UMT2LootTable> NewLootTable)
 
 bool AMT2Mob::TryAttackTarget(AActor* TargetActor)
 {
-	if (!HasAuthority() || !bAttackReady || !TargetActor || GetHealthComponent()->IsDead())
+	if (!HasAuthority() || IsCombatMotionLocked() || !bAttackReady || !TargetActor || GetHealthComponent()->IsDead())
 	{
 		return false;
 	}
@@ -358,8 +362,10 @@ bool AMT2Mob::TryAttackTarget(AActor* TargetActor)
 		Interval,
 		false);
 
+	AttackExternalForce = 0.f;
+	AttackHittingType = 2;
 	PlayMobMotion(EMT2MobMotion::NormalAttack);
-	return GetCombatComponent()->PerformBasicAttackOnTarget(TargetActor);
+	return GetCombatComponent()->PerformBasicAttackOnTarget(TargetActor, AttackExternalForce, AttackHittingType);
 }
 
 float AMT2Mob::GetAttackMotionPlayRate() const
@@ -371,13 +377,28 @@ float AMT2Mob::GetAttackMotionPlayRate() const
 bool AMT2Mob::PlayMobMotion(EMT2MobMotion Motion)
 {
 	const bool bDeathMotion = Motion == EMT2MobMotion::FrontDead || Motion == EMT2MobMotion::BackDead;
+	const bool bFallMotion = Motion == EMT2MobMotion::FrontKnockdown || Motion == EMT2MobMotion::BackKnockdown;
+	const bool bStandupMotion = Motion == EMT2MobMotion::FrontStandup || Motion == EMT2MobMotion::BackStandup;
+	if (HasAuthority() && bKnockdownMotionLocked && !bDeathMotion && !bStandupMotion)
+	{
+		return false;
+	}
 	if (GetHealthComponent()->IsDead() && !bDeathMotion)
 	{
 		return false;
 	}
 
 	const FMT2MobMotionVariant* Variant = ChooseMotion(Motion);
-	UAnimSequence* Sequence = Variant ? Variant->Animation.LoadSynchronous() : nullptr;
+	UAnimSequence* Sequence = HasAuthority() || Motion != ReplicatedMotion
+		? (Variant ? Variant->Animation.LoadSynchronous() : nullptr)
+		: ReplicatedMotionAnimation.LoadSynchronous();
+	if (HasAuthority() && Motion == EMT2MobMotion::NormalAttack)
+	{
+		GetCombatComponent()->SetBasicAttackMotion(Sequence, GetAttackMotionPlayRate());
+		const auto* Data = Sequence ? Sequence->GetAssetUserData<UMT2AnimationMotionData>() : nullptr;
+		AttackExternalForce = Data && Data->HittingType != 0 ? Data->ExternalForce : 0.f;
+		AttackHittingType = Data ? Data->HittingType : 2;
+	}
 	UE_LOG(LogMT2MobMotion, Verbose,
 		TEXT("[MT2MobMotion] '%s' PlayMobMotion(%d) VariantFound=%s Sequence='%s'"),
 		*GetNameSafe(this), static_cast<int32>(Motion),
@@ -386,6 +407,38 @@ bool AMT2Mob::PlayMobMotion(EMT2MobMotion Motion)
 	if (!Sequence || !GetMesh())
 	{
 		return false;
+	}
+	if (bDeathMotion)
+	{
+		ClearKnockdownMotion();
+	}
+	else if (bFallMotion || bStandupMotion)
+	{
+		bKnockdownMotionLocked = true;
+		if (HasAuthority())
+		{
+			GetWorldTimerManager().ClearTimer(CombatMotionLockTimer);
+			GetCombatComponent()->CancelPendingBasicAttackHits();
+			bCombatMotionLocked = false;
+			if (AAIController* AIController = Cast<AAIController>(GetController())) { AIController->StopMovement(); }
+			GetCharacterMovement()->StopMovementImmediately();
+			// No fixed stun: the queued motion ends when the chosen animation ends (rate 1).
+			const float Duration = Sequence->GetPlayLength();
+			if (Duration > 0.f)
+			{
+				GetWorldTimerManager().SetTimer(KnockdownMotionTimer, this,
+					&AMT2Mob::AdvanceKnockdownMotion, Duration, false);
+			}
+			else
+			{
+				UE_LOG(LogMT2MobMotion, Warning, TEXT("Zero-length knockdown motion: %s"), *GetNameSafe(Sequence));
+				ClearKnockdownMotion();
+			}
+		}
+	}
+	else if (!HasAuthority())
+	{
+		bKnockdownMotionLocked = false;
 	}
 
 	// Turn to face the target before an attack. This runs on the server (authority path) AND on every
@@ -421,6 +474,7 @@ bool AMT2Mob::PlayMobMotion(EMT2MobMotion Motion)
 			LockCombatMovement(Sequence->GetPlayLength() / FMath::Max(PlayRate, 0.01f));
 		}
 		ReplicatedMotion = Motion;
+		ReplicatedMotionAnimation = Sequence;
 		++MotionSerial;
 		ForceNetUpdate();
 	}
@@ -479,6 +533,63 @@ bool AMT2Mob::PlayMobMotion(EMT2MobMotion Motion)
 	return true;
 }
 
+void AMT2Mob::PlayHitReaction(const AActor* Attacker, int32 HittingType, bool bSyncPush)
+{
+	if (!HasAuthority() || !IsValid(Attacker) || GetHealthComponent()->IsDead() ||
+		bKnockdownMotionLocked || HittingType == 0)
+	{
+		return;
+	}
+	const bool bFront = FVector::DotProduct(Attacker->GetActorForwardVector(), GetActorForwardVector()) < 0.f;
+	if (HittingType == 1 && CanBeKnockedBack())
+	{
+		// __HitGreate does not interrupt a skill, unlike an ordinary attack.
+		if (bCombatMotionLocked && ReplicatedMotion >= EMT2MobMotion::Special1 &&
+			ReplicatedMotion <= EMT2MobMotion::Special5)
+		{
+			return;
+		}
+		EMT2MobMotion Fall = bFront || bSyncPush ? EMT2MobMotion::FrontKnockdown : EMT2MobMotion::BackKnockdown;
+		if (!ChooseMotion(Fall)) { Fall = EMT2MobMotion::FrontKnockdown; }
+		RecoveryMotion = Fall == EMT2MobMotion::BackKnockdown ? EMT2MobMotion::BackStandup : EMT2MobMotion::FrontStandup;
+		// Many imported mobs only author a front stand-up; reuse it rather than invent a delay.
+		if (!ChooseMotion(RecoveryMotion)) { RecoveryMotion = EMT2MobMotion::FrontStandup; }
+		PlayMobMotion(Fall);
+		return;
+	}
+	// __HitGood does not replace a locked attack/skill motion.
+	if (!bCombatMotionLocked)
+	{
+		if (!PlayMobMotion(bFront ? EMT2MobMotion::FrontDamage : EMT2MobMotion::BackDamage) && !bFront)
+		{
+			PlayMobMotion(EMT2MobMotion::FrontDamage);
+		}
+	}
+}
+
+void AMT2Mob::AdvanceKnockdownMotion()
+{
+	if (!HasAuthority() || GetHealthComponent()->IsDead())
+	{
+		ClearKnockdownMotion();
+		return;
+	}
+	if (ReplicatedMotion == EMT2MobMotion::FrontKnockdown || ReplicatedMotion == EMT2MobMotion::BackKnockdown)
+	{
+		if (PlayMobMotion(RecoveryMotion)) { return; }
+		UE_LOG(LogMT2MobMotion, Warning, TEXT("Mob %s has no usable stand-up motion"), *GetName());
+	}
+	ClearKnockdownMotion();
+	PlayMobMotion(EMT2MobMotion::Wait);
+	MobAIComponent->ApplyTickPolicy();
+}
+
+void AMT2Mob::ClearKnockdownMotion()
+{
+	GetWorldTimerManager().ClearTimer(KnockdownMotionTimer);
+	bKnockdownMotionLocked = false;
+}
+
 void AMT2Mob::LockCombatMovement(float Duration)
 {
 	if (!HasAuthority())
@@ -503,6 +614,7 @@ void AMT2Mob::UnlockCombatMovement()
 
 bool AMT2Mob::PlayMobSkillAnimation(int32 SkillVnum)
 {
+	if (bKnockdownMotionLocked) { return false; }
 	for (int32 SkillIndex = 0; SkillIndex < MobSkills.Num() && SkillIndex < 5; ++SkillIndex)
 	{
 		if (MobSkills[SkillIndex].SkillVnum == SkillVnum)
@@ -775,6 +887,10 @@ const FMT2MobMotionVariant* AMT2Mob::ChooseMotion(EMT2MobMotion Motion) const
 
 void AMT2Mob::HandleDeath()
 {
+	GetCombatComponent()->CancelPendingBasicAttackHits();
+	ClearKnockdownMotion();
+	GetWorldTimerManager().ClearTimer(CombatMotionLockTimer);
+	bCombatMotionLocked = false;
 	LifecycleComponent->StopRegeneration();
 	GetCharacterMovement()->DisableMovement();
 	SetActorEnableCollision(false);
@@ -815,6 +931,7 @@ void AMT2Mob::HandleDeath()
 
 void AMT2Mob::HandleRevived()
 {
+	ClearKnockdownMotion();
 	GetWorldTimerManager().ClearTimer(DeathAnimFreezeTimer);
 	if (UAnimInstance* AnimInstance = GetMesh() ? GetMesh()->GetAnimInstance() : nullptr)
 	{
@@ -833,6 +950,9 @@ void AMT2Mob::HandleRevived()
 
 void AMT2Mob::OnRep_MotionSerial()
 {
+	bKnockdownMotionLocked = ReplicatedMotion == EMT2MobMotion::FrontKnockdown ||
+		ReplicatedMotion == EMT2MobMotion::BackKnockdown || ReplicatedMotion == EMT2MobMotion::FrontStandup ||
+		ReplicatedMotion == EMT2MobMotion::BackStandup;
 	PlayMobMotion(ReplicatedMotion);
 }
 
@@ -840,5 +960,7 @@ bool AMT2Mob::CanBeKnockedBack() const
 {
 	// char_skill.cpp skips the CRUSH slide for victims with AIFLAG_NOMOVE (stones, doors).
 	const UMT2MobAIComponent* AI = GetMobAIComponent();
-	return !AI || !AI->HasFlag(EMT2MobAIFlag::NoMove);
+	return IsAttackable() && GetMobType() != EMT2MobType::NPC && GetMobType() != EMT2MobType::Stone &&
+		GetMobType() != EMT2MobType::Door && GetMobType() != EMT2MobType::Building &&
+		GetMobVnum() != 2493 && (!AI || !AI->HasFlag(EMT2MobAIFlag::NoMove));
 }

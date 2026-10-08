@@ -15,6 +15,7 @@
 
 class AMT2PlayerCharacter;
 class UMT2SkillDefinition;
+struct FMT2MotionAttackEvent;
 
 // Result of a cast attempt: whether the character should now play the skill's cast animation, and
 // at which mastery grade. The animation multicast itself stays on the character, since it drives
@@ -50,6 +51,7 @@ public:
 	float GetSkillCastDuration(const UMT2SkillDefinition* Definition, int32 MasteryGrade) const;
 
 protected:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	// Where in a cast animation the hit lands when the .msa recorded no attack event (buffs, or a
 	// skill not yet re-imported). Fraction of the cast duration.
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Skills", meta = (ClampMin = "0.0", ClampMax = "1.0"))
@@ -61,7 +63,7 @@ private:
 	// Old client __RunUseSkill target rules; false = the cast is refused and costs nothing.
 	bool ResolveSkillTarget(const UMT2SkillDefinition* Definition);
 	// Old ComputeSkill -> FuncSplashDamage: evaluate the HP poly and apply it to the target(s).
-	void ApplySkillDamageToTargets(const UMT2SkillDefinition* Definition, int32 Level);
+	void ApplySkillDamageToTargets(const UMT2SkillDefinition* Definition, int32 Level, const FMT2MotionAttackEvent& HitEvent);
 
 	// Old game: an attack skill deals its damage at the motion's hit frame(s), not on cast. Schedules
 	// one ApplySkillDamageToTargets per recorded hit time (falling back to a single mid-motion hit).

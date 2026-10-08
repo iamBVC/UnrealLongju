@@ -22,6 +22,7 @@ public:
 	UMT2MobMovementComponent();
 
 protected:
+	bool bHadKnockbackMovement = false;
 	virtual void PhysWalking(float DeltaSeconds, int32 Iterations) override;
 	virtual void SimulatedTick(float DeltaSeconds) override;
 	virtual void SmoothCorrection(

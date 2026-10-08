@@ -8,6 +8,7 @@
 */
 
 #include "Skills/MT2SkillCastComponent.h"
+#include "Config/MT2GameplaySettings.h"
 #include "Fishing/MT2FishingComponent.h"
 
 #include "Animation/AnimSequence.h"
@@ -245,6 +246,7 @@ FMT2SkillCastResult UMT2SkillCastComponent::TryUseSkill(int32 SkillVnum)
 	// Lock out other skills for the length of this one's cast animation, so they can't be chained
 	// with no gap. Uses the same motion duration the animation multicast plays with.
 	SkillCastLockUntil = Now + GetSkillCastDuration(Definition, Grade);
+	Player->GetCombatComponent()->CancelPendingBasicAttackHits();
 
 	// Old game: the damage lands at the motion's hit frame(s), not on cast - so schedule it rather
 	// than applying it here.
@@ -311,6 +313,16 @@ bool UMT2SkillCastComponent::PassesWeaponLimitation(const UMT2SkillDefinition* D
 	return bWeaponAllowed;
 }
 
+void UMT2SkillCastComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UWorld* World = GetWorld())
+	{
+		for (FTimerHandle& Handle : PendingDamageTimers) { World->GetTimerManager().ClearTimer(Handle); }
+	}
+	PendingDamageTimers.Reset();
+	Super::EndPlay(EndPlayReason);
+}
+
 void UMT2SkillCastComponent::ScheduleSkillDamage(
 	const UMT2SkillDefinition* Definition, int32 Level, int32 MasteryGrade)
 {
@@ -342,28 +354,37 @@ void UMT2SkillCastComponent::ScheduleSkillDamage(
 	const UMT2AnimationMotionData* MotionData =
 		CastAnimation ? CastAnimation->GetAssetUserData<UMT2AnimationMotionData>() : nullptr;
 
-	TArray<float> HitTimes;
-	if (MotionData && MotionData->AttackHitTimes.Num() > 0)
+	TArray<FMT2MotionAttackEvent> HitEvents;
+	if (MotionData && !MotionData->AttackEvents.IsEmpty())
 	{
-		HitTimes = MotionData->AttackHitTimes;
+		HitEvents = MotionData->AttackEvents;
 	}
 	else
 	{
-		HitTimes.Add(GetSkillCastDuration(Definition, MasteryGrade) * FallbackHitTimeFraction);
+		TArray<float> HitTimes = MotionData ? MotionData->AttackHitTimes : TArray<float>();
+		if (HitTimes.IsEmpty()) { HitTimes.Add(GetSkillCastDuration(Definition, MasteryGrade) * FallbackHitTimeFraction); }
+		for (float HitTime : HitTimes)
+		{
+			FMT2MotionAttackEvent& Event = HitEvents.AddDefaulted_GetRef();
+			Event.TimeSeconds = HitTime;
+			Event.ExternalForce = MotionData ? MotionData->ExternalForce : 0.f;
+			Event.HittingType = MotionData ? MotionData->HittingType : 2;
+		}
 	}
 
-	for (const float HitTime : HitTimes)
+	for (const FMT2MotionAttackEvent& Event : HitEvents)
 	{
+		if (!FMath::IsFinite(Event.TimeSeconds) || Event.TimeSeconds < 0.f) { continue; }
 		FTimerHandle& Handle = PendingDamageTimers.AddDefaulted_GetRef();
 		// Definition is a stable skill-definition object; Level is captured by value. The weak lambda
 		// no-ops if the player/component is torn down before the hit lands.
 		World->GetTimerManager().SetTimer(
 			Handle,
-			FTimerDelegate::CreateWeakLambda(this, [this, Definition, Level]()
+			FTimerDelegate::CreateWeakLambda(this, [this, Definition, Level, Event]()
 			{
-				ApplySkillDamageToTargets(Definition, Level);
+				ApplySkillDamageToTargets(Definition, Level, Event);
 			}),
-			FMath::Max(HitTime, 0.01f),
+			FMath::Max(Event.TimeSeconds, UE_SMALL_NUMBER),
 			false);
 	}
 }
@@ -437,7 +458,7 @@ bool UMT2SkillCastComponent::ResolveSkillTarget(const UMT2SkillDefinition* Defin
 }
 
 void UMT2SkillCastComponent::ApplySkillDamageToTargets(
-	const UMT2SkillDefinition* Definition, int32 Level)
+	const UMT2SkillDefinition* Definition, int32 Level, const FMT2MotionAttackEvent& HitEvent)
 {
 	AMT2PlayerCharacter* Player = GetPlayer();
 	UMT2CombatComponent* Combat = Player ? Player->GetCombatComponent() : nullptr;
@@ -494,15 +515,6 @@ void UMT2SkillCastComponent::ApplySkillDamageToTargets(
 			Definition->Vnum, *DamageApply->ValueFormula);
 		return;
 	}
-	// Old char_skill.cpp CRUSH: 200 base sliding length, doubled by CRUSH_LONG. (The 400 variant is
-	// for NPC attackers, which don't come through this player path.)
-	if (Definition->HasSkillFlag(EMT2SkillFlag::Crush) ||
-		Definition->HasSkillFlag(EMT2SkillFlag::CrushLong))
-	{
-		const float SlideLength = Definition->HasSkillFlag(EMT2SkillFlag::CrushLong) ? 400.0f : 200.0f;
-		Combat->SetPendingKnockback(SlideLength);
-	}
-
 	// An HP poly only means damage while it is negative; a positive one is a heal (old ComputeSkill,
 	// and the same rule the tooltip prints). Taking the magnitude unconditionally would turn a heal
 	// into a hit.
@@ -511,6 +523,22 @@ void UMT2SkillCastComponent::ApplySkillDamageToTargets(
 		return;
 	}
 	const float Damage = static_cast<float>(-Amount);
+	float SkillKnockback = 0.f;
+	// ActorInstanceSync::__Push uses SetBlendingPosition's authored one-second default.
+	float KnockbackDuration = 1.f;
+	int32 HittingType = HitEvent.HittingType;
+	const bool bCrush = Definition->HasSkillFlag(EMT2SkillFlag::Crush) || Definition->HasSkillFlag(EMT2SkillFlag::CrushLong);
+	if (bCrush)
+	{
+		SkillKnockback = Definition->HasSkillFlag(EMT2SkillFlag::CrushLong) ? 400.f : 200.f;
+		// Sync pushes longer than 150 units queue front knockdown + stand-up in the old client.
+		HittingType = 1;
+	}
+	else
+	{
+		SkillKnockback = HittingType != 0 ? UMT2CombatComponent::MotionKnockbackDistance(HitEvent.ExternalForce) : 0.f;
+		KnockbackDuration = UMT2CombatComponent::MotionKnockbackDuration;
+	}
 
 	// Old ComputeSkill: a SPLASH skill runs FuncSplashDamage over everything around posTarget,
 	// capped by lMaxHit. Everything else hits the single target.
@@ -525,11 +553,10 @@ void UMT2SkillCastComponent::ApplySkillDamageToTargets(
 		Victims.Add(Target);
 	}
 
-	const float SkillKnockback = Combat->GetPendingKnockback();
 	for (AActor* Victim : Victims)
 	{
 		// The CRUSH slide belongs to the cast, so every victim of the splash gets it.
-		Combat->SetPendingKnockback(SkillKnockback);
+		Combat->SetPendingKnockback(SkillKnockback, KnockbackDuration, bCrush && Definition->Vnum == 137, HittingType, bCrush);
 		Combat->ApplySkillDamage(Victim, Damage);
 	}
 	Combat->SetPendingKnockback(0.0f);

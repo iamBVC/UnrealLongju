@@ -8,6 +8,9 @@
 */
 
 #include "Combat/MT2CombatComponent.h"
+#include "Animation/AnimSequence.h"
+#include "Animation/MT2AnimationMotionData.h"
+#include "Config/MT2GameplaySettings.h"
 
 #include "Abilities/Effects/MT2DamageGameplayEffect.h"
 #include "Abilities/MT2GameplayTags.h"
@@ -139,26 +142,35 @@ AActor* UMT2CombatComponent::PerformBasicAttack()
 		return nullptr;
 	}
 
+	SetPendingKnockback(0);
 	CurrentComboIndex = AdvanceBasicAttackCombo();
 	LastAttackTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
 	CurrentAttackInputWindow = BasicAttackInterval;
 	CurrentAttackWorldAdvance = FVector::ZeroVector;
 	OnBasicAttackPerformed.Broadcast(CurrentComboIndex);
+	if (OwnerActor->HasAuthority() && ScheduleBasicAttackHits(nullptr, false))
+	{
+		const TArray<AActor*> PreviewTargets = FindBasicAttackTargets();
+		SetPendingKnockback(0);
+		return PreviewTargets.IsEmpty() ? nullptr : PreviewTargets[0];
+	}
 
 	// One swing hits everything in its arc, like the old client's per-instance collision loop.
 	// The knockback is a property of the swing, so every victim it lands on gets it.
 	const TArray<AActor*> TargetActors = FindBasicAttackTargets();
 	const float SwingKnockback = PendingKnockbackDistance;
+	const float SwingDuration = PendingKnockbackDuration;
+	const int32 SwingHittingType = PendingHittingType;
 	AActor* PrimaryTarget = nullptr;
 	for (AActor* TargetActor : TargetActors)
 	{
-		SetPendingKnockback(SwingKnockback);
+		SetPendingKnockback(SwingKnockback, SwingDuration, false, SwingHittingType);
 		if (ApplyBasicAttackDamage(TargetActor) && !PrimaryTarget)
 		{
 			PrimaryTarget = TargetActor;
 		}
 	}
-	PendingKnockbackDistance = 0.0f;
+	SetPendingKnockback(0);
 
 	UE_LOG(LogMT2Combat, Warning, TEXT("[MT2Attack] PerformBasicAttack Owner='%s' HasAuthority=%s Hits=%d Primary='%s'"),
 		*GetNameSafe(OwnerActor),
@@ -168,7 +180,7 @@ AActor* UMT2CombatComponent::PerformBasicAttack()
 	return PrimaryTarget;
 }
 
-bool UMT2CombatComponent::PerformBasicAttackOnTarget(AActor* TargetActor)
+bool UMT2CombatComponent::PerformBasicAttackOnTarget(AActor* TargetActor, float ExternalForce, int32 HittingType)
 {
 	AActor* OwnerActor = GetOwner();
 	if (!OwnerActor || !OwnerActor->HasAuthority() || !TargetActor)
@@ -177,6 +189,7 @@ bool UMT2CombatComponent::PerformBasicAttackOnTarget(AActor* TargetActor)
 	}
 
 	const double CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	SetPendingKnockback(MotionKnockbackDistance(ExternalForce), MotionKnockbackDuration, false, HittingType);
 	if (CurrentTime - LastAttackTime > ComboResetDelay)
 	{
 		CurrentComboIndex = INDEX_NONE;
@@ -186,7 +199,83 @@ bool UMT2CombatComponent::PerformBasicAttackOnTarget(AActor* TargetActor)
 	CurrentAttackInputWindow = BasicAttackInterval;
 	CurrentAttackWorldAdvance = FVector::ZeroVector;
 	OnBasicAttackPerformed.Broadcast(CurrentComboIndex);
-	return ApplyBasicAttackDamage(TargetActor);
+	if (ScheduleBasicAttackHits(TargetActor, true))
+	{
+		SetPendingKnockback(0);
+		return true; // Swing accepted; actual hit/reaction is resolved at the authored event.
+	}
+	const bool bHit = ApplyBasicAttackDamage(TargetActor);
+	SetPendingKnockback(0);
+	return bHit;
+}
+
+void UMT2CombatComponent::SetBasicAttackMotion(UAnimSequence* Sequence, float PlayRate)
+{
+	BasicAttackMotion = Sequence;
+	BasicAttackPlayRate = FMath::IsFinite(PlayRate) && PlayRate > 0.f ? PlayRate : 1.f;
+}
+
+void UMT2CombatComponent::CancelPendingBasicAttackHits()
+{
+	if (UWorld* World = GetWorld())
+	{
+		for (FTimerHandle& Handle : BasicAttackHitTimers) { World->GetTimerManager().ClearTimer(Handle); }
+	}
+	BasicAttackHitTimers.Reset();
+}
+
+void UMT2CombatComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	CancelPendingBasicAttackHits();
+	StopBasicAttackLoop();
+	Super::EndPlay(EndPlayReason);
+}
+
+bool UMT2CombatComponent::ScheduleBasicAttackHits(AActor* TargetActor, bool bSingleTarget)
+{
+	CancelPendingBasicAttackHits();
+	UAnimSequence* Sequence = BasicAttackMotion.Get();
+	const auto* Data = Sequence ? Sequence->GetAssetUserData<UMT2AnimationMotionData>() : nullptr;
+	if (!Data || Data->AttackEvents.IsEmpty() || !GetWorld()) { return false; }
+	// A new motion intercepts the previous one; releasing attack input alone does not cancel a swing.
+	for (const FMT2MotionAttackEvent& Event : Data->AttackEvents)
+	{
+		if (!FMath::IsFinite(Event.TimeSeconds) || Event.TimeSeconds < 0.f || Event.HittingType == 0) { continue; }
+		const TWeakObjectPtr<AActor> WeakTarget(TargetActor);
+		if (Event.TimeSeconds == 0.f)
+		{
+			ExecuteBasicAttackHit(Event, WeakTarget, bSingleTarget);
+			continue;
+		}
+		FTimerHandle& Handle = BasicAttackHitTimers.AddDefaulted_GetRef();
+		GetWorld()->GetTimerManager().SetTimer(Handle,
+			FTimerDelegate::CreateWeakLambda(this, [this, Event, WeakTarget, bSingleTarget]()
+			{
+				ExecuteBasicAttackHit(Event, WeakTarget, bSingleTarget);
+			}), Event.TimeSeconds / BasicAttackPlayRate, false);
+	}
+	return true;
+}
+
+void UMT2CombatComponent::ExecuteBasicAttackHit(FMT2MotionAttackEvent Event, TWeakObjectPtr<AActor> TargetActor, bool bSingleTarget)
+{
+	const auto* Character = Cast<AMT2CharacterBase>(GetOwner());
+	if (!Character || !Character->HasAuthority() || Character->GetHealthComponent()->IsDead()) { return; }
+	if (const auto* Mob = Cast<AMT2Mob>(Character); Mob && Mob->IsKnockdownMotionLocked()) { return; }
+	// Re-query the current world, not victims frozen at swing start. Damage retains its PvP gate.
+	TArray<AActor*> Targets = FindBasicAttackTargets();
+	if (bSingleTarget)
+	{
+		AActor* Target = TargetActor.Get();
+		if (!Target || !Targets.Contains(Target)) { return; }
+		Targets = {Target};
+	}
+	for (AActor* Target : Targets)
+	{
+		SetPendingKnockback(MotionKnockbackDistance(Event.ExternalForce), MotionKnockbackDuration, false, Event.HittingType);
+		ApplyBasicAttackDamage(Target);
+	}
+	SetPendingKnockback(0);
 }
 
 void UMT2CombatComponent::ConfigureBasicAttack(
@@ -365,8 +454,7 @@ bool UMT2CombatComponent::ApplyBasicAttackDamage(AActor* TargetActor)
 		// Matches the old client's ActorInstanceBattle.cpp __HitGood: attacker and victim facing each
 		// other (dot product of their forward vectors is negative) is a front hit, otherwise the
 		// attacker is roughly behind the victim.
-		const float FacingDot = FVector::DotProduct(OwnerActor->GetActorForwardVector(), TargetMob->GetActorForwardVector());
-		TargetMob->PlayMobMotion(FacingDot < 0.0f ? EMT2MobMotion::FrontDamage : EMT2MobMotion::BackDamage);
+		TargetMob->PlayHitReaction(OwnerActor, PendingHittingType, bPendingSyncPush);
 
 		// Counter-attack: getting hit pulls even a currently-passive mob into combat against its
 		// attacker. TickBehavior already knows how to chase and swing once AttackRange (sourced from
@@ -386,7 +474,9 @@ bool UMT2CombatComponent::ApplyBasicAttackDamage(AActor* TargetActor)
 void UMT2CombatComponent::ApplyPendingKnockback(AActor* TargetActor)
 {
 	const float Distance = PendingKnockbackDistance;
-	PendingKnockbackDistance = 0.0f;
+	const float Duration = PendingKnockbackDuration;
+	const bool bSideways = bPendingKnockbackSideways;
+	SetPendingKnockback(0);
 	if (Distance <= 0.0f)
 	{
 		return;
@@ -395,8 +485,22 @@ void UMT2CombatComponent::ApplyPendingKnockback(AActor* TargetActor)
 	if (AMT2CharacterBase* Victim = Cast<AMT2CharacterBase>(TargetActor);
 		Victim && !Victim->GetHealthComponent()->IsDead())
 	{
-		Victim->ApplyKnockback(GetOwner(), Distance);
+		Victim->ApplyKnockback(GetOwner(), Distance, Duration, bSideways);
 	}
+}
+
+float UMT2CombatComponent::MotionKnockbackDistance(float ExternalForce)
+{
+	if (!FMath::IsFinite(ExternalForce) || ExternalForce <= 0) { return 0; }
+	// Legacy PhysicsObject: mass=1, friction=.3, up to 100 discrete accumulation steps.
+	float Distance = 0;
+	for (int32 Step = 1; Step <= 100; ++Step)
+	{
+		const float Velocity = ExternalForce - .3f * Step;
+		if (Velocity < .001f) { break; }
+		Distance += Velocity;
+	}
+	return Distance;
 }
 
 bool UMT2CombatComponent::ApplySkillDamage(
@@ -496,9 +600,7 @@ bool UMT2CombatComponent::ApplySkillDamage(
 
 	if (AMT2Mob* TargetMob = Cast<AMT2Mob>(TargetActor); TargetMob && !TargetMob->GetHealthComponent()->IsDead())
 	{
-		const float FacingDot = FVector::DotProduct(
-			OwnerActor->GetActorForwardVector(), TargetMob->GetActorForwardVector());
-		TargetMob->PlayMobMotion(FacingDot < 0.0f ? EMT2MobMotion::FrontDamage : EMT2MobMotion::BackDamage);
+		TargetMob->PlayHitReaction(OwnerActor, PendingHittingType, bPendingSyncPush);
 		if (UMT2MobAIComponent* MobAI = TargetMob->GetMobAIComponent())
 		{
 			MobAI->SetTargetActor(OwnerActor);

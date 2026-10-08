@@ -1097,6 +1097,7 @@ void AMT2PlayerCharacter::UpdateSafeZoneNotification()
 
 void AMT2PlayerCharacter::HandleDeath()
 {
+	GetCombatComponent()->CancelPendingBasicAttackHits();
 	if (FishingComponent && HasAuthority()) { FishingComponent->CancelFishing(); }
 	DeathLocation = GetActorLocation();
 	if (HasAuthority() && MountComponent)
@@ -1478,16 +1479,31 @@ FString AMT2PlayerCharacter::BuildUnarmedAttackAnimationPath(int32 ComboIndex) c
 
 void AMT2PlayerCharacter::HandleBasicAttackPerformed(int32 ComboIndex)
 {
+	GetCombatComponent()->SetBasicAttackMotion(nullptr, 1.f);
 	RegenerationComponent->MarkActivity();
 
 	if (!GetMesh()) return;
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	UAnimSequence* Sequence = nullptr;
-	if (const UMT2CharacterAnimInstance* MT2AnimInstance = Cast<UMT2CharacterAnimInstance>(AnimInstance))
+	// Combat metadata must not depend on a rendered/live AnimInstance (absent on headless servers,
+	// and reset asynchronously when equipment/body visuals change).
+	const UMT2CharacterAnimInstance* MotionDefaults = nullptr;
+	if (const auto* State = GetPlayerState<AMT2PlayerState>())
 	{
-		Sequence = MT2AnimInstance->GetComboAnimation(MT2AnimInstance->GetActiveAnimationSet(), ComboIndex);
+		const auto& Appearance = State->GetCharacterAppearance();
+		if (const auto* Profile = GetDefault<UMT2CharacterAppearanceSettings>()->FindAnimationProfile(Appearance.Race, Appearance.Sex))
+		{
+			UClass* AnimationClass = Profile->AnimInstanceClass.LoadSynchronous();
+			MotionDefaults = AnimationClass ? Cast<UMT2CharacterAnimInstance>(AnimationClass->GetDefaultObject()) : nullptr;
+		}
 	}
+	if (MotionDefaults) { Sequence = MotionDefaults->GetComboAnimation(GetAnimationSet(), ComboIndex); }
 	if (!Sequence)
+	{
+		if (const auto* MT2AnimInstance = Cast<UMT2CharacterAnimInstance>(AnimInstance))
+			Sequence = MT2AnimInstance->GetComboAnimation(GetAnimationSet(), ComboIndex);
+	}
+	if (!Sequence && GetAnimationSet() == TEXT("general"))
 	{
 		Sequence = LoadObject<UAnimSequence>(nullptr, *BuildUnarmedAttackAnimationPath(ComboIndex));
 	}
@@ -1513,10 +1529,14 @@ void AMT2PlayerCharacter::HandleBasicAttackPerformed(int32 ComboIndex)
 			(Stats ? Stats->GetCalculatedStats().AttackSpeed : 100) / 100.0f, 0.1f);
 		const UMT2AnimationMotionData* MotionData =
 			Sequence->GetAssetUserData<UMT2AnimationMotionData>();
+		UE_LOG(LogMT2Targeting, Verbose, TEXT("[MT2Knockback] %s combo=%d set=%s motion=%s force=%.1f hit=%d"),
+			*GetName(), ComboIndex, *GetAnimationSet().ToString(), *Sequence->GetName(),
+			MotionData ? MotionData->ExternalForce : 0.f, MotionData ? MotionData->HittingType : 0);
 		const float AuthoredDuration = MotionData && MotionData->MotionDuration > UE_SMALL_NUMBER
 			? MotionData->MotionDuration
 			: Sequence->GetPlayLength();
 		const float AttackDuration = AuthoredDuration / PlayRate;
+		GetCombatComponent()->SetBasicAttackMotion(Sequence, PlayRate);
 		const float InputWindow = MotionData && MotionData->bHasComboInputData && MotionData->DirectInputTime > UE_SMALL_NUMBER
 			? MotionData->DirectInputTime / PlayRate
 			: AttackDuration * 0.9f;
@@ -1542,13 +1562,12 @@ void AMT2PlayerCharacter::HandleBasicAttackPerformed(int32 ComboIndex)
 		AttackAdvanceSpeed = WorldAdvance.Size() / FMath::Max(InputWindow, 0.05f);
 		AttackMotionEndTime = (GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0) + InputWindow;
 
-		// The .msa authors knockback per motion: combo chain finishers carry a much larger
-		// ExternalForce than normal hits (two-hand sword 3/5/5 -> 20 on combo_04). Scale it into
-		// old sliding units so a finisher shoves about as far as a skill CRUSH.
-		if (HasAuthority() && MotionData && MotionData->ExternalForce > 0.0f)
+		// Legacy attack data drives each swing, including weaker pushes before the finisher.
+		if (HasAuthority())
 		{
-			constexpr float ForceToSlideUnits = 10.0f;
-			GetCombatComponent()->SetPendingKnockback(MotionData->ExternalForce * ForceToSlideUnits);
+			GetCombatComponent()->SetPendingKnockback(
+				MotionData && MotionData->HittingType != 0 ? UMT2CombatComponent::MotionKnockbackDistance(MotionData->ExternalForce) : 0.f,
+				UMT2CombatComponent::MotionKnockbackDuration, false, MotionData ? MotionData->HittingType : 2);
 		}
 		// Publish timing and displacement for combat/UI consumers. Actual movement is fed through
 		// AddMovementInput in Tick so it follows the same network prediction as normal locomotion.

@@ -769,6 +769,7 @@ namespace
 		else if (Name.StartsWith(TEXT("BACK_DAMAGE"))) OutMotion = EMT2MobMotion::BackDamage;
 		else if (Name.StartsWith(TEXT("BACK_DEAD"))) OutMotion = EMT2MobMotion::BackDead;
 		else if (Name.StartsWith(TEXT("BACK_KNOCKDOWN"))) OutMotion = EMT2MobMotion::BackKnockdown;
+		else if (Name.StartsWith(TEXT("BACK_STANDUP"))) OutMotion = EMT2MobMotion::BackStandup;
 		else if (Name == TEXT("SPECIAL")) OutMotion = EMT2MobMotion::Special1;
 		else if (Name == TEXT("SPECIAL1")) OutMotion = EMT2MobMotion::Special2;
 		else if (Name == TEXT("SPECIAL2")) OutMotion = EMT2MobMotion::Special3;

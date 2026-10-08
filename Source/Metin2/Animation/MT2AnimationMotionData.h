@@ -16,6 +16,25 @@
 class UParticleSystem;
 
 USTRUCT(BlueprintType)
+struct METIN2_API FMT2MotionAttackEvent
+{
+	GENERATED_BODY()
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MT2 Motion|Attack")
+	float TimeSeconds = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MT2 Motion|Attack")
+	float EndTimeSeconds = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MT2 Motion|Attack")
+	float ExternalForce = 0.f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MT2 Motion|Attack")
+	int32 HittingType = 0;
+	bool operator==(const FMT2MotionAttackEvent& Other) const
+	{
+		return TimeSeconds == Other.TimeSeconds && EndTimeSeconds == Other.EndTimeSeconds &&
+			ExternalForce == Other.ExternalForce && HittingType == Other.HittingType;
+	}
+};
+
+USTRUCT(BlueprintType)
 struct METIN2_API FMT2MotionEffectEvent
 {
 	GENERATED_BODY()
@@ -79,6 +98,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MT2 Motion|Attack")
 	TArray<float> AttackHitTimes;
 
+	// Each normal attack window / SPECIAL_ATTACKING event keeps its own timing and hit data.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MT2 Motion|Attack")
+	TArray<FMT2MotionAttackEvent> AttackEvents;
+
 	// Old MotionEventType 1 events, preserving exact start time, attachment bone, local offset,
 	// independence and follow behavior from the .msa file.
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MT2 Motion|Effects")
@@ -98,4 +121,6 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "MT2 Motion|Combo")
 	bool bHasComboInputData = false;
+	static void ReadKnockbackMetadata(const FString& Script, float& OutForce, int32& OutHittingType);
+	static void ReadAttackEvents(const FString& Script, TArray<FMT2MotionAttackEvent>& OutEvents);
 };

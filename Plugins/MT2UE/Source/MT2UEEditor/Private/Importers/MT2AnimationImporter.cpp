@@ -154,12 +154,8 @@ namespace
 		}
 		ReadMotionFloat(Script, TEXT("MotionDuration"), MotionData->MotionDuration);
 		// .msa AttackingData: knockback strength + hit kind (1 = blow, 2 = normal).
-		ReadMotionFloat(Script, TEXT("ExternalForce"), MotionData->ExternalForce);
-		float HittingTypeValue = 0.0f;
-		if (ReadMotionFloat(Script, TEXT("HittingType"), HittingTypeValue))
-		{
-			MotionData->HittingType = FMath::RoundToInt(HittingTypeValue);
-		}
+		UMT2AnimationMotionData::ReadKnockbackMetadata(Script, MotionData->ExternalForce, MotionData->HittingType);
+		UMT2AnimationMotionData::ReadAttackEvents(Script, MotionData->AttackEvents);
 		MotionData->bHasAccumulation = ReadMotionVector(Script, TEXT("Accumulation"), MotionData->Accumulation) &&
 			!MotionData->Accumulation.IsNearlyZero();
 		MotionData->bHasComboInputData =

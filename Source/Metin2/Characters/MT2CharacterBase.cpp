@@ -8,6 +8,7 @@
 */
 
 #include "Characters/MT2CharacterBase.h"
+#include "Combat/MT2KnockbackRootMotion.h"
 #include "Characters/MT2CharacterMovementComponent.h"
 
 #include "Animation/MT2CharacterAnimInstance.h"
@@ -26,6 +27,8 @@
 #include "Equipment/MT2EquipmentComponent.h"
 #include "Effects/MT2MotionEffectComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/RootMotionSource.h"
+#include "Config/MT2GameplaySettings.h"
 #include "Net/UnrealNetwork.h"
 #include "UI/MT2NameplateComponent.h"
 
@@ -241,11 +244,12 @@ bool AMT2CharacterBase::IsHostileTo(const AActor* Other) const
 	return OtherCharacter->IsPlayerFaction() != IsPlayerFaction();
 }
 
-void AMT2CharacterBase::ApplyKnockback(const AActor* KnockbackInstigator, float Distance)
+void AMT2CharacterBase::ApplyKnockback(const AActor* KnockbackInstigator, float Distance, float Duration, bool bSideways)
 {
 	// Old char_skill.cpp CRUSH: victims flagged NOMOVE never slide; the push runs straight along
 	// the attacker->victim line (GetDegreeFromPositionXY) for the given sliding length.
-	if (!HasAuthority() || !KnockbackInstigator || Distance <= 0.0f || !CanBeKnockedBack())
+	if (!HasAuthority() || !IsValid(KnockbackInstigator) || !FMath::IsFinite(Distance) || Distance <= 0.0f ||
+		!CanBeKnockedBack() || GetHealthComponent()->IsDead())
 	{
 		return;
 	}
@@ -256,21 +260,58 @@ void AMT2CharacterBase::ApplyKnockback(const AActor* KnockbackInstigator, float 
 		Direction = KnockbackInstigator->GetActorForwardVector();
 		Direction.Z = 0.0;
 	}
-	MulticastKnockback(Direction.GetSafeNormal(), Distance);
+	if (bSideways)
+	{
+		const FVector Right = KnockbackInstigator->GetActorRightVector().GetSafeNormal2D();
+		Direction = FVector::DotProduct(Direction, Right) >= 0 ? Right : -Right;
+	}
+	// ActorInstance.h: SetBlendingPosition defaults to one second for server sync pushes.
+	const float SlideDuration = Duration > 0 ? Duration : 1.f;
+	if (!FMath::IsFinite(SlideDuration) || SlideDuration < .05f || SlideDuration > 5.f) { return; }
+	StartKnockback(Direction.GetSafeNormal2D(), Distance, SlideDuration);
+	MulticastKnockback(Direction.GetSafeNormal2D(), Distance, SlideDuration);
+	ForceNetUpdate();
 }
 
 void AMT2CharacterBase::MulticastKnockback_Implementation(
-	FVector_NetQuantizeNormal Direction, float Distance)
+	FVector_NetQuantizeNormal Direction, float Distance, float Duration)
+{
+	// Authoritative movement never depends on RPC delivery or local multicast dispatch.
+	if (!HasAuthority()) { StartKnockback(Direction, Distance, Duration); }
+}
+
+void AMT2CharacterBase::StartKnockback(const FVector& Direction, float Distance, float Duration)
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
-	if (!Movement || Direction.IsNearlyZero())
+	if (!Movement || Direction.IsNearlyZero() ||
+		!FMath::IsFinite(Distance) || Distance <= 0 || !FMath::IsFinite(Duration) || Duration < .05f || Duration > 5.f ||
+		!CanBeKnockedBack() || GetHealthComponent()->IsDead())
 	{
 		return;
 	}
-	// The old server slid the victim over its move duration; LaunchCharacter is the closest
-	// equivalent that still goes through movement/collision instead of teleporting through walls.
-	// Distance (old units) is covered in roughly SlideTime, plus a small hop for readability.
-	constexpr float SlideTime = 0.25f;
-	const FVector Launch = FVector(Direction) * (Distance / SlideTime);
-	LaunchCharacter(FVector(Launch.X, Launch.Y, 0.0f), true, false);
+	Movement->SetComponentTickEnabled(true);
+	if (!HasAuthority() && !IsLocallyControlled()) { return; }
+	GetHealthComponent()->OnDeath.AddUniqueDynamic(this, &AMT2CharacterBase::ClearKnockbackOnDeath);
+	// Both authority and autonomous owner use UE's root-motion-source prediction/correction.
+	// Simulated proxies follow replicated movement, never run a second local launch.
+	const FName SourceName(TEXT("MT2Knockback"));
+	Movement->RemoveRootMotionSource(SourceName);
+	auto Source = MakeShared<FMT2KnockbackRootMotion>();
+	Source->InstanceName = SourceName;
+	Source->Priority = 1000;
+	Source->AccumulateMode = ERootMotionAccumulateMode::Override;
+	Source->Duration = Duration;
+	Source->Force = FVector(Direction).GetSafeNormal2D() * (Distance / Duration);
+	Source->Settings.SetFlag(ERootMotionSourceSettingsFlags::IgnoreZAccumulate);
+	Source->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::SetVelocity;
+	Source->FinishVelocityParams.SetVelocity = FVector::ZeroVector;
+	Movement->ApplyRootMotionSource(Source);
+}
+
+void AMT2CharacterBase::ClearKnockbackOnDeath()
+{
+	if (auto* Movement = GetCharacterMovement())
+	{
+		Movement->RemoveRootMotionSource(FName(TEXT("MT2Knockback")));
+	}
 }

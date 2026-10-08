@@ -13,6 +13,10 @@
 #include "Animation/AnimSequence.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/MT2CharacterAnimInstance.h"
+#include "Animation/MT2AnimationMotionData.h"
+#include "Misc/FileHelper.h"
+#include "Misc/Paths.h"
+#include "UObject/SavePackage.h"
 #include "Animation/Skeleton.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Curves/CurveFloat.h"
@@ -24,6 +28,53 @@
 
 namespace
 {
+	int32 RepairKnockbackMetadata(const FString& Params, bool bRepairEvents = false)
+	{
+		FString SourceRoot; FParse::Value(*Params, TEXT("SourceRoot="), SourceRoot);
+		if (SourceRoot.IsEmpty()) { SourceRoot = UMT2PathSettings::Path(TEXT("LegacyYmirWorkRoot")); }
+		if (!FPaths::DirectoryExists(SourceRoot)) { UE_LOG(LogTemp, Error, TEXT("Missing configured legacy motion root: %s"), *SourceRoot); return 1; }
+		FAssetRegistryModule& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry"));
+		Registry.Get().SearchAllAssets(true);
+		TArray<FAssetData> Assets;
+		const FString AssetRoot = UMT2PathSettings::Path(TEXT("ymir_work"));
+		Registry.Get().GetAssetsByPath(*AssetRoot, Assets, true);
+		int32 Changed = 0, Failures = 0;
+		for (const auto& Asset : Assets)
+		{
+			if (Asset.AssetClassPath != UAnimSequence::StaticClass()->GetClassPathName()) { continue; }
+			FString Relative = Asset.PackageName.ToString(); Relative.RemoveFromStart(AssetRoot + TEXT("/"));
+			FString MotionName = FPaths::GetBaseFilename(Relative); MotionName.RemoveFromStart(TEXT("A_"));
+			const FString ScriptPath = SourceRoot / FPaths::GetPath(Relative) / (MotionName + TEXT(".msa"));
+			FString Script; if (!FFileHelper::LoadFileToString(Script, *ScriptPath)) { continue; }
+			TArray<FString> ForceDeclarations; Script.ParseIntoArray(ForceDeclarations, TEXT("ExternalForce"), false);
+			if (!bRepairEvents && ForceDeclarations.Num() <= 2) { continue; }
+			TArray<FMT2MotionAttackEvent> Events;
+			if (bRepairEvents)
+			{
+				UMT2AnimationMotionData::ReadAttackEvents(Script, Events);
+				if (Events.IsEmpty()) { continue; }
+			}
+			float Force; int32 HitType; UMT2AnimationMotionData::ReadKnockbackMetadata(Script, Force, HitType);
+			auto* Sequence = Cast<UAnimSequence>(Asset.GetAsset());
+			auto* Data = Sequence ? Sequence->GetAssetUserData<UMT2AnimationMotionData>() : nullptr;
+			if (!Data && bRepairEvents && Sequence)
+			{
+				Data = NewObject<UMT2AnimationMotionData>(Sequence);
+				Sequence->AddAssetUserData(Data);
+			}
+			if (!Data || (Data->ExternalForce == Force && Data->HittingType == HitType &&
+				(!bRepairEvents || Data->AttackEvents == Events))) { continue; }
+			Data->Modify(); Data->ExternalForce = Force; Data->HittingType = HitType;
+			if (bRepairEvents) { Data->AttackEvents = Events; }
+			UPackage* Package = Sequence->GetOutermost(); Package->MarkPackageDirty();
+			FSavePackageArgs Args; Args.TopLevelFlags = RF_Public | RF_Standalone; Args.SaveFlags = SAVE_NoError;
+			const FString Filename = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
+			if (!UPackage::SavePackage(Package, Sequence, *Filename, Args)) { ++Failures; }
+			else { ++Changed; UE_LOG(LogTemp, Display, TEXT("Repaired %s force=%.1f hit=%d events=%d"), *Package->GetName(), Force, HitType, Data->AttackEvents.Num()); }
+		}
+		UE_LOG(LogTemp, Display, TEXT("Knockback metadata repair: %d changed, %d failed."), Changed, Failures);
+		return Failures ? 1 : 0;
+	}
 	int32 CreateExperienceCurve()
 	{
 		const FString PackageName = UMT2PathSettings::Path(TEXT("ExperienceCurvePackage"));
@@ -176,6 +227,8 @@ UMT2GeneratePlayerAnimationCommandlet::UMT2GeneratePlayerAnimationCommandlet()
 
 int32 UMT2GeneratePlayerAnimationCommandlet::Main(const FString& Params)
 {
+	if (FParse::Param(*Params, TEXT("RepairAttackEventMetadata"))) { return RepairKnockbackMetadata(Params, true); }
+	if (FParse::Param(*Params, TEXT("RepairKnockbackMetadata"))) { return RepairKnockbackMetadata(Params); }
 	if (FParse::Param(*Params, TEXT("CreateXPCurve")))
 	{
 		return CreateExperienceCurve();

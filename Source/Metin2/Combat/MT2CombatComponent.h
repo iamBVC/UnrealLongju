@@ -16,6 +16,8 @@
 #include "MT2CombatComponent.generated.h"
 
 class UGameplayEffect;
+class UAnimSequence;
+struct FMT2MotionAttackEvent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(
 	FMT2BasicAttackHitSignature, AActor*, Target, float, AppliedDamage);
@@ -37,7 +39,7 @@ public:
 	AActor* PerformBasicAttack();
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Combat")
-	bool PerformBasicAttackOnTarget(AActor* TargetActor);
+	bool PerformBasicAttackOnTarget(AActor* TargetActor, float ExternalForce = 0, int32 HittingType = 2);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Combat")
 	void ConfigureBasicAttack(float Range, float Radius, float Damage, float Interval, int32 ComboLength = 1);
@@ -127,10 +129,28 @@ public:
 
 	// Knockback distance for the next landed hit, in old-game sliding units. Set from the attack
 	// motion's .msa ExternalForce (combo finishers) or a skill's CRUSH flags; consumed per hit.
-	void SetPendingKnockback(float Distance) { PendingKnockbackDistance = FMath::Max(Distance, 0.0f); }
+	void SetPendingKnockback(float Distance, float Duration = 0, bool bSideways = false, int32 HittingType = 2, bool bSyncPush = false)
+	{
+		PendingKnockbackDistance = FMath::IsFinite(Distance) ? FMath::Max(Distance, 0.0f) : 0.f;
+		PendingKnockbackDuration = Duration;
+		bPendingKnockbackSideways = bSideways;
+		PendingHittingType = HittingType;
+		bPendingSyncPush = bSyncPush;
+	}
 	float GetPendingKnockback() const { return PendingKnockbackDistance; }
+	void SetBasicAttackMotion(UAnimSequence* Sequence, float PlayRate);
+	void CancelPendingBasicAttackHits();
+	static float MotionKnockbackDistance(float ExternalForce);
+	// PhysicsObject.cpp: 100 integration steps at c_fFrameTime (0.02 seconds).
+	static constexpr float MotionKnockbackDuration = 2.f;
 
 private:
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	bool ScheduleBasicAttackHits(AActor* TargetActor, bool bSingleTarget);
+	void ExecuteBasicAttackHit(FMT2MotionAttackEvent Event, TWeakObjectPtr<AActor> TargetActor, bool bSingleTarget);
+	TWeakObjectPtr<UAnimSequence> BasicAttackMotion;
+	float BasicAttackPlayRate = 1.f;
+	TArray<FTimerHandle> BasicAttackHitTimers;
 	void RequestBasicAttack();
 	void ScheduleNextBasicAttack(float DelaySeconds);
 	void ResetBasicAttackCombo();
@@ -176,6 +196,10 @@ private:
 	float CurrentAttackInputWindow = 0.65f;
 	FVector CurrentAttackWorldAdvance = FVector::ZeroVector;
 	float PendingKnockbackDistance = 0.0f;
+	float PendingKnockbackDuration = 0.f;
+	bool bPendingKnockbackSideways = false;
+	int32 PendingHittingType = 2;
+	bool bPendingSyncPush = false;
 
 	// Replicated so the server (set-on-hit) and the owning client (click, and the target ring) agree
 	// on one selection. OnRep drives the ring via OnSelectedTargetChanged.

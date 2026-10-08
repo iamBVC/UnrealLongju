@@ -284,6 +284,7 @@ protected:
 
 private:
 	friend class FMT2QuestAlignmentApiTest;
+	friend class FMT2WarriorComboKnockbackTest;
 	UFUNCTION(Client, Reliable)
 	void ClientConfirmInventoryAction(int32 Vnum, bool bUseSound);
 
