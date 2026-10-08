@@ -21,7 +21,7 @@ struct METIN2_API FMT2FishingState
 	UPROPERTY() uint32 Session = 0;
 	UPROPERTY(BlueprintReadOnly) FVector HookLocation = FVector::ZeroVector;
 };
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMT2FishingEventSignature, EMT2FishingEvent, Event, int32, CaughtVnum);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FMT2FishingEventSignature, EMT2FishingEvent, Event, TSubclassOf<UMT2ItemTemplate>, CaughtItem);
 
 UCLASS(BlueprintType, ClassGroup="MT2", meta=(BlueprintSpawnableComponent))
 class METIN2_API UMT2FishingComponent : public UActorComponent
@@ -50,11 +50,11 @@ private:
 	void Bite();
 	void CheckAttempt();
 	void ReelIn();
-	void Finish(EMT2FishingEvent Event, int32 Vnum=0, bool bPractice=false);
+	void Finish(EMT2FishingEvent Event, TSubclassOf<UMT2ItemTemplate> ItemClass=nullptr, bool bPractice=false);
 	void Say(const FString& Message) const;
 	UFUNCTION() void OnEquipmentChanged();
 	UFUNCTION() void OnRep_State();
-	UFUNCTION(NetMulticast, Reliable) void MulticastFishingEvent(EMT2FishingEvent Event, int32 Vnum, FVector HookPosition);
+	UFUNCTION(NetMulticast, Reliable) void MulticastFishingEvent(EMT2FishingEvent Event, TSubclassOf<UMT2ItemTemplate> ItemClass, FVector HookPosition);
 	void ShowFloat(const FVector& HookPosition);
 	void ClearFloat();
 	UPROPERTY(Transient, DuplicateTransient) TObjectPtr<UStaticMeshComponent> FloatComponent;

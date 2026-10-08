@@ -32,6 +32,13 @@
 #include "Config/MT2PathSettings.h"
 #include "Config/MT2GameplaySettings.h"
 #include "Engine/SkeletalMesh.h"
+#include "Sound/SoundBase.h"
+#include "Animation/AnimSequence.h"
+#include "Animation/AnimNotifies/AnimNotify_PlaySound.h"
+#include "UI/MT2ChatWidget.h"
+#include "Player/MT2PlayerController.h"
+#include "Blueprint/WidgetTree.h"
+#include "Components/ScrollBox.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2FishingRulesTest, "Metin2.Fishing.LegacyRules", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FMT2FishingRulesTest::RunTest(const FString&)
@@ -56,6 +63,38 @@ bool FMT2FishingRulesTest::RunTest(const FString&)
 	TestFalse(TEXT("Insufficient rod power"), Settings.ResolveCatch(Catch, 3000, 12, 100, 13));
 	TestFalse(TEXT("Late roll denied"), Settings.ResolveCatch(Catch, 6001, 1000, 1, 1));
 	TestFalse(TEXT("Miss entry never rewards"), Settings.ResolveCatch(Settings.CatchTable[0], 3000, 1000, 1, 1));
+	for (const auto& Row : Settings.CatchTable)
+	{
+		if (Row.ItemTemplate.IsNull()) { continue; }
+		UClass* Class = Row.ItemTemplate.LoadSynchronous();
+		TestNotNull(TEXT("Configured reward class loads"), Class);
+		const auto* Template = Class ? Class->GetDefaultObject<UMT2ItemTemplate>() : nullptr;
+		TestTrue(TEXT("Reward has an inventory identity"), Template && Template->Vnum > 0 && !Class->HasAnyClassFlags(CLASS_Abstract));
+	}
+	for (const TCHAR* Race : {TEXT("Warrior"), TEXT("Assassin"), TEXT("Sura"), TEXT("Shaman")})
+	for (const TCHAR* Sex : {TEXT("Male"), TEXT("Female")})
+	{
+		const FString Name = FString::Printf(TEXT("ABP_%s_%s"), Race, Sex);
+		const FString Path = UMT2PathSettings::Format(TEXT("Characters_Animations_Name"), TEXT("%s%s"), *Name, *Name);
+		const auto* Blueprint = LoadObject<UAnimBlueprint>(nullptr, *Path);
+		const auto* Defaults = Blueprint && Blueprint->GeneratedClass ? Cast<UMT2CharacterAnimInstance>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+		if (!TestNotNull(TEXT("Character animation defaults"), Defaults)) { continue; }
+		for (const FName Action : {FName(TEXT("throw")), FName(TEXT("fishing_catch")), FName(TEXT("fishing_fail")), FName(TEXT("fishing_cancel"))})
+		{
+			const auto* Sequence = Defaults->GetAnimation(TEXT("fishing"), Action);
+			if (!TestNotNull(TEXT("Bound fishing action"), Sequence)) { continue; }
+			int32 SoundCount = 0;
+			for (const auto& Event : Sequence->Notifies)
+			{
+				if (const auto* Notify = Cast<UAnimNotify_PlaySound>(Event.Notify))
+				{
+					++SoundCount;
+					TestNotNull(TEXT("Animation sound reference resolves"), Notify->Sound.Get());
+				}
+			}
+			TestTrue(FString::Printf(TEXT("%s %s has sound events"), *Name, *Action.ToString()), SoundCount > 0);
+		}
+	}
 	FMT2ItemSlot A; A.Vnum=27803; A.MetinSockets.SetNum(1); A.MetinSockets[0].Value=1000;
 	FMT2ItemSlot B=A; B.MetinSockets[0].Value=2000;
 	TestFalse(TEXT("Fish lengths cannot merge"), MT2ItemUtils::HaveSameInstanceData(A,B));
@@ -165,7 +204,8 @@ bool FMT2FishingPresentationTest::RunTest(const FString&)
 	Equipment->EquipWeapon(RodMesh,TEXT("equip_right_hand"),INDEX_NONE);
 	Equipment->OnWeaponLoaded(Equipment->WeaponRequestId,RodMesh.ToSoftObjectPath());
 	TestTrue(TEXT("Rod visible on hand"),Equipment->GetWeaponMeshComponent()->IsVisible() && Equipment->GetWeaponMeshComponent()->GetStaticMesh()==RodMesh.Get());
-	auto* Fishing=Player->GetFishingComponent(); Fishing->MulticastFishingEvent_Implementation(EMT2FishingEvent::Cancelled,0,FVector::ZeroVector);
+	auto* Fishing=Player->GetFishingComponent();
+	Fishing->MulticastFishingEvent_Implementation(EMT2FishingEvent::Cancelled,nullptr,FVector::ZeroVector);
 	auto* Montage=Anim->GetCurrentActiveMontage(); if (!TestNotNull(TEXT("Stop animation starts"),Montage)) { return false; }
 	Equipment->OnArmorLoaded(Request,FSoftObjectPath(Body));
 	TestEqual(TEXT("Unchanged body preserves AnimInstance"),Player->GetMesh()->GetAnimInstance(),static_cast<UAnimInstance*>(Anim));
@@ -183,6 +223,31 @@ bool FMT2FishingPresentationTest::RunTest(const FString&)
 		TestNotNull(TEXT("Float has mesh"),Fishing->FloatComponent->GetStaticMesh().Get());
 	}
 	Fishing->State.Phase=EMT2FishingPhase::Idle; Fishing->OnRep_State(); TestNull(TEXT("Idle replication removes float"),Fishing->FloatComponent.Get());
+	return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2NotificationRoutingTest, "Metin2.UI.NotificationRouting", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FMT2NotificationRoutingTest::RunTest(const FString&)
+{
+	TStrongObjectPtr<UGameInstance> GI(NewObject<UGameInstance>(GEngine)); GI->InitializeStandalone();
+	UWorld* World = GI->GetWorld(); if (!TestNotNull(TEXT("World"), World)) { return false; }
+	ON_SCOPE_EXIT { GI->Shutdown(); World->DestroyWorld(false); GEngine->DestroyWorldContext(World); };
+	auto* Controller = World->SpawnActor<AMT2PlayerController>();
+	auto* Widget = NewObject<UMT2ChatWidget>(GI.Get());
+	Widget->WidgetTree = NewObject<UWidgetTree>(Widget);
+	Widget->HistoryBox = Widget->WidgetTree->ConstructWidget<UScrollBox>();
+	Widget->RewardHistoryBox = Widget->WidgetTree->ConstructWidget<UScrollBox>();
+	Controller->ChatWidget = Widget;
+	Controller->ClientSystemChatMessage_Implementation(TEXT("Fishing cast\nSafezone area"));
+	TestEqual(TEXT("System notifications do not enter player chat"), Widget->HistoryBox->GetChildrenCount(), 0);
+	TestEqual(TEXT("Multiline system notifications enter loot log"), Widget->RewardHistoryBox->GetChildrenCount(), 2);
+	Controller->ClientNotifyYangReceived_Implementation(100);
+	TestEqual(TEXT("Loot shares notification history"), Widget->RewardHistoryBox->GetChildrenCount(), 3);
+	Controller->AddPlayerChatLine(TEXT("[Guild] Player: hello"));
+	Widget->AddGlobalLine(EMT2Empire::Shinsoo, TEXT("Admin"), TEXT("hello"), true);
+	TestEqual(TEXT("Player/guild/admin chat remains in chat history"), Widget->HistoryBox->GetChildrenCount(), 2);
+	TestEqual(TEXT("Player chat does not enter loot log"), Widget->RewardHistoryBox->GetChildrenCount(), 3);
+	for (int32 Index = 0; Index < 20; ++Index) { Controller->AddInfoChatLine(TEXT("Notification")); }
+	TestEqual(TEXT("Notification history remains bounded"), Widget->RewardHistoryBox->GetChildrenCount(), 8);
 	return true;
 }
 #endif

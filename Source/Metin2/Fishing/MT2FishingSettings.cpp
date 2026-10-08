@@ -11,7 +11,7 @@ bool UMT2FishingSettings::Validate(FString& Error) const
 		if (Profile.Chances.Num() != 31 || Profile.Chances.ContainsByPredicate([](int32 Value) { return Value < 0 || Value > 100; }))
 		{ Error = TEXT("Each timing profile needs 31 probability values in [0,100]."); return false; }
 	for (const auto& Entry : CatchTable)
-		if (Entry.Vnum < 0 || Entry.Weights.Num() != 4 || Entry.Difficulty < 1 || Entry.TimeProfile < 0 || Entry.TimeProfile >= 5 ||
+		if (Entry.Weights.Num() != 4 || Entry.Difficulty < 1 || Entry.TimeProfile < 0 || Entry.TimeProfile >= 5 ||
 			Entry.LengthRange.Num() != 3 || Entry.LengthRange[0] < 0 || Entry.LengthRange[0] > Entry.LengthRange[1] || Entry.LengthRange[1] > Entry.LengthRange[2] ||
 			Entry.Weights.ContainsByPredicate([](int32 Weight) { return Weight < 0; }))
 		{ Error = TEXT("Invalid fishing catch row."); return false; }
@@ -52,6 +52,6 @@ int32 UMT2FishingSettings::TimingChance(int32 Profile, int32 ElapsedMilliseconds
 }
 bool UMT2FishingSettings::ResolveCatch(const FMT2FishingCatch& Catch, int32 Milliseconds, int32 Power, int32 TimingRoll, int32 DifficultyRoll) const
 {
-	return Catch.Vnum > 0 && TimingRoll >= 1 && TimingRoll <= TimingChance(Catch.TimeProfile, Milliseconds) &&
+	return !Catch.ItemTemplate.IsNull() && TimingRoll >= 1 && TimingRoll <= TimingChance(Catch.TimeProfile, Milliseconds) &&
 		DifficultyRoll >= 1 && DifficultyRoll <= Catch.Difficulty && DifficultyRoll <= Power;
 }

@@ -9,7 +9,7 @@ Equip a rod by right-clicking it, then right-click a bait item. Press the attack
 key (Space with native input) once to cast, and again to reel in. The fishing
 skill (legacy vnum 123) routes to the same logic. Moving cancels the attempt.
 
-The initial wait is 10–40 seconds. A chat message and the character's reaction
+The initial wait is 10–40 seconds. A loot/notification-log message and the character's reaction
 animation indicate a bite. Reel in within six seconds. Timing is probabilistic:
 normal catches peak around three seconds, slow ones around five, quick ones
 around one; rod plus bait power is checked against the catch's difficulty.
@@ -24,7 +24,11 @@ matching the legacy town rules. Add explicit rules for other maps.
 
 The 37 rows and five timing profiles come from the local legacy server's
 `share/locale/italy/fishing.txt` and `game/src/fishing.cpp`. Weights total
-9950/9950/9800/9900. A vnum-zero row is a miss; other rows include fish and items.
+9950/9950/9800/9900. A null `ItemTemplate` row is a miss; other rows select fish
+and items by soft item-class reference, editable in Project Settings. The server
+loads the selected class and derives its numeric identity only for the existing
+inventory/save format. Fishing result events also carry the item class, not a vnum.
+Old `CatchTable` overrides using `Vnum` must be changed to `ItemTemplate` references.
 No runtime access to that legacy directory is required. Tables 2 and 3 are
 available to configure; premium/event switching, regional suppression of gold
 and disguise rewards, fishing-event leaderboards, fish opening and grilling
@@ -92,8 +96,22 @@ It has no collision, navigation influence, or server mesh loading. Float mesh,
 material, scale and height offset are configurable in Metin2 Fishing settings;
 the initial visible float is a small engine-shape placeholder. The legacy float
 uses an animated MDE mesh, which the existing effect importer does not yet
-translate. Its exact model, icons, sounds, line effects and dedicated fishing UI
+translate. Its exact model, icons, line effects and dedicated fishing UI
 remain future presentation work.
+
+Fishing sounds are already embedded as `UAnimNotify_PlaySound` events in the
+imported animations. All eight variants have sound events for throw, catch,
+failure and cancellation, imported from the legacy `.mss` motion scripts.
+Python registers the motions but does not define their sound timings. Waiting
+and bite-reaction animations have no sound events in the supplied assets.
+The redundant native sound table and timer playback have been removed. Edit
+sounds and their timings on the animation's Notify track; no Content packages
+were modified by this cleanup.
+
+Fishing and other system feedback now share the existing loot history. Player,
+guild and administrator chat messages remain in the chat history. Existing
+`AddInfoChatLine`/`SendSystemChatMessage` names are retained for compatibility,
+but route to the notification log; guild text uses the separate player-chat path.
 
 Body refreshes preserve the live AnimInstance when the skeletal mesh is unchanged,
 so bait/proficiency replication cannot interrupt the finishing montage. Real
@@ -118,3 +136,7 @@ checks synthetic server-attribute maps with actual imported rods, stale/duplicat
 requests, bait, movement, expiry, catch delivery, proficiency caps, fisherman
 refinement and numeric-socket persistence. Tests live in `Source/Metin2/Tests`.
 Headless tests do not validate visual animation blending or remote latency.
+The rules test loads every configured reward and checks sound events in all
+32 bound throw/catch/fail/cancel animations;
+`Metin2.UI.NotificationRouting` checks chat/notification separation and the
+bounded shared loot history.

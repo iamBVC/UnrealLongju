@@ -5,12 +5,14 @@
 
 class UStaticMesh;
 class UMaterialInterface;
+class UMT2ItemTemplate;
 
 USTRUCT(BlueprintType)
 struct METIN2_API FMT2FishingCatch
 {
 	GENERATED_BODY()
-	UPROPERTY(EditAnywhere, Config, Category="Fishing") int32 Vnum = 0;
+	// Null denotes the legacy miss row; rewards are selected by their item class.
+	UPROPERTY(EditAnywhere, Config, Category="Fishing") TSoftClassPtr<UMT2ItemTemplate> ItemTemplate;
 	UPROPERTY(EditAnywhere, Config, Category="Fishing") TArray<int32> Weights;
 	UPROPERTY(EditAnywhere, Config, Category="Fishing") int32 Difficulty = 1;
 	UPROPERTY(EditAnywhere, Config, Category="Fishing") int32 TimeProfile = 0;
