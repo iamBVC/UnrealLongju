@@ -221,8 +221,27 @@ bool FMT2FishingPresentationTest::RunTest(const FString&)
 			150.0+GetDefault<UMT2GameplaySettings>()->WaterSurfaceOffset+GetDefault<UMT2FishingSettings>()->FloatHeightOffset);
 		TestEqual(TEXT("Float is non-colliding"),Fishing->FloatComponent->GetCollisionEnabled(),ECollisionEnabled::NoCollision);
 		TestNotNull(TEXT("Float has mesh"),Fishing->FloatComponent->GetStaticMesh().Get());
+		const auto& Settings = *GetDefault<UMT2FishingSettings>();
+		const FVector Base = Fishing->FloatComponent->GetComponentLocation();
+		TestTrue(TEXT("Visible float enables cosmetic tick"), Fishing->IsComponentTickEnabled());
+		Fishing->TickComponent(Settings.FloatBobPeriod * .25f, LEVELTICK_All, nullptr);
+		TestTrue(TEXT("Quarter-cycle bob reaches configured amplitude"), FMath::IsNearlyEqual(
+			Fishing->FloatComponent->GetComponentLocation().Z, Base.Z + Settings.FloatBobAmplitude, .001));
+		TestEqual(TEXT("Bob keeps hook XY fixed"), FVector2D(Fishing->FloatComponent->GetComponentLocation()), FVector2D(Base));
+		Fishing->TickComponent(Settings.FloatBobPeriod * .5f, LEVELTICK_All, nullptr);
+		TestTrue(TEXT("Three-quarter-cycle bob falls below baseline"), FMath::IsNearlyEqual(
+			Fishing->FloatComponent->GetComponentLocation().Z, Base.Z - Settings.FloatBobAmplitude, .001));
+		// RPC can arrive before the replicated phase; it must still start the visual dip.
+		Fishing->MulticastFishingEvent_Implementation(EMT2FishingEvent::Bite, nullptr, FVector(-500,-1000,10000));
+		Fishing->TickComponent(Settings.FloatBiteDipResponseTime * 10.f, LEVELTICK_All, nullptr);
+		TestTrue(TEXT("Bite pulls float down by configured depth"), FMath::IsNearlyEqual(
+			Fishing->FloatComponent->GetComponentLocation().Z, Base.Z - Settings.FloatBiteDipDepth, .01));
+		Fishing->State.Phase = EMT2FishingPhase::Bite;
+		Fishing->OnRep_State();
+		TestTrue(TEXT("Replicated bite retains submerged float"), Fishing->bFloatBiting && Fishing->FloatDip > 0);
 	}
 	Fishing->State.Phase=EMT2FishingPhase::Idle; Fishing->OnRep_State(); TestNull(TEXT("Idle replication removes float"),Fishing->FloatComponent.Get());
+	TestFalse(TEXT("Idle disables cosmetic tick"), Fishing->IsComponentTickEnabled());
 	return true;
 }
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2NotificationRoutingTest, "Metin2.UI.NotificationRouting", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)

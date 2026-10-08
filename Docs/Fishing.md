@@ -92,8 +92,14 @@ Rods now attach their imported item mesh to the character's weapon socket.
 older item template has no world-mesh reference; a template's explicit mesh wins.
 The local float uses the replicated hook XY and baked visual-water elevation,
 including the global water offset, rather than the character's capsule height.
-It has no collision, navigation influence, or server mesh loading. Float mesh,
-material, scale and height offset are configurable in Metin2 Fishing settings;
+It has no collision, navigation influence, or server mesh loading.
+The float bobs vertically with a slow sine wave while waiting, then dips smoothly
+on the server's bite event. Motion is client-side only and ticks only while the
+float exists; no movement is replicated or used for fishing validation.
+`FloatBobAmplitude` (1.5 cm), `FloatBobPeriod` (4 s), `FloatBiteDipDepth` (12 cm)
+and `FloatBiteDipResponseTime` (0.15 s exponential response) are configurable
+under Presentation > Float Motion. Idle/end-play cleanup disables the tick.
+Float mesh, material, scale and height offset are configurable in Metin2 Fishing settings;
 the initial visible float is a small engine-shape placeholder. The legacy float
 uses an animated MDE mesh, which the existing effect importer does not yet
 translate. Its exact model, icons, line effects and dedicated fishing UI

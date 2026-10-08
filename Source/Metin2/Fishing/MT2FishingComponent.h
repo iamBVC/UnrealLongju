@@ -31,6 +31,7 @@ public:
 	UMT2FishingComponent();
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type Reason) override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out) const override;
 	UFUNCTION(BlueprintPure, Category="Fishing") bool IsFishing() const { return State.Phase != EMT2FishingPhase::Idle; }
 	UFUNCTION(BlueprintPure, Category="Fishing") bool HasRodEquipped() const;
@@ -61,6 +62,10 @@ private:
 	UPROPERTY(ReplicatedUsing=OnRep_State) FMT2FishingState State;
 	TWeakObjectPtr<AMT2MapPresentationActor> Map;
 	FVector CastOrigin = FVector::ZeroVector;
+	FVector FloatBaseLocation = FVector::ZeroVector;
+	double FloatBobTime = 0;
+	float FloatDip = 0;
+	bool bFloatBiting = false;
 	int32 RodVnum = 0, BaitPower = 0, TableIndex = INDEX_NONE;
 	double BiteTime = 0, LastRequestTime = -DBL_MAX, NextStartTime = 0;
 	uint32 SessionCounter = 0;

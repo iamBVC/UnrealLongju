@@ -37,7 +37,10 @@ namespace
 }
 UMT2FishingComponent::UMT2FishingComponent()
 {
-	SetIsReplicatedByDefault(true); PrimaryComponentTick.bCanEverTick = false;
+	SetIsReplicatedByDefault(true);
+	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bStartWithTickEnabled = false;
+	PrimaryComponentTick.bAllowTickOnDedicatedServer = false;
 }
 void UMT2FishingComponent::BeginPlay()
 {
@@ -197,13 +200,19 @@ void UMT2FishingComponent::Say(const FString& Message) const
 void UMT2FishingComponent::OnRep_State()
 {
 	bCancelRequested = false;
+	bFloatBiting = State.Phase == EMT2FishingPhase::Bite;
 	if (IsFishing()) { ShowFloat(State.HookLocation); } else { ClearFloat(); }
 }
 void UMT2FishingComponent::MulticastFishingEvent_Implementation(EMT2FishingEvent Event, TSubclassOf<UMT2ItemTemplate> ItemClass, FVector HookPosition)
 {
 	OnFishingEvent.Broadcast(Event, ItemClass);
 	if (GetNetMode() == NM_DedicatedServer) { return; }
-	if (Event == EMT2FishingEvent::Cast || Event == EMT2FishingEvent::Bite) { ShowFloat(HookPosition); } else { ClearFloat(); }
+	if (Event == EMT2FishingEvent::Cast || Event == EMT2FishingEvent::Bite)
+	{
+		bFloatBiting = Event == EMT2FishingEvent::Bite;
+		ShowFloat(HookPosition);
+	}
+	else { ClearFloat(); }
 	const auto* Player = Cast<AMT2PlayerCharacter>(GetOwner());
 	auto* Anim = Player && Player->GetMesh() ? Cast<UMT2CharacterAnimInstance>(Player->GetMesh()->GetAnimInstance()) : nullptr;
 	const FName Action = Event == EMT2FishingEvent::Cast ? TEXT("throw") : Event == EMT2FishingEvent::Bite ? TEXT("fishing_react") :
@@ -213,10 +222,29 @@ void UMT2FishingComponent::MulticastFishingEvent_Implementation(EMT2FishingEvent
 	{ Anim->PlaySlotAnimationAsDynamicMontage(Sequence, TEXT("DefaultSlot"), .15f, .15f, 1, 1); }
 }
 
-
 void UMT2FishingComponent::ClearFloat()
 {
+	SetComponentTickEnabled(false);
+	FloatBobTime = 0; FloatDip = 0; bFloatBiting = false;
 	if (FloatComponent) { FloatComponent->DestroyComponent(); FloatComponent = nullptr; }
+}
+
+void UMT2FishingComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	if (GetNetMode() == NM_DedicatedServer || !IsValid(FloatComponent)) { SetComponentTickEnabled(false); return; }
+	if (!FMath::IsFinite(DeltaTime) || DeltaTime <= 0) { return; }
+	const auto& Settings = *GetDefault<UMT2FishingSettings>();
+	const double Period = FMath::IsFinite(Settings.FloatBobPeriod) ? FMath::Max(.1f, Settings.FloatBobPeriod) : 4.f;
+	const float Amplitude = FMath::IsFinite(Settings.FloatBobAmplitude) ? FMath::Max(0.f, Settings.FloatBobAmplitude) : 0.f;
+	const float Depth = FMath::IsFinite(Settings.FloatBiteDipDepth) ? FMath::Max(0.f, Settings.FloatBiteDipDepth) : 0.f;
+	const float Response = FMath::IsFinite(Settings.FloatBiteDipResponseTime) ? FMath::Max(.01f, Settings.FloatBiteDipResponseTime) : .15f;
+	FloatBobTime = FMath::Fmod(FloatBobTime + DeltaTime, Period);
+	// Frame-rate-independent dip; reduce the bob as the fish pulls the float down.
+	FloatDip = FMath::Lerp(FloatDip, bFloatBiting ? Depth : 0.f, 1.f - FMath::Exp(-DeltaTime / Response));
+	const float BobWeight = Depth > 0 ? FMath::Clamp(1.f - FloatDip / Depth, 0.f, 1.f) : 1.f;
+	const double Bob = Amplitude * BobWeight * FMath::Sin(2.0 * PI * FloatBobTime / Period);
+	FloatComponent->SetWorldLocation(FloatBaseLocation + FVector(0, 0, Bob - FloatDip));
 }
 void UMT2FishingComponent::ShowFloat(const FVector& HookPosition)
 {
@@ -239,6 +267,7 @@ void UMT2FishingComponent::ShowFloat(const FVector& HookPosition)
 	if (!Mesh) { ClearFloat(); UE_LOG(LogTemp, Warning, TEXT("Cannot load configured fishing float mesh.")); return; }
 	if (!FloatComponent)
 	{
+		FloatBobTime = 0; FloatDip = 0;
 		FloatComponent = NewObject<UStaticMeshComponent>(GetOwner(), NAME_None, RF_Transient | RF_DuplicateTransient);
 		FloatComponent->SetupAttachment(GetOwner()->GetRootComponent()); FloatComponent->SetAbsolute(true, true, true);
 		FloatComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); FloatComponent->SetCanEverAffectNavigation(false);
@@ -246,5 +275,7 @@ void UMT2FishingComponent::ShowFloat(const FVector& HookPosition)
 	}
 	FloatComponent->SetStaticMesh(Mesh); FloatComponent->SetMaterial(0, Material);
 	FloatComponent->SetWorldScale3D(Settings.FloatScale);
-	FloatComponent->SetWorldLocation(FVector(HookPosition.X, HookPosition.Y, Rect->Height + GetDefault<UMT2GameplaySettings>()->WaterSurfaceOffset + Settings.FloatHeightOffset));
+	FloatBaseLocation = FVector(HookPosition.X, HookPosition.Y, Rect->Height + GetDefault<UMT2GameplaySettings>()->WaterSurfaceOffset + Settings.FloatHeightOffset);
+	FloatComponent->SetWorldLocation(FloatBaseLocation - FVector(0, 0, FloatDip));
+	SetComponentTickEnabled(true);
 }

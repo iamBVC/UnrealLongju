@@ -55,6 +55,10 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category="Presentation") TSoftObjectPtr<UMaterialInterface> FloatMaterial;
 	UPROPERTY(EditAnywhere, Config, Category="Presentation") FVector FloatScale = FVector(.06, .06, .12);
 	UPROPERTY(EditAnywhere, Config, Category="Presentation", meta=(Units="cm")) float FloatHeightOffset = 4;
+	UPROPERTY(EditAnywhere, Config, Category="Presentation|Float Motion", meta=(ClampMin="0", Units="cm")) float FloatBobAmplitude = 1.5f;
+	UPROPERTY(EditAnywhere, Config, Category="Presentation|Float Motion", meta=(ClampMin="0.1", Units="s")) float FloatBobPeriod = 4.f;
+	UPROPERTY(EditAnywhere, Config, Category="Presentation|Float Motion", meta=(ClampMin="0", Units="cm")) float FloatBiteDipDepth = 12.f;
+	UPROPERTY(EditAnywhere, Config, Category="Presentation|Float Motion", meta=(ClampMin="0.01", Units="s")) float FloatBiteDipResponseTime = .15f;
 	bool Validate(FString& Error) const;
 	int32 FindTable(int32 MapIndex) const;
 	int32 PickCatch(int32 TableIndex, int32 Roll) const;
