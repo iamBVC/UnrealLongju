@@ -39,6 +39,7 @@
 #include "Player/MT2PlayerController.h"
 #include "Blueprint/WidgetTree.h"
 #include "Components/ScrollBox.h"
+#include "Components/CanvasPanel.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2FishingRulesTest, "Metin2.Fishing.LegacyRules", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FMT2FishingRulesTest::RunTest(const FString&)
@@ -255,6 +256,10 @@ bool FMT2NotificationRoutingTest::RunTest(const FString&)
 	Widget->WidgetTree = NewObject<UWidgetTree>(Widget);
 	Widget->HistoryBox = Widget->WidgetTree->ConstructWidget<UScrollBox>();
 	Widget->RewardHistoryBox = Widget->WidgetTree->ConstructWidget<UScrollBox>();
+	Widget->HistoryPanel = Widget->WidgetTree->ConstructWidget<UCanvasPanel>();
+	Widget->WidgetTree->RootWidget = Widget->HistoryPanel;
+	Widget->HistoryPanel->AddChild(Widget->HistoryBox);
+	Widget->HistoryPanel->AddChild(Widget->RewardHistoryBox);
 	Controller->ChatWidget = Widget;
 	Controller->ClientSystemChatMessage_Implementation(TEXT("Fishing cast\nSafezone area"));
 	TestEqual(TEXT("System notifications do not enter player chat"), Widget->HistoryBox->GetChildrenCount(), 0);
@@ -267,6 +272,49 @@ bool FMT2NotificationRoutingTest::RunTest(const FString&)
 	TestEqual(TEXT("Player chat does not enter loot log"), Widget->RewardHistoryBox->GetChildrenCount(), 3);
 	for (int32 Index = 0; Index < 20; ++Index) { Controller->AddInfoChatLine(TEXT("Notification")); }
 	TestEqual(TEXT("Notification history remains bounded"), Widget->RewardHistoryBox->GetChildrenCount(), 8);
+	Widget->HistoryVisibleUntil = 0; Widget->RewardVisibleUntil = 10;
+	Widget->UpdateHistoryVisibility(5);
+	TestEqual(TEXT("Chat fades independently"), Widget->HistoryBox->GetRenderOpacity(), 0.f);
+	TestEqual(TEXT("Info visible with closed/expired chat"), Widget->RewardHistoryBox->GetRenderOpacity(), 1.f);
+	TestEqual(TEXT("Shared parent cannot hide info"), Widget->HistoryPanel->GetRenderOpacity(), 1.f);
+	TestEqual(TEXT("Invisible chat excludes itself and children from hit tests"), Widget->HistoryBox->GetVisibility(), ESlateVisibility::HitTestInvisible);
+	TestEqual(TEXT("Visible info is always click-through"), Widget->RewardHistoryBox->GetVisibility(), ESlateVisibility::HitTestInvisible);
+	TestEqual(TEXT("Shared panel does not intercept clicks"), Widget->HistoryPanel->GetVisibility(), ESlateVisibility::SelfHitTestInvisible);
+	TestEqual(TEXT("Chat wrapper does not intercept empty space"), Widget->GetVisibility(), ESlateVisibility::SelfHitTestInvisible);
+	Widget->HistoryVisibleUntil = 10; Widget->RewardVisibleUntil = 0;
+	Widget->UpdateHistoryVisibility(5);
+	TestEqual(TEXT("Chat stays visible independently"), Widget->HistoryBox->GetRenderOpacity(), 1.f);
+	TestEqual(TEXT("Visible chat restores authored hit testing"), Widget->HistoryBox->GetVisibility(), ESlateVisibility::Visible);
+	TestEqual(TEXT("Expired info hides with visible chat"), Widget->RewardHistoryBox->GetRenderOpacity(), 0.f);
+	Widget->RewardVisibleUntil = 5.5; Widget->UpdateHistoryVisibility(5);
+	TestEqual(TEXT("Info has its own fade"), Widget->RewardHistoryBox->GetRenderOpacity(), .5f);
+	TestEqual(TEXT("Fading info stays click-through"), Widget->RewardHistoryBox->GetVisibility(), ESlateVisibility::HitTestInvisible);
+	Widget->bIsOpen = true; Widget->UpdateHistoryVisibility(20);
+	TestEqual(TEXT("Typing keeps chat visible"), Widget->HistoryBox->GetRenderOpacity(), 1.f);
+	TestEqual(TEXT("Typing does not keep info visible"), Widget->RewardHistoryBox->GetRenderOpacity(), 0.f);
+	Widget->bIsOpen = false;
+	Widget->HistoryVisibleUntil = 0;
+	Controller->AddInfoChatLine(TEXT("New info"));
+	TestEqual(TEXT("Info immediately reappears without chat"), Widget->RewardHistoryBox->GetRenderOpacity(), 1.f);
+	TestEqual(TEXT("New info does not wake chat"), Widget->HistoryBox->GetRenderOpacity(), 0.f);
+	TestEqual(TEXT("New info does not enable chat hit tests"), Widget->HistoryBox->GetVisibility(), ESlateVisibility::HitTestInvisible);
+
+	const auto Class = LoadClass<UMT2ChatWidget>(nullptr, UMT2PathSettings::Path(TEXT("UI_MT2Chat")));
+	auto* Authored = Class ? CreateWidget<UMT2ChatWidget>(GI.Get(), Class) : nullptr;
+	if (TestNotNull(TEXT("Authored chat widget"), Authored))
+	{
+		AddInfo(FString::Printf(TEXT("Authored hierarchy: history=%s reward parent=%s root=%s"),
+			*GetNameSafe(Authored->HistoryPanel), *GetNameSafe(Authored->RewardHistoryBox ? Authored->RewardHistoryBox->GetParent() : nullptr), *GetNameSafe(Authored->GetRootWidget())));
+		Authored->HistoryVisibleUntil = 0; Authored->RewardVisibleUntil = 10;
+		Authored->UpdateHistoryVisibility(5);
+		if (TestNotNull(TEXT("Authored info log"), Authored->RewardHistoryBox.Get()))
+		{
+			TestEqual(TEXT("Authored info visible"), Authored->RewardHistoryBox->GetRenderOpacity(), 1.f);
+			TestEqual(TEXT("Authored info is click-through"), Authored->RewardHistoryBox->GetVisibility(), ESlateVisibility::HitTestInvisible);
+			for (UWidget* Parent = Authored->RewardHistoryBox->GetParent(); Parent; Parent = Parent->GetParent())
+				TestTrue(TEXT("Authored info ancestors remain visible"), Parent->GetRenderOpacity() > 0);
+		}
+	}
 	return true;
 }
 #endif

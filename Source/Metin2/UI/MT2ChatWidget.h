@@ -69,6 +69,9 @@ private:
 	friend class FMT2NotificationRoutingTest;
 	void CloseInput();
 	void KeepHistoryVisible();
+	void UpdateHistoryVisibility(double Now);
+	void SetChatBranchOpacity(UWidget* Widget, float Opacity);
+	TMap<TWeakObjectPtr<UWidget>, ESlateVisibility> ChatBranchVisibilities;
 	void SubmitCurrentText();
 	void RecordSubmittedText(const FString& Text);
 	void NavigateSubmitHistory(int32 Direction);

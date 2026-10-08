@@ -17,6 +17,7 @@
 #include "Components/EditableTextBox.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/PanelWidget.h"
 #include "Components/ScrollBox.h"
 #include "Components/TextBlock.h"
 #include "Components/VerticalBox.h"
@@ -68,43 +69,54 @@ void UMT2ChatWidget::NativeConstruct()
 	if (WhisperButton) WhisperButton->OnClicked.AddUniqueDynamic(this, &UMT2ChatWidget::HandleFocusInputClicked);
 	if (HistoryButton) HistoryButton->OnClicked.AddUniqueDynamic(this, &UMT2ChatWidget::HandleHistoryClicked);
 	if (InputControls) InputControls->SetVisibility(ESlateVisibility::Collapsed);
+	UpdateHistoryVisibility(GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0);
 }
 
 void UMT2ChatWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-	if (!HistoryPanel)
-	{
-		return;
-	}
+	UpdateHistoryVisibility(GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0);
+}
 
-	// While typing, the history stays fully visible; otherwise it holds for HistoryHoldTime after the
-	// last message then fades out, so old chatter doesn't clutter the screen.
-	float TargetOpacity = 1.0f;
-	if (!bIsOpen && !bHistoryPinned)
+void UMT2ChatWidget::SetChatBranchOpacity(UWidget* Widget, float Opacity)
+{
+	if (!Widget || Widget == RewardHistoryBox) { return; }
+	if (RewardHistoryBox && RewardHistoryBox->IsChildOf(Widget))
 	{
-		const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
-		const double Remaining = HistoryVisibleUntil - Now;
-		if (Remaining <= 0.0)
-		{
-			TargetOpacity = 0.0f;
-		}
-		else if (Remaining < HistoryFadeDuration)
-		{
-			TargetOpacity = static_cast<float>(Remaining / HistoryFadeDuration);
-		}
+		// A shared parent must remain opaque; fade only its chat-only branches.
+		Widget->SetRenderOpacity(1.f);
+		Widget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		if (auto* Panel = Cast<UPanelWidget>(Widget))
+			for (int32 Index = 0; Index < Panel->GetChildrenCount(); ++Index)
+				SetChatBranchOpacity(Panel->GetChildAt(Index), Opacity);
 	}
-	HistoryPanel->SetRenderOpacity(TargetOpacity);
+	else
+	{
+		Widget->SetRenderOpacity(Opacity);
+		const TWeakObjectPtr<UWidget> Key(Widget);
+		if (!ChatBranchVisibilities.Contains(Key)) { ChatBranchVisibilities.Add(Key, Widget->GetVisibility()); }
+		// Opacity alone does not remove a widget or its children from Slate's hit-test grid.
+		const ESlateVisibility Authored = ChatBranchVisibilities[Key];
+		const bool bAuthoredHidden = Authored == ESlateVisibility::Hidden || Authored == ESlateVisibility::Collapsed;
+		Widget->SetVisibility(Opacity > 0.f || bAuthoredHidden ? Authored : ESlateVisibility::HitTestInvisible);
+	}
+}
 
+void UMT2ChatWidget::UpdateHistoryVisibility(double Now)
+{
+	// Structural containers must not intercept clicks in empty/transparent areas.
+	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	if (auto* RootPanel = Cast<UPanelWidget>(GetRootWidget())) { RootPanel->SetVisibility(ESlateVisibility::SelfHitTestInvisible); }
+	const auto Opacity = [](double Remaining)
+	{
+		return static_cast<float>(FMath::Clamp(Remaining / HistoryFadeDuration, 0.0, 1.0));
+	};
+	const float ChatOpacity = bIsOpen || bHistoryPinned ? 1.f : Opacity(HistoryVisibleUntil - Now);
+	SetChatBranchOpacity(HistoryPanel ? static_cast<UWidget*>(HistoryPanel) : HistoryBox.Get(), ChatOpacity);
 	if (RewardHistoryBox)
 	{
-		const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
-		const double Remaining = RewardVisibleUntil - Now;
-		const float RewardOpacity = Remaining <= 0.0
-			? 0.0f
-			: (Remaining < HistoryFadeDuration
-				? static_cast<float>(Remaining / HistoryFadeDuration) : 1.0f);
-		RewardHistoryBox->SetRenderOpacity(RewardOpacity);
+		RewardHistoryBox->SetVisibility(ESlateVisibility::HitTestInvisible);
+		RewardHistoryBox->SetRenderOpacity(Opacity(RewardVisibleUntil - Now));
 	}
 }
 
@@ -160,7 +172,9 @@ void UMT2ChatWidget::CloseInput()
 
 void UMT2ChatWidget::KeepHistoryVisible()
 {
-	HistoryVisibleUntil = (GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0) + HistoryHoldTime;
+	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	HistoryVisibleUntil = Now + HistoryHoldTime + HistoryFadeDuration;
+	UpdateHistoryVisibility(Now);
 }
 
 void UMT2ChatWidget::AddLine(const FString& Line)
@@ -205,7 +219,9 @@ void UMT2ChatWidget::AddRewardLine(const FString& Line)
 	RewardHistoryBox->AddChild(Text);
 	RewardHistoryBox->ScrollToEnd();
 	RewardHistoryBox->SetRenderOpacity(1.0f);
-	RewardVisibleUntil = (GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0) + HistoryHoldTime;
+	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	RewardVisibleUntil = Now + HistoryHoldTime + HistoryFadeDuration;
+	UpdateHistoryVisibility(Now);
 }
 
 void UMT2ChatWidget::AddGlobalLine(

@@ -118,6 +118,15 @@ Fishing and other system feedback now share the existing loot history. Player,
 guild and administrator chat messages remain in the chat history. Existing
 `AddInfoChatLine`/`SendSystemChatMessage` names are retained for compatibility,
 but route to the notification log; guild text uses the separate player-chat path.
+Chat and info logs have independent visibility deadlines: messages immediately
+show only their own history, hold for five seconds, then fade over one second.
+Opening/pinning chat does not keep info visible. Shared widget containers remain
+opaque so a nested info history cannot inherit the chat fade; authored UMG layout
+and assets are preserved.
+The info log is always non-hit-testable, including its children. Fully faded chat
+branches also disable hit testing; visible chat restores its authored interaction
+settings. Shared/root containers do not intercept clicks in empty areas, while
+visible chat inputs and controls remain interactive.
 
 Body refreshes preserve the live AnimInstance when the skeletal mesh is unchanged,
 so bait/proficiency replication cannot interrupt the finishing montage. Real
