@@ -10,6 +10,7 @@
 #include "MT2UEEditorModule.h"
 #include "Config/MT2PathSettings.h"
 #include "MT2AreaPaintEdMode.h"
+#include "MT2VisualWaterPaintEdMode.h"
 #include "EditorModeManager.h"
 #include "EditorModeRegistry.h"
 
@@ -51,6 +52,8 @@ void FMT2UEEditorModule::StartupModule()
 	{
 		FEditorModeRegistry::Get().RegisterMode<FMT2AreaPaintEdMode>(FMT2AreaPaintEdMode::ModeId,
 			LOCTEXT("AreaPaintMode", "Metin2 Areas"), FSlateIcon(), true);
+		FEditorModeRegistry::Get().RegisterMode<FMT2VisualWaterPaintEdMode>(FMT2VisualWaterPaintEdMode::ModeId,
+			LOCTEXT("VisualWaterPaintMode", "Metin2 Visual Water"), FSlateIcon(), true);
 	}
 	FGlobalTabmanager::Get()->RegisterNomadTabSpawner(
 		MT2ImporterTabName,
@@ -77,7 +80,11 @@ void FMT2UEEditorModule::StartupModule()
 
 void FMT2UEEditorModule::ShutdownModule()
 {
-	if (!IsRunningCommandlet()) { FEditorModeRegistry::Get().UnregisterMode(FMT2AreaPaintEdMode::ModeId); }
+	if (!IsRunningCommandlet())
+	{
+		FEditorModeRegistry::Get().UnregisterMode(FMT2AreaPaintEdMode::ModeId);
+		FEditorModeRegistry::Get().UnregisterMode(FMT2VisualWaterPaintEdMode::ModeId);
+	}
 	UToolMenus::UnRegisterStartupCallback(this);
 	UToolMenus::UnregisterOwner(this);
 	if (UObjectInitialized())
@@ -150,6 +157,12 @@ void FMT2UEEditorModule::RegisterMenus()
 
 void FMT2UEEditorModule::AddMenuEntry(FMenuBuilder& MenuBuilder)
 {
+	MenuBuilder.AddMenuEntry(LOCTEXT("VisualWaterPaintLabel", "Metin2 Visual Water Paint"),
+		LOCTEXT("VisualWaterPaintTooltip", "Paint visual water coverage and heights independently of server attributes."),
+		FSlateIcon(), FUIAction(FExecuteAction::CreateLambda([]()
+		{
+			GLevelEditorModeTools().ActivateMode(FMT2VisualWaterPaintEdMode::ModeId, true);
+		})));
 	MenuBuilder.AddMenuEntry(LOCTEXT("AreaPaintLabel", "Metin2 Area Paint"),
 		LOCTEXT("AreaPaintTooltip", "View and paint full-resolution gameplay attribute bits on the landscape."),
 		FSlateIcon(), FUIAction(FExecuteAction::CreateLambda([]()

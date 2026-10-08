@@ -83,8 +83,13 @@ UMT2MapWaterComponent::UMT2MapWaterComponent()
 
 void UMT2MapWaterComponent::ClearChunks()
 {
+#if WITH_EDITOR
+	// Derived, transient render components must not serialize their owner into editor undo.
+	TGuardValue<decltype(GUndo)> UndoGuard(GUndo, nullptr);
+#endif
 	for (UProceduralMeshComponent* Chunk : Chunks) { if (IsValid(Chunk)) { Chunk->DestroyComponent(); } }
 	Chunks.Reset();
+	ChunkLookup.Reset();
 }
 
 void UMT2MapWaterComponent::OnRegister()
@@ -121,10 +126,13 @@ void UMT2MapWaterComponent::OnWaterSettingsChanged(UObject* Settings, FPropertyC
 }
 #endif
 
-void UMT2MapWaterComponent::Rebuild(const AMT2MapPresentationActor& Map)
+void UMT2MapWaterComponent::Rebuild(const AMT2MapPresentationActor& Map, const FIntRect* UpdatedCells)
 {
-	ClearChunks();
-	if (!IsRegistered() || Map.GetNetMode() == NM_DedicatedServer || Map.WaterRectangles.IsEmpty()) { return; }
+#if WITH_EDITOR
+	TGuardValue<decltype(GUndo)> UndoGuard(GUndo, nullptr);
+#endif
+	if (!UpdatedCells) { ClearChunks(); }
+	if (!IsRegistered() || Map.GetNetMode() == NM_DedicatedServer || Map.WaterRectangles.IsEmpty()) { ClearChunks(); return; }
 	const FVector2D Extent = Map.WorldMax - Map.WorldMin;
 	const bool bValidSource = Map.MapCells.X > 0 && Map.MapCells.Y > 0 &&
 		int64(Map.MapCells.X) * 128 == Map.WaterGridSize.X && int64(Map.MapCells.Y) * 128 == Map.WaterGridSize.Y;
@@ -132,17 +140,36 @@ void UMT2MapWaterComponent::Rebuild(const AMT2MapPresentationActor& Map)
 		!FMath::IsFinite(Extent.X) || !FMath::IsFinite(Extent.Y) || Extent.X <= 0 || Extent.Y <= 0 ||
 		!FMath::IsFinite(Map.WorldMin.X) || !FMath::IsFinite(Map.WorldMin.Y))
 	{
+		ClearChunks();
 		UE_LOG(LogMT2Water, Warning, TEXT("%s: invalid visual water grid or map bounds; re-bake water from the source water layers."), *Map.MapId);
 		return;
 	}
 	const UMT2GameplaySettings& Settings = UMT2GameplaySettings::Get();
 	if (Settings.WaterMaterial.IsNull())
 	{
+		ClearChunks();
 		UE_LOG(LogMT2Water, Warning, TEXT("%s: assign Water Material in Project Settings > Metin2 > Metin2 Gameplay > Water."), *Map.MapId);
 		return;
 	}
 	UMaterialInterface* Material = Settings.WaterMaterial.LoadSynchronous();
-	if (!Material) { UE_LOG(LogMT2Water, Error, TEXT("Cannot load configured water material: %s"), *Settings.WaterMaterial.ToString()); return; }
+	if (!Material) { ClearChunks(); UE_LOG(LogMT2Water, Error, TEXT("Cannot load configured water material: %s"), *Settings.WaterMaterial.ToString()); return; }
+	FIntRect ChunkRegion(FIntPoint::ZeroValue, FIntPoint::ZeroValue);
+	if (UpdatedCells)
+	{
+		const FIntRect Cells(UpdatedCells->Min.ComponentMax(FIntPoint::ZeroValue), UpdatedCells->Max.ComponentMin(Map.WaterGridSize));
+		if (Cells.Width() <= 0 || Cells.Height() <= 0) { return; }
+		ChunkRegion = FIntRect(Cells.Min / MT2MapWater::ChunkCells, (Cells.Max - FIntPoint(1, 1)) / MT2MapWater::ChunkCells + FIntPoint(1, 1));
+		for (int32 Y = ChunkRegion.Min.Y; Y < ChunkRegion.Max.Y; ++Y)
+			for (int32 X = ChunkRegion.Min.X; X < ChunkRegion.Max.X; ++X)
+			{
+				const FIntPoint Key(X, Y);
+				if (auto* Existing = ChunkLookup.Find(Key))
+				{
+					if (UProceduralMeshComponent* Mesh = Existing->Get()) { Chunks.Remove(Mesh); Mesh->DestroyComponent(); }
+					ChunkLookup.Remove(Key);
+				}
+			}
+	}
 	TMap<FIntPoint, TArray<const FMT2WaterRectangle*>> Groups;
 	for (const FMT2WaterRectangle& Rect : Map.WaterRectangles)
 	{
@@ -150,9 +177,10 @@ void UMT2MapWaterComponent::Rebuild(const AMT2MapPresentationActor& Map)
 			int64(Rect.Cell.X) + Rect.Size.X > Map.WaterGridSize.X || int64(Rect.Cell.Y) + Rect.Size.Y > Map.WaterGridSize.Y ||
 			!FMath::IsFinite(Rect.Height))
 		{
-			UE_LOG(LogMT2Water, Error, TEXT("%s: invalid baked water rectangle."), *Map.MapId); return;
+			ClearChunks(); UE_LOG(LogMT2Water, Error, TEXT("%s: invalid baked water rectangle."), *Map.MapId); return;
 		}
-		Groups.FindOrAdd(FIntPoint(Rect.Cell.X / MT2MapWater::ChunkCells, Rect.Cell.Y / MT2MapWater::ChunkCells)).Add(&Rect);
+		const FIntPoint Key = Rect.Cell / MT2MapWater::ChunkCells;
+		if (!UpdatedCells || ChunkRegion.Contains(Key)) { Groups.FindOrAdd(Key).Add(&Rect); }
 	}
 	for (const auto& Group : Groups)
 	{
@@ -167,6 +195,7 @@ void UMT2MapWaterComponent::Rebuild(const AMT2MapPresentationActor& Map)
 		}
 		UProceduralMeshComponent* Chunk = NewObject<UProceduralMeshComponent>(GetOwner(), NAME_None, RF_Transient | RF_DuplicateTransient);
 		Chunks.Add(Chunk);
+		ChunkLookup.Add(Group.Key, Chunk);
 		Chunk->SetupAttachment(this);
 		Chunk->SetAbsolute(true, true, true);
 		Chunk->SetWorldLocation(Origin);
@@ -180,6 +209,6 @@ void UMT2MapWaterComponent::Rebuild(const AMT2MapPresentationActor& Map)
 		Chunk->CreateMeshSection_LinearColor(0, Vertices, Indices, Normals, UVs, {}, Tangents, false);
 		Chunk->SetMaterial(0, Material);
 	}
-	UE_LOG(LogMT2Water, Display, TEXT("%s: built %d water chunks from %d rectangles using %s."),
+	UE_CLOG(!UpdatedCells, LogMT2Water, Display, TEXT("%s: built %d water chunks from %d rectangles using %s."),
 		*Map.MapId, Chunks.Num(), Map.WaterRectangles.Num(), *Material->GetPathName());
 }

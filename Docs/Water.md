@@ -1,6 +1,7 @@
 # Map water
 
 Implementation: 2026-10-07, UE 5.7.4.
+Visual-water paint mode added: 2026-10-08.
 
 ## Setup
 
@@ -85,8 +86,31 @@ against a fresh bake without saving. Failed maps are not saved.
 Re-bake after changing source water files or shoreline padding. Area-painter
 water-bit edits affect gameplay attributes, not the independent visual water
 layer; they neither remove water under crossings nor define new surface heights.
-Editing visual water coverage/heights needs corresponding source water-layer
-changes and a fresh bake.
+Visual water can now be edited directly in Unreal without changing legacy files.
+
+## Editing visual water
+
+Open **Window > Metin2 Visual Water Paint**, or choose **Metin2 Visual Water**
+in the editor mode selector. The mode uses a loaded map-presentation actor;
+if the level contains several maps, select the intended actor in the Outliner
+and click **Use selected map presentation**.
+
+* Set **Water height** to the surface's world Z in centimetres (before the global
+  `WaterSurfaceOffset`). Press **E** over existing water to sample its height.
+* Set the brush radius; zero edits one native cell. **LMB** adds water or changes
+  the height of covered cells; **Shift+LMB**, or **Erase water**, removes it.
+* **Pick on water-height plane** allows painting beneath bridges and other
+  objects. Uncheck it to pick the loaded landscape instead. Terrain still
+  occludes surfaces below the riverbed; painting does not sculpt terrain.
+* **Ctrl+Z/Y** undo/redo a stroke. Save the map and changed actors normally.
+
+Preview changes use the configured Water Material and refresh only affected
+render chunks during strokes. Edits retain the native visual grid and existing
+serialized `WaterGridSize`/`WaterRectangles` format. Server water/fishing,
+safezone and no-walk flags remain unchanged: edit those in **Metin2 Areas**.
+No legacy water files are required for this editor mode. Reimporting or running
+the water bake commandlet **replaces authored visual-water edits** with source
+data; `-Verify` will intentionally report a mismatch after such edits.
 
 ## Runtime
 

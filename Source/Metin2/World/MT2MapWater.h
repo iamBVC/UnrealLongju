@@ -8,7 +8,7 @@ class AMT2MapPresentationActor;
 class UProceduralMeshComponent;
 struct FMT2MapAttributes;
 
-// Exact attribute-grid rectangles, not a downsampled visual mask.
+// Exact native visual-water grid rectangles, independent of gameplay attributes.
 USTRUCT()
 struct METIN2_API FMT2WaterRectangle
 {
@@ -38,11 +38,12 @@ public:
 	UMT2MapWaterComponent();
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
-	void Rebuild(const AMT2MapPresentationActor& Map);
+	void Rebuild(const AMT2MapPresentationActor& Map, const FIntRect* UpdatedCells = nullptr);
 private:
 	void ClearChunks();
 #if WITH_EDITOR
 	void OnWaterSettingsChanged(UObject* Settings, FPropertyChangedEvent& Event);
 #endif
 	UPROPERTY(Transient, DuplicateTransient) TArray<TObjectPtr<UProceduralMeshComponent>> Chunks;
+	TMap<FIntPoint, TWeakObjectPtr<UProceduralMeshComponent>> ChunkLookup;
 };
