@@ -1547,6 +1547,11 @@ void AMT2PlayerController::ClientReceiveGlobalChat_Implementation(
 
 void AMT2PlayerController::AddInfoChatLine(const FString& Message)
 {
+	AddRewardChatLine(Message);
+}
+
+void AMT2PlayerController::AddPlayerChatLine(const FString& Message)
+{
 	if (EnsureChatWidget())
 	{
 		ChatWidget->AddLine(Message);

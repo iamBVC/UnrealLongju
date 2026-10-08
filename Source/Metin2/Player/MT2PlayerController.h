@@ -89,9 +89,11 @@ public:
 	// leaking UI clicks into click-to-move or camera rotation.
 	bool IsPointerOverGameUI() const;
 
-	// Old chat.AppendChat(CHAT_TYPE_INFO, ...): a system feedback line in the chat log.
+	// System feedback goes to the loot/notification history, never player chat.
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void AddInfoChatLine(const FString& Message);
+	friend class FMT2NotificationRoutingTest;
+	void AddPlayerChatLine(const FString& Message);
 
 	void RequestPartyInvite(AMT2PlayerCharacter* TargetPlayer);
 	void RequestTrade(AMT2PlayerCharacter* TargetPlayer);

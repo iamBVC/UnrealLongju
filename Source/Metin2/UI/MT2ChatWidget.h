@@ -66,6 +66,7 @@ protected:
 	virtual FReply NativeOnPreviewKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
 private:
+	friend class FMT2NotificationRoutingTest;
 	void CloseInput();
 	void KeepHistoryVisible();
 	void SubmitCurrentText();

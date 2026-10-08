@@ -363,7 +363,7 @@ void UMT2GuildComponent::ClientReceiveChat_Implementation(
 	OnGuildChat.Broadcast(SenderName, Message);
 	const AMT2PlayerState* State = Cast<AMT2PlayerState>(GetOwner());
 	if (AMT2PlayerController* Controller = State ? Cast<AMT2PlayerController>(State->GetOwner()) : nullptr)
-		Controller->AddInfoChatLine(FString::Printf(TEXT("[Guild] %s: %s"), *SenderName, *Message));
+		Controller->AddPlayerChatLine(FString::Printf(TEXT("[Guild] %s: %s"), *SenderName, *Message));
 }
 
 void UMT2GuildComponent::OnRep_Snapshot()
