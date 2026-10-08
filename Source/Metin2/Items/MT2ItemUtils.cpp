@@ -62,7 +62,7 @@ bool MT2ItemUtils::HaveSameInstanceData(const FMT2ItemSlot& Left, const FMT2Item
 	{
 		const FMT2MetinSocket& A = Left.MetinSockets[Index];
 		const FMT2MetinSocket& B = Right.MetinSockets[Index];
-		if (A.Type != B.Type || A.Stone.Get() != B.Stone.Get())
+		if (A.Type != B.Type || A.Stone.Get() != B.Stone.Get() || A.Value != B.Value)
 		{
 			return false;
 		}

@@ -529,14 +529,21 @@ public:
 		switch (Index)
 		{
 		case 0: return FishingDelayTenths;
+		case 1: return PracticeChanceDenominator;
 		case 2: return ImprovementPointsRequired;
 		case 3: return RefinementSuccessPercent;
+		case 4: return RefinementFailureVnum;
 		default: return 0;
 		}
 	}
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Fishing")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Fishing", meta=(DisplayName="Fishing Power (Legacy Value0)"))
 	int32 FishingDelayTenths = 0;
+	// Legacy Value0 is fishing power, not delay; retain the historical property for saved assets.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Fishing")
+	int32 PracticeChanceDenominator = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Fishing")
+	int32 RefinementFailureVnum = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Fishing")
 	int32 ImprovementPointsRequired = 0;

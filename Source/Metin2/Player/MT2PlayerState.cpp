@@ -30,6 +30,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Items/MT2InventoryComponent.h"
 #include "Items/MT2ItemTemplate.h"
+#include "Items/MT2ItemUtils.h"
 #include "Items/MT2WorldItem.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystem.h"
@@ -914,7 +915,7 @@ FString AMT2PlayerState::CapturePersistentStateJson_Implementation() const
 		if (const UMT2InventoryComponent* Inventory = Player->GetInventoryComponent())
 		{
 			bInventoryReadable = true;
-			auto AppendItems = [&ItemValues](const TArray<FMT2ItemSlot>& Items, int32 Container)
+			auto AppendItems = [this, &ItemValues](const TArray<FMT2ItemSlot>& Items, int32 Container)
 			{
 				for (int32 SlotIndex = 0; SlotIndex < Items.Num(); ++SlotIndex)
 				{
@@ -924,10 +925,16 @@ FString AMT2PlayerState::CapturePersistentStateJson_Implementation() const
 					Item->SetNumberField(TEXT("slot"), SlotIndex);
 					Item->SetNumberField(TEXT("vnum"), Items[SlotIndex].Vnum);
 					Item->SetNumberField(TEXT("count"), Items[SlotIndex].Count);
+					const UMT2ItemTemplate* Template = MT2ItemUtils::ResolveTemplate(this, Items[SlotIndex].Vnum);
+					const bool bFishingSockets = Template && (Template->IsA<UMT2ItemRodTemplate>() || Template->IsA<UMT2ItemFishTemplate>());
 					for (int32 SocketIndex = 0; SocketIndex < 3; ++SocketIndex)
 					{
 						int32 StoredSocket = 0;
-						if (Items[SlotIndex].AutoRecoveryMaximumAmount > 0)
+						if (bFishingSockets)
+						{
+							StoredSocket = Items[SlotIndex].MetinSockets.IsValidIndex(SocketIndex) ? Items[SlotIndex].MetinSockets[SocketIndex].Value : 0;
+						}
+						else if (Items[SlotIndex].AutoRecoveryMaximumAmount > 0)
 						{
 							StoredSocket = SocketIndex == 0
 								? (Items[SlotIndex].bAutoRecoveryActive ? 1 : 0)
@@ -940,7 +947,7 @@ FString AMT2PlayerState::CapturePersistentStateJson_Implementation() const
 						{
 							StoredSocket = Items[SlotIndex].SkillVnum;
 						}
-						if (StoredSocket == 0 &&
+						if (!bFishingSockets && StoredSocket == 0 &&
 							Items[SlotIndex].MetinSockets.IsValidIndex(SocketIndex))
 						{
 							const FMT2MetinSocket& Socket =
@@ -1329,6 +1336,11 @@ bool AMT2PlayerState::ApplyPersistentStateJson_Implementation(const FString& Pay
 					0, Slot.AutoRecoveryMaximumAmount);
 				Slot.bAutoRecoveryActive = ReadInteger(TEXT("socket_0")) != 0 &&
 					Slot.AutoRecoveryRemainingAmount > 0;
+			}
+			else if (ItemTemplate && (ItemTemplate->IsA<UMT2ItemRodTemplate>() || ItemTemplate->IsA<UMT2ItemFishTemplate>()))
+			{
+				Slot.MetinSockets.SetNum(3);
+				for (int32 Index = 0; Index < 3; ++Index) { Slot.MetinSockets[Index].Value = ReadInteger(*FString::Printf(TEXT("socket_%d"), Index)); }
 			}
 			else for (int32 SocketIndex = 0; SocketIndex < 3; ++SocketIndex)
 			{

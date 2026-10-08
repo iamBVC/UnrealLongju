@@ -35,6 +35,7 @@ public:
 	void UnregisterMap(AMT2MapPresentationActor* Map);
 	bool IsSafeZone(const FVector& Location) const;
 	bool IsBlocked(const FVector& Location) const;
+	AMT2MapPresentationActor* FindMapAt(const FVector& Location, uint8& OutFlags) const;
 	bool TraceBlockedMovement(const FVector& Start, const FVector& End, FHitResult& OutHit) const;
 private:
 	TArray<TWeakObjectPtr<AMT2MapPresentationActor>> Maps;

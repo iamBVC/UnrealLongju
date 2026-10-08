@@ -81,6 +81,7 @@ int32 UMT2InventoryComponent::GetItemSize(int32 Vnum) const
 
 int32 UMT2InventoryComponent::GetWearPosition(int32 Vnum) const
 {
+	if (Cast<UMT2ItemRodTemplate>(ResolveTemplate(Vnum))) { return static_cast<int32>(EMT2ItemWearFlag::Weapon); }
 	const UMT2ItemEquipmentTemplate* EquipmentTemplate = Cast<UMT2ItemEquipmentTemplate>(ResolveTemplate(Vnum));
 	if (!EquipmentTemplate || EquipmentTemplate->Vnum <= 0)
 	{
@@ -592,6 +593,8 @@ bool UMT2InventoryComponent::UseItem(int32 InventorySlot)
 	}
 	else switch (UseTemplate->UseSubType)
 	{
+	case 6: // USE_BAIT
+		return ApplyFishingBait(InventorySlot);
 	case 0: // USE_POTION: add VALUE0 HP / VALUE1 SP into a single over-time recovery pool per resource.
 	{
 		UMT2StatusEffectComponent* StatusEffects = Character->GetStatusEffectComponent();

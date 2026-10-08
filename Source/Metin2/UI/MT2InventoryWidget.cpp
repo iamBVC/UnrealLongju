@@ -384,7 +384,7 @@ void UMT2InventoryWidget::HandleGridSlotRightClicked(int32 SlotIndex, EMT2Invent
 		{
 			Player->ServerOpenInventoryLootCrate(SlotIndex, INDEX_NONE);
 		}
-		else if (Cast<UMT2ItemEquipmentTemplate>(Template))
+		else if (Cast<UMT2ItemEquipmentTemplate>(Template) || Cast<UMT2ItemRodTemplate>(Template))
 		{
 			Player->ServerEquipInventoryItem(SlotIndex);
 		}

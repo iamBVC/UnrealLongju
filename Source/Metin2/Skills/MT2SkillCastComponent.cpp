@@ -8,6 +8,7 @@
 */
 
 #include "Skills/MT2SkillCastComponent.h"
+#include "Fishing/MT2FishingComponent.h"
 
 #include "Animation/AnimSequence.h"
 #include "Animation/MT2AnimationMotionData.h"
@@ -45,6 +46,7 @@ FMT2SkillCastResult UMT2SkillCastComponent::TryUseSkill(int32 SkillVnum)
 	FMT2SkillCastResult Result;
 
 	AMT2PlayerCharacter* Player = GetPlayer();
+	if (Player && Player->GetFishingComponent()->HasRodEquipped()) { return Result; }
 	AMT2PlayerState* State = Player ? Player->GetPlayerState<AMT2PlayerState>() : nullptr;
 	UMT2SkillComponent* Skills = State ? State->GetSkillComponent() : nullptr;
 	const UMT2SkillDefinition* Definition = Skills ? Skills->FindSkillDefinition(SkillVnum) : nullptr;

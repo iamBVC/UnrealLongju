@@ -25,6 +25,7 @@ struct FMT2CharacterAnimationGenerationResult
 class FMT2CharacterAnimationGenerator
 {
 public:
+	static bool BindFishingAnimations(FMT2CharacterAnimationGenerationResult& OutResult);
 	static bool Generate(
 		const FString& SourceRoot,
 		bool bImportMissingAnimations,

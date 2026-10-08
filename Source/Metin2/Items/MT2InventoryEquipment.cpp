@@ -10,6 +10,7 @@
 #include "Items/MT2InventoryComponent.h"
 
 #include "Characters/MT2PlayerCharacter.h"
+#include "Fishing/MT2FishingComponent.h"
 #include "Items/MT2InventoryLayout.h"
 #include "Items/MT2ItemTemplate.h"
 #include "Player/MT2PlayerState.h"
@@ -33,6 +34,7 @@ bool UMT2InventoryComponent::EquipItemFromSlot(int32 InventorySlot)
 		return false;
 	}
 
+	if (auto* Player = Cast<AMT2PlayerCharacter>(GetOwner())) { Player->GetFishingComponent()->CancelFishing(); }
 	const FMT2ItemSlot PreviouslyEquipped = Equipment[WearPosition];
 	if (!PreviouslyEquipped.IsEmpty() &&
 		!CanPlaceAt(InventorySlot, GetItemSize(PreviouslyEquipped.Vnum), InventorySlot))
@@ -49,7 +51,7 @@ bool UMT2InventoryComponent::EquipItemFromSlot(int32 InventorySlot)
 
 bool UMT2InventoryComponent::CanEquipTemplate(const UMT2ItemTemplate* Template) const
 {
-	if (!Cast<UMT2ItemEquipmentTemplate>(Template))
+	if (!Cast<UMT2ItemEquipmentTemplate>(Template) && !Cast<UMT2ItemRodTemplate>(Template))
 	{
 		return false;
 	}
@@ -103,6 +105,7 @@ bool UMT2InventoryComponent::UnequipItem(int32 WearPosition)
 		return false;
 	}
 	const int32 Size = GetItemSize(Equipment[WearPosition].Vnum);
+	if (auto* Player = Cast<AMT2PlayerCharacter>(GetOwner())) { Player->GetFishingComponent()->CancelFishing(); }
 	for (int32 TopSlot = 0; TopSlot < Slots.Num(); ++TopSlot)
 	{
 		if (Slots[TopSlot].IsEmpty() && CanPlaceAt(TopSlot, Size))
@@ -125,6 +128,7 @@ bool UMT2InventoryComponent::UnequipAllItems()
 	}
 
 	TArray<FMT2ItemSlot> NewSlots = Slots;
+	if (auto* Player = Cast<AMT2PlayerCharacter>(GetOwner())) { Player->GetFishingComponent()->CancelFishing(); }
 	TArray<FMT2ItemSlot> NewEquipment = Equipment;
 	auto IsOccupied = [this, &NewSlots](int32 Cell)
 	{
@@ -193,6 +197,7 @@ bool UMT2InventoryComponent::ExtractRandomEquippedItem(FMT2ItemSlot& OutItem)
 		if (!Equipment[Index].IsEmpty()) OccupiedSlots.Add(Index);
 	}
 	if (OccupiedSlots.IsEmpty()) return false;
+	if (auto* Player = Cast<AMT2PlayerCharacter>(GetOwner())) { Player->GetFishingComponent()->CancelFishing(); }
 	const int32 WearPosition = OccupiedSlots[FMath::RandRange(0, OccupiedSlots.Num() - 1)];
 	OutItem = Equipment[WearPosition];
 	Equipment[WearPosition] = FMT2ItemSlot();

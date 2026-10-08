@@ -8,6 +8,7 @@
 */
 
 #include "Characters/MT2PlayerCharacter.h"
+#include "Fishing/MT2FishingComponent.h"
 #include "Config/MT2PathSettings.h"
 #include "World/MT2MapAttributes.h"
 #include "Audio/MT2SoundPlaybackSubsystem.h"
@@ -155,6 +156,7 @@ AMT2PlayerCharacter::AMT2PlayerCharacter()
 	GetCombatComponent()->ConfigureBasicAttack(200.0f, 65.0f, 10.0f, 0.65f, 1);
 
 	InventoryComponent = CreateDefaultSubobject<UMT2InventoryComponent>(TEXT("InventoryComponent"));
+	FishingComponent = CreateDefaultSubobject<UMT2FishingComponent>(TEXT("FishingComponent"));
 	PrimaryStatsComponent = CreateDefaultSubobject<UMT2PrimaryStatsComponent>(TEXT("PrimaryStatsComponent"));
 	MountComponent = CreateDefaultSubobject<UMT2MountComponent>(TEXT("MountComponent"));
 
@@ -300,6 +302,7 @@ void AMT2PlayerCharacter::Tick(float DeltaSeconds)
 
 void AMT2PlayerCharacter::Move(const FVector2D& MovementInput)
 {
+	if (!MovementInput.IsNearlyZero() && FishingComponent) { FishingComponent->RequestCancelFishing(); }
 	if (!Controller || IsDead() || IsInteractionUIOpen())
 	{
 		return;
@@ -487,6 +490,7 @@ void AMT2PlayerCharacter::Look(const FVector2D& LookInput)
 
 bool AMT2PlayerCharacter::Attack()
 {
+	if (FishingComponent && FishingComponent->HasRodEquipped()) { return false; }
 	if (MountComponent && !MountComponent->CanAttackWhileMounted())
 	{
 		return false;
@@ -770,6 +774,10 @@ void AMT2PlayerCharacter::HandleLookInput(const FInputActionValue& Value)
 
 void AMT2PlayerCharacter::HandleAttackPressed()
 {
+	if (FishingComponent && FishingComponent->HasRodEquipped())
+	{
+		StopAutoMove(); GetCombatComponent()->StopBasicAttackLoop(); FishingComponent->RequestToggleFishing(); return;
+	}
 	GetCombatComponent()->StartBasicAttackLoop();
 }
 
@@ -1088,6 +1096,7 @@ void AMT2PlayerCharacter::UpdateSafeZoneNotification()
 
 void AMT2PlayerCharacter::HandleDeath()
 {
+	if (FishingComponent && HasAuthority()) { FishingComponent->CancelFishing(); }
 	DeathLocation = GetActorLocation();
 	if (HasAuthority() && MountComponent)
 	{
@@ -1576,6 +1585,8 @@ void AMT2PlayerCharacter::ServerExecuteChatCommand_Implementation(const FString&
 
 void AMT2PlayerCharacter::ServerUseSkill_Implementation(int32 SkillVnum)
 {
+	if (SkillVnum == 123) { FishingComponent->RequestToggleFishing(); return; }
+	if (FishingComponent->HasRodEquipped()) { return; }
 	// All the server-side decision logic (gates, cost, buffs, damage, cooldown/lock) lives in the
 	// skill-cast component; the character only owns the shared attack-motion animation multicast.
 	const FMT2SkillCastResult Result = SkillCastComponent->TryUseSkill(SkillVnum);
@@ -2520,6 +2531,7 @@ void AMT2PlayerCharacter::HandleEquipmentChanged()
 		{
 			GetEquipmentComponent()->UnequipWeapon();
 			SetWeaponAnimationSet(INDEX_NONE, MountComponent && MountComponent->IsMounted());
+			if (Cast<UMT2ItemRodTemplate>(Registry->ResolveItemTemplateClass(WeaponSlot.Vnum).GetDefaultObject())) { SetAnimationSet(TEXT("fishing")); }
 		}
 
 		const FMT2ItemSlot& BodySlot = Worn.IsValidIndex(WearBody) ? Worn[WearBody] : FMT2ItemSlot();

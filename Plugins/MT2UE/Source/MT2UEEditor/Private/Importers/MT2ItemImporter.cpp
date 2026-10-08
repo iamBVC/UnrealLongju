@@ -1227,6 +1227,8 @@ namespace
 			if (UMT2ItemRodTemplate* Rod = Cast<UMT2ItemRodTemplate>(Defaults))
 			{
 				Rod->FishingDelayTenths = Definition.Values.IsValidIndex(0) ? Definition.Values[0] : 0;
+				Rod->PracticeChanceDenominator = Definition.Values.IsValidIndex(1) ? Definition.Values[1] : 0;
+				Rod->RefinementFailureVnum = Definition.Values.IsValidIndex(4) ? Definition.Values[4] : 0;
 				Rod->ImprovementPointsRequired =
 					Definition.Values.IsValidIndex(2) ? Definition.Values[2] : 0;
 				Rod->RefinementSuccessPercent =

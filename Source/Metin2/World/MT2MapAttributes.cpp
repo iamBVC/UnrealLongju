@@ -144,6 +144,17 @@ bool UMT2MapAttributeSubsystem::IsBlocked(const FVector& Location) const
 	return false;
 }
 
+AMT2MapPresentationActor* UMT2MapAttributeSubsystem::FindMapAt(const FVector& Location, uint8& OutFlags) const
+{
+	OutFlags = 0;
+	for (const auto& WeakMap : Maps)
+	{
+		AMT2MapPresentationActor* Map = WeakMap.Get();
+		if (Map && Map->Attributes.Query(Location, Map->WorldMin, Map->WorldMax, OutFlags)) { return Map; }
+	}
+	return nullptr;
+}
+
 bool UMT2MapAttributeSubsystem::TraceBlockedMovement(const FVector& Start, const FVector& End, FHitResult& OutHit) const
 {
 	OutHit = FHitResult(1.0f);

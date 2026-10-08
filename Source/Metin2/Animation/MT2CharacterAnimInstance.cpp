@@ -11,6 +11,8 @@
 
 #include "Animation/AnimSequence.h"
 #include "Characters/MT2CharacterBase.h"
+#include "Characters/MT2PlayerCharacter.h"
+#include "Fishing/MT2FishingComponent.h"
 #include "Components/MT2HealthComponent.h"
 #include "Components/MT2MovementSpeedComponent.h"
 #include "GameFramework/Character.h"
@@ -144,6 +146,11 @@ void UMT2CharacterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	}
 
 	const FVector Velocity = Character->GetVelocity();
+	if (const auto* Player = Cast<AMT2PlayerCharacter>(Character); Player && Player->GetFishingComponent())
+	{
+		WaitAnimation = Player->GetFishingComponent()->IsFishing()
+			? GetAnimation(TEXT("fishing"), TEXT("fishing_wait")) : GetActiveAnimation(TEXT("wait"));
+	}
 	GroundSpeed = Velocity.Size2D();
 	bIsMoving = GroundSpeed > 1.0f;
 

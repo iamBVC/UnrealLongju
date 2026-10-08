@@ -72,6 +72,11 @@ int32 UMT2ImportItemsCommandlet::Main(const FString& Params)
 		UE_LOG(LogTemp, Display, TEXT("Filtered import to %d configured loot crates."), Records.Num());
 	}
 	int32 OnlyVnum = 0;
+	if (FParse::Param(*Params, TEXT("FishingRodsOnly")))
+	{
+		Records.RemoveAll([](const FMT2ItemImportRecord& Record) { return Record.Definition.ItemType != 13; });
+		UE_LOG(LogTemp, Display, TEXT("Filtered import to %d fishing rods."), Records.Num());
+	}
 	if (FParse::Value(*Params, TEXT("OnlyVnum="), OnlyVnum) && OnlyVnum > 0)
 	{
 		Records.RemoveAll([OnlyVnum](const FMT2ItemImportRecord& Record)

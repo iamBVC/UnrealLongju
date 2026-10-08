@@ -34,6 +34,7 @@ class UMT2SkillCastComponent;
 class UMT2SkillVisualEffectComponent;
 class UMT2TargetIndicatorComponent;
 class UMT2InventoryComponent;
+class UMT2FishingComponent;
 class UMT2Item;
 class UMT2PrimaryStatsComponent;
 class UMT2MountComponent;
@@ -119,6 +120,8 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	UMT2InventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+	UFUNCTION(BlueprintPure, Category = "Fishing")
+	UMT2FishingComponent* GetFishingComponent() const { return FishingComponent; }
 
 	UFUNCTION(BlueprintPure, Category = "Stats|Primary")
 	UMT2PrimaryStatsComponent* GetPrimaryStatsComponent() const { return PrimaryStatsComponent; }
@@ -472,6 +475,8 @@ public:
 private:
 
 	TWeakObjectPtr<AMT2PlayerState> BoundPlayerState;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Fishing", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UMT2FishingComponent> FishingComponent;
 	TWeakObjectPtr<AActor> AutoMoveTargetActor;
 	// NPC we're walking toward to interact with; consumed by Tick when in range.
 	TWeakObjectPtr<AMT2Npc> PendingInteractNpc;

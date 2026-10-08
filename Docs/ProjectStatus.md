@@ -13,6 +13,11 @@ See the [setup guide](../README.md) for supported commands and configuration cav
 
 ## Implemented foundations
 
+Fishing update (2026-10-08): [server-authoritative fishing](Fishing.md) adds
+server-attribute water validation, timed reeling, configured weighted rewards,
+rod proficiency/fisherman refinement and numeric-socket persistence. Existing
+player fishing animations are bound; icon/sound/hook effects remain deferred.
+
 - Standard Unreal gameplay framework, Enhanced Input, replicated characters, GAS-backed resources, primary/combat stats, appearance, equipment, movement, and animation systems.
 - Import services for textures, static/skeletal meshes, character assets, animations, audio, effects, landscapes, map objects, mob/item/skill data, and quest conversion. Generic archive/script services and the separate skeleton domain remain skeleton implementations; skeletal mesh import has its own functional path.
 - Saved VNUM registry for mob/item lookup; quest discovery has a separate registry and active-quest manifest.

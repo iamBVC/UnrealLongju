@@ -1,6 +1,8 @@
 # Metin2 automation tests
 
 All first-party Unreal automation test implementations live in this directory.
+Fishing gameplay and persistence coverage is in `MT2FishingTests.cpp`, compiled
+by the runtime module. See [fishing](../../../Docs/Fishing.md).
 Test names, behaviour, and automation categories are unchanged by the move.
 
 | Files | Compiling module |

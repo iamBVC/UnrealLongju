@@ -33,6 +33,9 @@
 #include "Quests/MT2QuestLuaPattern.h"
 #include "Skills/MT2SkillComponent.h"
 #include "World/MT2MapPresentationActor.h"
+#include "Fishing/MT2FishingSettings.h"
+#include "Items/MT2ItemUtils.h"
+#include "Npcs/MT2Npc.h"
 #include "Misc/PackageName.h"
 #include <cstdio>
 
@@ -382,6 +385,7 @@ namespace
 			TEXT("horse.is_dead"), TEXT("horse.is_ride"), TEXT("npc.get_guild"),
 			TEXT("item.get_socket"), TEXT("item.get_vnum"), TEXT("item.vnum"),
 			TEXT("item.get_count"), TEXT("item.get_cell"), TEXT("item.get_value"),
+			TEXT("__fish_real_refine_rod"),
 			TEXT("item.get_type"), TEXT("item.get_sub_type"), TEXT("item.get_level"),
 			TEXT("item.get_level_limit"), TEXT("item.get_refine_vnum"), TEXT("item.next_refine_vnum"),
 			TEXT("party.is_party"), TEXT("party.is_leader"), TEXT("party.get_member_count"),
@@ -992,6 +996,18 @@ namespace
 		if (Name == TEXT("is_test_server"))
 		{
 			return FMT2QuestValue(0.0); // live behaviour: the scripts' test-only branches stay off
+		}
+		if (Name == TEXT("__fish_real_refine_rod"))
+		{
+			const int32 Slot = Argument(0).AsInt();
+			const auto* Npc = Cast<AMT2Npc>(Context.TargetActor);
+			if (!Player || !Player->HasAuthority() || !Npc || Npc->IsActorBeingDestroyed() ||
+				!GetDefault<UMT2FishingSettings>()->FishermanVnums.Contains(Npc->GetMobVnum()) ||
+				FVector::Dist2D(Player->GetActorLocation(), Npc->GetActorLocation()) > 350 ||
+				!Context.bHasEventItemSnapshot || Slot != Context.EventItemSlot || !Inventory || !Inventory->GetSlots().IsValidIndex(Slot) ||
+				Inventory->GetSlots()[Slot].Count != Context.EventItemSnapshot.Count ||
+				!MT2ItemUtils::HaveSameInstanceData(Inventory->GetSlots()[Slot], Context.EventItemSnapshot)) { return FMT2QuestValue(2); }
+			return FMT2QuestValue(Player->GetInventoryComponent()->RefineFishingRod(Slot));
 		}
 		if (Name == TEXT("get_global_time") || Name == TEXT("get_time"))
 		{

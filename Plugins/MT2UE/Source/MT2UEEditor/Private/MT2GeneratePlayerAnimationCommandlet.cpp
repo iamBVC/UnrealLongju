@@ -197,7 +197,9 @@ int32 UMT2GeneratePlayerAnimationCommandlet::Main(const FString& Params)
 	}
 
 	FMT2CharacterAnimationGenerationResult Result;
-	const bool bSucceeded = FMT2CharacterAnimationGenerator::Generate(SourceRoot, true, Result);
+	const bool bSucceeded = FParse::Param(*Params, TEXT("FishingOnly"))
+		? FMT2CharacterAnimationGenerator::BindFishingAnimations(Result)
+		: FMT2CharacterAnimationGenerator::Generate(SourceRoot, true, Result);
 	UE_LOG(LogTemp, Display, TEXT("MT2 animation generation:\n%s"), *Result.BuildSummary());
 	for (const FString& Error : Result.Errors)
 	{

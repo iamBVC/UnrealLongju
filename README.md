@@ -345,6 +345,9 @@ Project logs are normally under `Saved\Logs`. Packaging diagnostics are also ava
 
 Additional workflows: [Localization](Scripts/LOCALIZATION.md), [NPCs and Quests](Docs/OldGameResearch/NPCAndQuestSystem.md), [Safezones](Docs/OldGameResearch/SafeZones.md), and [Full-resolution Area Painting](Docs/AreaPainting.md).
 
+[Fishing gameplay and configuration](Docs/Fishing.md) documents server-validated
+fishing spots, rod proficiency, loot and animation bindings.
+
 ## Submodules and dependency management
 
 The content dependency is [UnrealLongju-Content](https://github.com/iamBVC/UnrealLongju-Content.git), checked out at `Content/`. `.gitmodules` records its URL and path; the parent repository records the selected commit. Developers and CI need access to both repositories. The current `MT2UE` directory remains bundled source, and `Engine2` remains an external checkout.

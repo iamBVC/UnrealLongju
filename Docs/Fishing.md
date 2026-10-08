@@ -1,0 +1,107 @@
+# Fishing
+
+Implemented 2026-10-08 against UE 5.7.4. Gameplay is authoritative on the map
+server; visual-water meshes are not used to decide whether a spot is fishable.
+
+## Playing and configuration
+
+Equip a rod by right-clicking it, then right-click a bait item. Press the attack
+key (Space with native input) once to cast, and again to reel in. The fishing
+skill (legacy vnum 123) routes to the same logic. Moving cancels the attempt.
+
+The initial wait is 10–40 seconds. A chat message and the character's reaction
+animation indicate a bite. Reel in within six seconds. Timing is probabilistic:
+normal catches peak around three seconds, slow ones around five, quick ones
+around one; rod plus bait power is checked against the catch's difficulty.
+Responding within the window is not a guaranteed catch.
+
+**Project Settings > Metin2 > Metin2 Fishing** controls the wait, cast distance,
+movement tolerance, dropped-reward ownership time, permitted map/table pairs,
+catch weights, timing profiles, and fisherman NPC vnums. Values live in
+`Config/DefaultGame.ini`, under `[/Script/Metin2.MT2FishingSettings]`.
+The default permitted map indices are 1/21/41 (table 0) and 3/23/43 (table 1),
+matching the legacy town rules. Add explicit rules for other maps.
+
+The 37 rows and five timing profiles come from the local legacy server's
+`share/locale/italy/fishing.txt` and `game/src/fishing.cpp`. Weights total
+9950/9950/9800/9900. A vnum-zero row is a miss; other rows include fish and items.
+No runtime access to that legacy directory is required. Tables 2 and 3 are
+available to configure; premium/event switching, regional suppression of gold
+and disguise rewards, fishing-event leaderboards, fish opening and grilling
+are not part of this first gameplay pass.
+
+## Server validation and inventory
+
+`UMT2FishingComponent` accepts intent plus a session token, not a client catch,
+reaction timestamp, hook coordinate, item class, or random seed. The server:
+
+* Requires a living, grounded, dismounted player with an equipped rod and bait.
+* Uses the registered map's original attribute grid, rejects no-walk ground,
+  and searches water-bit cells 600 cm away in the legacy ±10-degree sweep.
+* Rechecks the same map, water cell, equipment, and movement at bite and reel.
+  A small active-only timer also detects movement, mounting, and invalidation.
+* Owns the bite deadline and both success rolls. Stale requests cannot resolve
+  another cast. Normal attacks and skills cannot bypass rod restrictions.
+* Consumes bait on a resolved/expired bite, including a cancellation after the
+  bite. Cancelling before the bite retains it. Equipment changes cancel before
+  transferring the original rod, so swapping cannot retain spent bait.
+* Grants one actual item instance. If inventory is full it creates an
+  owner-protected world item instead. Fish length uses the legacy normal/rare
+  size distributions and remains part of the item instance.
+
+Timers are cleared on teardown. Fishing sessions do not persist across travel,
+death or disconnect. Rod proficiency, bait and fish length use existing numeric
+socket columns: no new database schema or asset-version fields were introduced.
+Equipment Metin stones keep their existing encoding.
+
+## Rod progression and fisherman
+
+Legacy Value0 is fishing power, Value1 is the practice-roll denominator, Value2
+is the proficiency cap, Value3 is upgrade success percent, and Value4 is the
+failed-upgrade result vnum. `FishingDelayTenths` retains its historical property
+name for saved-asset compatibility, but is interpreted as Value0 power.
+
+Reeling after a bite can raise socket 0 proficiency by one, on successes or
+failures, until the cap. It does **not** automatically replace the rod with the
+next level: the legacy fisherman upgrades a fully trained, unequipped rod.
+The `__fish_real_refine_rod` quest binding verifies the nearby configured NPC,
+offered slot and unchanged server snapshot after the dialog, then atomically
+replaces the item on success/downgrade and resets its sockets. Invalid requests
+return legacy result 2 and preserve the item.
+
+The 20 imported rod templates have been refreshed with previously omitted
+practice and downgrade values. To refresh only those templates again:
+
+```powershell
+& "$EngineRoot\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" $ProjectFile `
+  -run=MT2ImportItems -FishingRodsOnly -nullrhi -nosound -unattended -nop4
+```
+
+## Animation and presentation boundary
+
+All eight player AnimBPs bind the nine existing `fishing` actions. Native idle
+switches to `fishing_wait` during a cast, with one-shot throw/react/catch/fail/
+cancel montages through `DefaultSlot`. Nearby clients receive fishing events;
+late joiners can reconstruct waiting state from replicated phase/hook data.
+The `OnFishingEvent` delegate is the future icon/sound/hook-effects integration
+point. Those effects, and a dedicated fishing UI, remain deferred.
+
+To refresh only fishing bindings, without regenerating combat animations:
+
+```powershell
+& "$EngineRoot\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" $ProjectFile `
+  -run=MT2GeneratePlayerAnimation -FishingOnly -nullrhi -nosound -unattended -nop4
+```
+
+Both commands save Content packages. Save/close the editor first and review the
+Content submodule diff. Source and destination paths use the existing path
+catalogue; `Part_fishing` selects the source asset subfolder.
+
+## Validation
+
+`Metin2.Fishing.LegacyRules` checks configuration, weight boundaries, timing
+curves, rod power and length-sensitive stacking. `Metin2.Fishing.Authority`
+checks synthetic server-attribute maps with actual imported rods, stale/duplicate
+requests, bait, movement, expiry, catch delivery, proficiency caps, fisherman
+refinement and numeric-socket persistence. Tests live in `Source/Metin2/Tests`.
+Headless tests do not validate visual animation blending or remote latency.

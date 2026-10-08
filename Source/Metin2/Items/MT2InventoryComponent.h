@@ -120,6 +120,9 @@ public:
 	// subtypes remain available for their dedicated gameplay implementations.
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	bool UseItem(int32 InventorySlot);
+	bool ApplyFishingBait(int32 InventorySlot);
+	bool FinishFishingAttempt(bool bPractice);
+	int32 RefineFishingRod(int32 InventorySlot);
 
 	// Owning-client acknowledgement sent when the new item's tooltip is first displayed.
 	UFUNCTION(Server, Reliable)

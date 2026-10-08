@@ -8,6 +8,7 @@
 */
 
 #include "Abilities/MT2GameplayAbilityBasicAttack.h"
+#include "Fishing/MT2FishingComponent.h"
 
 #include "Abilities/MT2GameplayTags.h"
 #include "AbilitySystemComponent.h"
@@ -42,7 +43,9 @@ bool UMT2GameplayAbilityBasicAttack::CanActivateAbility(
 		return false;
 	}
 
-	return ActorInfo && ActorInfo->AbilitySystemComponent.IsValid() &&
+	const UMT2FishingComponent* Fishing = ActorInfo && ActorInfo->AvatarActor.IsValid()
+		? ActorInfo->AvatarActor->FindComponentByClass<UMT2FishingComponent>() : nullptr;
+	return ActorInfo && ActorInfo->AbilitySystemComponent.IsValid() && (!Fishing || !Fishing->HasRodEquipped()) &&
 		!ActorInfo->AbilitySystemComponent->HasMatchingGameplayTag(MT2GameplayTags::Status_Dead);
 }
 

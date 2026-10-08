@@ -769,6 +769,44 @@ FString FMT2CharacterAnimationGenerationResult::BuildSummary() const
 		AnimationsImported, AnimationBindings, BlueprintsCreated, BlueprintsUpdated, Errors.Num());
 }
 
+bool FMT2CharacterAnimationGenerator::BindFishingAnimations(FMT2CharacterAnimationGenerationResult& OutResult)
+{
+	auto& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get();
+	Registry.SearchAllAssets(true);
+	TArray<UPackage*> Packages;
+	for (const FCharacterProfile& Profile : CharacterProfiles)
+	{
+		const FString Name = BuildBlueprintName(Profile);
+		const FString Path = UMT2PathSettings::Format(TEXT("Characters_Animations_Name"), TEXT("%s%s"), *Name, *Name);
+		auto* Blueprint = LoadObject<UAnimBlueprint>(nullptr, *Path);
+		auto* Defaults = Blueprint && Blueprint->GeneratedClass ? Cast<UMT2CharacterAnimInstance>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+		if (!Defaults) { OutResult.Errors.Add(FString::Printf(TEXT("Missing AnimBP %s"), *Name)); continue; }
+		const FString Folder = UMT2PathSettings::Format(TEXT("ymir_work_Name_Name"), TEXT("%s%s"), Profile.SourceFolder, *GetRaceLower(Profile)) /
+			UMT2PathSettings::Path(TEXT("Part_fishing"));
+		TArray<FAssetData> Assets; Registry.GetAssetsByPath(FName(*Folder), Assets, false, false);
+		FMT2AnimationActionSet Fishing;
+		for (const FAssetData& Asset : Assets)
+		{
+			auto* Sequence = Cast<UAnimSequence>(Asset.GetAsset());
+			if (!Sequence || Sequence->GetSkeleton() != Blueprint->TargetSkeleton) { continue; }
+			FString Motion = Asset.AssetName.ToString(); Motion.RemoveFromStart(TEXT("A_"));
+			FName Action; int32 Variant; ParseActionAndVariant(Motion, Action, Variant);
+			Fishing.Actions.FindOrAdd(Action).Animations.AddUnique(Sequence);
+		}
+		bool Valid = true;
+		for (const TCHAR* Action : {TEXT("wait"), TEXT("walk"), TEXT("run"), TEXT("throw"), TEXT("fishing_wait"), TEXT("fishing_react"), TEXT("fishing_catch"), TEXT("fishing_fail"), TEXT("fishing_cancel")})
+		{
+			if (!Fishing.Actions.Contains(Action)) { OutResult.Errors.Add(FString::Printf(TEXT("%s lacks fishing action %s"), *Name, Action)); Valid = false; }
+		}
+		if (!Valid) { continue; }
+		Defaults->Modify(); Defaults->AnimationSets.Add(TEXT("fishing"), MoveTemp(Fishing));
+		Blueprint->MarkPackageDirty(); Packages.AddUnique(Blueprint->GetOutermost()); ++OutResult.BlueprintsUpdated;
+	}
+	if (!OutResult.Errors.IsEmpty()) { return false; }
+	if (!UEditorLoadingAndSavingUtils::SavePackages(Packages, true)) { OutResult.Errors.Add(TEXT("Could not save fishing AnimBP bindings.")); }
+	return OutResult.Errors.IsEmpty();
+}
+
 bool FMT2CharacterAnimationGenerator::Generate(
 	const FString& SourceRoot,
 	bool bImportMissingAnimations,
