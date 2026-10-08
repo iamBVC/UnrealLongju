@@ -7,6 +7,7 @@
 
 class AMT2PlayerCharacter;
 class AMT2MapPresentationActor;
+class UStaticMeshComponent;
 
 UENUM(BlueprintType)
 enum class EMT2FishingPhase : uint8 { Idle, Waiting, Bite };
@@ -43,6 +44,7 @@ public:
 	UPROPERTY(BlueprintAssignable, Category="Fishing") FMT2FishingEventSignature OnFishingEvent;
 private:
 	friend class FMT2FishingAuthorityTest;
+	friend class FMT2FishingPresentationTest;
 	bool StartFishing();
 	bool ValidateAttempt() const;
 	void Bite();
@@ -52,7 +54,10 @@ private:
 	void Say(const FString& Message) const;
 	UFUNCTION() void OnEquipmentChanged();
 	UFUNCTION() void OnRep_State();
-	UFUNCTION(NetMulticast, Reliable) void MulticastFishingEvent(EMT2FishingEvent Event, int32 Vnum);
+	UFUNCTION(NetMulticast, Reliable) void MulticastFishingEvent(EMT2FishingEvent Event, int32 Vnum, FVector HookPosition);
+	void ShowFloat(const FVector& HookPosition);
+	void ClearFloat();
+	UPROPERTY(Transient, DuplicateTransient) TObjectPtr<UStaticMeshComponent> FloatComponent;
 	UPROPERTY(ReplicatedUsing=OnRep_State) FMT2FishingState State;
 	TWeakObjectPtr<AMT2MapPresentationActor> Map;
 	FVector CastOrigin = FVector::ZeroVector;

@@ -22,6 +22,16 @@
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Animation/AnimBlueprint.h"
+#include "Animation/AnimMontage.h"
+#include "Animation/MT2CharacterAnimInstance.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Equipment/MT2EquipmentComponent.h"
+#include "Characters/MT2CharacterAppearanceSettings.h"
+#include "Config/MT2PathSettings.h"
+#include "Config/MT2GameplaySettings.h"
+#include "Engine/SkeletalMesh.h"
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2FishingRulesTest, "Metin2.Fishing.LegacyRules", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool FMT2FishingRulesTest::RunTest(const FString&)
@@ -131,6 +141,48 @@ bool FMT2FishingAuthorityTest::RunTest(const FString&)
 	TestEqual(TEXT("Replayed refinement snapshot rejected"),FMT2QuestExpression::Evaluate(FString::Printf(TEXT("__fish_real_refine_rod(%d)"),RodIndex),Context,Ok).AsInt(),2);
 	TestEqual(TEXT("Rod replaced with next vnum"),Inventory->GetSlots()[RodIndex].Vnum,Rod->RefinedVnum);
 	TestEqual(TEXT("New rod resets proficiency"),Inventory->GetSlots()[RodIndex].MetinSockets[0].Value,0);
+	return true;
+}
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2FishingPresentationTest, "Metin2.Fishing.Presentation", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FMT2FishingPresentationTest::RunTest(const FString&)
+{
+	TStrongObjectPtr<UGameInstance> GI(NewObject<UGameInstance>(GEngine)); GI->InitializeStandalone();
+	UWorld* World=GI->GetWorld(); if (!World) { return false; }
+	ON_SCOPE_EXIT { GI->Shutdown(); World->DestroyWorld(false); GEngine->DestroyWorldContext(World); };
+	auto* Player=World->SpawnActor<AMT2PlayerCharacter>(); auto* PS=World->SpawnActor<AMT2PlayerState>(); Player->SetPlayerState(PS);
+	const auto* Appearance=GetDefault<UMT2CharacterAppearanceSettings>()->FindAppearance(PS->GetCharacterAppearance());
+	if (!TestNotNull(TEXT("Default appearance"),Appearance)) { return false; }
+	USkeletalMesh* Body=Appearance->Mesh.LoadSynchronous(); if (!TestNotNull(TEXT("Body mesh"),Body)) { return false; }
+	const FString Path=UMT2PathSettings::Format(TEXT("Characters_Animations_Name"),TEXT("%s%s"),TEXT("ABP_Warrior_Male"),TEXT("ABP_Warrior_Male"));
+	auto* Blueprint=LoadObject<UAnimBlueprint>(nullptr,*Path); if (!TestNotNull(TEXT("AnimBP"),Blueprint)) { return false; }
+	Player->GetMesh()->SetSkeletalMesh(Body,true); Player->GetMesh()->SetAnimInstanceClass(Blueprint->GeneratedClass);
+	auto* Anim=Cast<UMT2CharacterAnimInstance>(Player->GetMesh()->GetAnimInstance()); if (!TestNotNull(TEXT("AnimInstance"),Anim)) { return false; }
+	const auto* Rod=Cast<UMT2ItemRodTemplate>(GI->GetSubsystem<UMT2VnumRegistrySubsystem>()->ResolveItemTemplateClass(27400).GetDefaultObject());
+	if (!TestNotNull(TEXT("Rod template"),Rod)) { return false; }
+	const TSoftObjectPtr<UStaticMesh> RodMesh=Rod->WorldMesh.IsNull() ? GetDefault<UMT2FishingSettings>()->RodMesh : Rod->WorldMesh;
+	TestNotNull(TEXT("Configured rod mesh loads"),RodMesh.LoadSynchronous());
+	auto* Equipment=Player->GetEquipmentComponent(); const int32 Request=Equipment->ArmorRequestId;
+	Equipment->EquipWeapon(RodMesh,TEXT("equip_right_hand"),INDEX_NONE);
+	Equipment->OnWeaponLoaded(Equipment->WeaponRequestId,RodMesh.ToSoftObjectPath());
+	TestTrue(TEXT("Rod visible on hand"),Equipment->GetWeaponMeshComponent()->IsVisible() && Equipment->GetWeaponMeshComponent()->GetStaticMesh()==RodMesh.Get());
+	auto* Fishing=Player->GetFishingComponent(); Fishing->MulticastFishingEvent_Implementation(EMT2FishingEvent::Cancelled,0,FVector::ZeroVector);
+	auto* Montage=Anim->GetCurrentActiveMontage(); if (!TestNotNull(TEXT("Stop animation starts"),Montage)) { return false; }
+	Equipment->OnArmorLoaded(Request,FSoftObjectPath(Body));
+	TestEqual(TEXT("Unchanged body preserves AnimInstance"),Player->GetMesh()->GetAnimInstance(),static_cast<UAnimInstance*>(Anim));
+	TestTrue(TEXT("Stop montage survives equipment refresh"),Anim->Montage_IsActive(Montage));
+	auto* Map=World->SpawnActor<AMT2MapPresentationActor>(); Map->WorldMin=FVector2D(-2000,-2000); Map->WorldMax=FVector2D::ZeroVector;
+	Map->MapCells=FIntPoint(1,1); Map->Attributes.Size=FIntPoint(1,1); Map->Attributes.Flags={2}; Map->WaterGridSize=FIntPoint(128,128);
+	FMT2WaterRectangle Rect; Rect.Size=Map->WaterGridSize; Rect.Height=150; Map->WaterRectangles.Add(Rect);
+	World->GetSubsystem<UMT2MapAttributeSubsystem>()->RegisterMap(Map);
+	Fishing->ShowFloat(FVector(-500,-1000,10000));
+	if (TestNotNull(TEXT("Visible float created"),Fishing->FloatComponent.Get()))
+	{
+		TestEqual(TEXT("Float placed on visual water, not pawn Z"),Fishing->FloatComponent->GetComponentLocation().Z,
+			150.0+GetDefault<UMT2GameplaySettings>()->WaterSurfaceOffset+GetDefault<UMT2FishingSettings>()->FloatHeightOffset);
+		TestEqual(TEXT("Float is non-colliding"),Fishing->FloatComponent->GetCollisionEnabled(),ECollisionEnabled::NoCollision);
+		TestNotNull(TEXT("Float has mesh"),Fishing->FloatComponent->GetStaticMesh().Get());
+	}
+	Fishing->State.Phase=EMT2FishingPhase::Idle; Fishing->OnRep_State(); TestNull(TEXT("Idle replication removes float"),Fishing->FloatComponent.Get());
 	return true;
 }
 #endif

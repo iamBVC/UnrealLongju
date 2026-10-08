@@ -9,6 +9,7 @@
 
 #include "Characters/MT2PlayerCharacter.h"
 #include "Fishing/MT2FishingComponent.h"
+#include "Fishing/MT2FishingSettings.h"
 #include "Config/MT2PathSettings.h"
 #include "World/MT2MapAttributes.h"
 #include "Audio/MT2SoundPlaybackSubsystem.h"
@@ -2527,11 +2528,18 @@ void AMT2PlayerCharacter::HandleEquipmentChanged()
 				Weapon->WeaponSubType, Weapon->RefinementLevel);
 			SetWeaponAnimationSet(Weapon->WeaponSubType, MountComponent && MountComponent->IsMounted());
 		}
+		else if (const UMT2ItemRodTemplate* Rod = Cast<UMT2ItemRodTemplate>(Registry->ResolveItemTemplateClass(WeaponSlot.Vnum).GetDefaultObject()))
+		{
+			const AMT2PlayerState* State = GetPlayerState<AMT2PlayerState>();
+			const bool bWarrior = State && State->GetCharacterAppearance().Race == EMT2CharacterRace::Warrior;
+			GetEquipmentComponent()->EquipWeapon(Rod->WorldMesh.IsNull() ? GetDefault<UMT2FishingSettings>()->RodMesh : Rod->WorldMesh,
+				bWarrior ? FName(TEXT("equip_right_hand")) : FName(TEXT("equip_right")), INDEX_NONE);
+			SetAnimationSet(TEXT("fishing"));
+		}
 		else
 		{
 			GetEquipmentComponent()->UnequipWeapon();
 			SetWeaponAnimationSet(INDEX_NONE, MountComponent && MountComponent->IsMounted());
-			if (Cast<UMT2ItemRodTemplate>(Registry->ResolveItemTemplateClass(WeaponSlot.Vnum).GetDefaultObject())) { SetAnimationSet(TEXT("fishing")); }
 		}
 
 		const FMT2ItemSlot& BodySlot = Worn.IsValidIndex(WearBody) ? Worn[WearBody] : FMT2ItemSlot();

@@ -3,6 +3,9 @@
 #include "Engine/DeveloperSettings.h"
 #include "MT2FishingSettings.generated.h"
 
+class UStaticMesh;
+class UMaterialInterface;
+
 USTRUCT(BlueprintType)
 struct METIN2_API FMT2FishingCatch
 {
@@ -45,6 +48,11 @@ public:
 	UPROPERTY(EditAnywhere, Config, Category="Loot") TArray<FMT2FishingCatch> CatchTable;
 	UPROPERTY(EditAnywhere, Config, Category="Rod") TArray<int32> FishermanVnums;
 	UPROPERTY(EditAnywhere, Config, Category="Timing") TArray<FMT2FishingTimingProfile> TimingProfiles;
+	UPROPERTY(EditAnywhere, Config, Category="Presentation") TSoftObjectPtr<UStaticMesh> FloatMesh;
+	UPROPERTY(EditAnywhere, Config, Category="Presentation") TSoftObjectPtr<UStaticMesh> RodMesh;
+	UPROPERTY(EditAnywhere, Config, Category="Presentation") TSoftObjectPtr<UMaterialInterface> FloatMaterial;
+	UPROPERTY(EditAnywhere, Config, Category="Presentation") FVector FloatScale = FVector(.06, .06, .12);
+	UPROPERTY(EditAnywhere, Config, Category="Presentation", meta=(Units="cm")) float FloatHeightOffset = 4;
 	bool Validate(FString& Error) const;
 	int32 FindTable(int32 MapIndex) const;
 	int32 PickCatch(int32 TableIndex, int32 Roll) const;

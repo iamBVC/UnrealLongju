@@ -83,8 +83,21 @@ All eight player AnimBPs bind the nine existing `fishing` actions. Native idle
 switches to `fishing_wait` during a cast, with one-shot throw/react/catch/fail/
 cancel montages through `DefaultSlot`. Nearby clients receive fishing events;
 late joiners can reconstruct waiting state from replicated phase/hook data.
-The `OnFishingEvent` delegate is the future icon/sound/hook-effects integration
-point. Those effects, and a dedicated fishing UI, remain deferred.
+Rods now attach their imported item mesh to the character's weapon socket.
+`RodMesh` in Fishing settings supplies the existing imported rod mesh when an
+older item template has no world-mesh reference; a template's explicit mesh wins.
+The local float uses the replicated hook XY and baked visual-water elevation,
+including the global water offset, rather than the character's capsule height.
+It has no collision, navigation influence, or server mesh loading. Float mesh,
+material, scale and height offset are configurable in Metin2 Fishing settings;
+the initial visible float is a small engine-shape placeholder. The legacy float
+uses an animated MDE mesh, which the existing effect importer does not yet
+translate. Its exact model, icons, sounds, line effects and dedicated fishing UI
+remain future presentation work.
+
+Body refreshes preserve the live AnimInstance when the skeletal mesh is unchanged,
+so bait/proficiency replication cannot interrupt the finishing montage. Real
+armor mesh changes retain the existing animation reinitialization behavior.
 
 To refresh only fishing bindings, without regenerating combat animations:
 

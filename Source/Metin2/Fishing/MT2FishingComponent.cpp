@@ -4,6 +4,10 @@
 #include "Animation/MT2CharacterAnimInstance.h"
 #include "Animation/AnimSequence.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "Config/MT2GameplaySettings.h"
+#include "Engine/StaticMesh.h"
+#include "Materials/MaterialInterface.h"
 #include "Items/MT2InventoryComponent.h"
 #include "Items/MT2ItemTemplate.h"
 #include "Items/MT2ItemUtils.h"
@@ -52,6 +56,7 @@ void UMT2FishingComponent::EndPlay(const EEndPlayReason::Type Reason)
 		Player->GetInventoryComponent()->OnEquipmentChanged.RemoveDynamic(this, &UMT2FishingComponent::OnEquipmentChanged);
 	}
 	if (GetWorld()) { GetWorld()->GetTimerManager().ClearAllTimersForObject(this); }
+	ClearFloat();
 	State.Phase = EMT2FishingPhase::Idle; Super::EndPlay(Reason);
 }
 void UMT2FishingComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -103,7 +108,7 @@ bool UMT2FishingComponent::StartFishing()
 	Player->GetCharacterMovement()->StopMovementImmediately(); Player->SetActorRotation(FRotator(0, CastYaw, 0));
 	++SessionCounter; if (SessionCounter == 0) { ++SessionCounter; }
 	State.Session = SessionCounter; State.Phase = EMT2FishingPhase::Waiting; State.HookLocation = Hook;
-	Player->ForceNetUpdate(); MulticastFishingEvent(EMT2FishingEvent::Cast, 0);
+	Player->ForceNetUpdate(); MulticastFishingEvent(EMT2FishingEvent::Cast, 0, State.HookLocation);
 	GetWorld()->GetTimerManager().SetTimer(BiteTimer, this, &UMT2FishingComponent::Bite, FMath::RandRange(Settings.MinimumWaitSeconds, Settings.MaximumWaitSeconds), false);
 	GetWorld()->GetTimerManager().SetTimer(GuardTimer, this, &UMT2FishingComponent::CheckAttempt, .2f, true);
 	Say(TEXT("You cast your line. Wait for a bite.")); return true;
@@ -130,7 +135,7 @@ void UMT2FishingComponent::Bite()
 	const int32 Index = Settings.PickCatch(TableIndex, FMath::RandRange(1, Total));
 	if (!Settings.CatchTable.IsValidIndex(Index)) { CancelFishing(); return; }
 	Catch = Settings.CatchTable[Index]; BiteTime = GetWorld()->GetTimeSeconds(); State.Phase = EMT2FishingPhase::Bite;
-	GetOwner()->ForceNetUpdate(); MulticastFishingEvent(EMT2FishingEvent::Bite, 0);
+	GetOwner()->ForceNetUpdate(); MulticastFishingEvent(EMT2FishingEvent::Bite, 0, State.HookLocation);
 	Say(TEXT("A bite! Reel in within six seconds."));
 	GetWorld()->GetTimerManager().SetTimer(ExpiryTimer, FTimerDelegate::CreateWeakLambda(this, [this] { Finish(EMT2FishingEvent::Failed); }), 6.f, false);
 }
@@ -177,7 +182,7 @@ void UMT2FishingComponent::Finish(EMT2FishingEvent Event, int32 Vnum, bool bPrac
 	if (ConsumeBait && Worn.IsValidIndex(4) && Worn[4].Vnum == RodVnum && Socket(Worn[4], 2) == BaitPower)
 	{ Player->GetInventoryComponent()->FinishFishingAttempt(bPractice); }
 	NextStartTime = GetWorld()->GetTimeSeconds() + .5; Map.Reset(); GetOwner()->ForceNetUpdate();
-	MulticastFishingEvent(Event, Vnum);
+	MulticastFishingEvent(Event, Vnum, State.HookLocation);
 	Say(Event == EMT2FishingEvent::Caught ? FString::Printf(TEXT("You caught %s."), *MT2ItemUtils::GetDisplayName(MT2ItemUtils::ResolveTemplate(this, Vnum), Vnum).ToString()) : Event == EMT2FishingEvent::Failed ? TEXT("The catch escaped.") : TEXT("Fishing stopped."));
 }
 void UMT2FishingComponent::CancelFishing() { Finish(EMT2FishingEvent::Cancelled); }
@@ -186,11 +191,16 @@ void UMT2FishingComponent::Say(const FString& Message) const
 	if (const auto* Player = Cast<AMT2PlayerCharacter>(GetOwner()))
 		if (auto* Controller = Cast<AMT2PlayerController>(Player->GetController())) { Controller->SendSystemChatMessage(Message); }
 }
-void UMT2FishingComponent::OnRep_State() { bCancelRequested = false; }
-void UMT2FishingComponent::MulticastFishingEvent_Implementation(EMT2FishingEvent Event, int32 Vnum)
+void UMT2FishingComponent::OnRep_State()
+{
+	bCancelRequested = false;
+	if (IsFishing()) { ShowFloat(State.HookLocation); } else { ClearFloat(); }
+}
+void UMT2FishingComponent::MulticastFishingEvent_Implementation(EMT2FishingEvent Event, int32 Vnum, FVector HookPosition)
 {
 	OnFishingEvent.Broadcast(Event, Vnum);
 	if (GetNetMode() == NM_DedicatedServer) { return; }
+	if (Event == EMT2FishingEvent::Cast || Event == EMT2FishingEvent::Bite) { ShowFloat(HookPosition); } else { ClearFloat(); }
 	const auto* Player = Cast<AMT2PlayerCharacter>(GetOwner());
 	auto* Anim = Player && Player->GetMesh() ? Cast<UMT2CharacterAnimInstance>(Player->GetMesh()->GetAnimInstance()) : nullptr;
 	if (!Anim) { return; }
@@ -198,4 +208,39 @@ void UMT2FishingComponent::MulticastFishingEvent_Implementation(EMT2FishingEvent
 		Event == EMT2FishingEvent::Caught ? TEXT("fishing_catch") : Event == EMT2FishingEvent::Failed ? TEXT("fishing_fail") : TEXT("fishing_cancel");
 	if (UAnimSequence* Sequence = Anim->GetAnimation(TEXT("fishing"), Action))
 	{ Anim->PlaySlotAnimationAsDynamicMontage(Sequence, TEXT("DefaultSlot"), .15f, .15f, 1, 1); }
+}
+
+void UMT2FishingComponent::ClearFloat()
+{
+	if (FloatComponent) { FloatComponent->DestroyComponent(); FloatComponent = nullptr; }
+}
+void UMT2FishingComponent::ShowFloat(const FVector& HookPosition)
+{
+	if (!GetWorld() || GetNetMode() == NM_DedicatedServer || !GetOwner() || !GetOwner()->GetRootComponent()) { return; }
+	const auto& Settings = *GetDefault<UMT2FishingSettings>();
+	if (Settings.FloatMesh.IsNull() || Settings.FloatScale.ContainsNaN() || Settings.FloatScale.GetMin() <= 0 || !FMath::IsFinite(Settings.FloatHeightOffset)) { ClearFloat(); return; }
+	uint8 Flags;
+	const auto* MapActor = GetWorld()->GetSubsystem<UMT2MapAttributeSubsystem>()->FindMapAt(HookPosition, Flags);
+	if (!MapActor || MapActor->WaterGridSize.X <= 0 || MapActor->WaterGridSize.Y <= 0) { ClearFloat(); return; }
+	const FVector2D Extent = MapActor->WorldMax - MapActor->WorldMin;
+	if (Extent.X <= 0 || Extent.Y <= 0) { ClearFloat(); return; }
+	const FVector2D Cell = (MapActor->WorldMax - FVector2D(HookPosition)) * FVector2D(MapActor->WaterGridSize) / Extent;
+	const auto* Rect = MapActor->WaterRectangles.FindByPredicate([&](const FMT2WaterRectangle& R)
+	{
+		return Cell.X >= R.Cell.X && Cell.Y >= R.Cell.Y && Cell.X < int64(R.Cell.X) + R.Size.X && Cell.Y < int64(R.Cell.Y) + R.Size.Y;
+	});
+	if (!Rect || !FMath::IsFinite(Rect->Height)) { ClearFloat(); return; }
+	UMaterialInterface* Material = Settings.FloatMaterial.IsNull() ? nullptr : Settings.FloatMaterial.LoadSynchronous();
+	UStaticMesh* Mesh = Settings.FloatMesh.LoadSynchronous();
+	if (!Mesh) { ClearFloat(); UE_LOG(LogTemp, Warning, TEXT("Cannot load configured fishing float mesh.")); return; }
+	if (!FloatComponent)
+	{
+		FloatComponent = NewObject<UStaticMeshComponent>(GetOwner(), NAME_None, RF_Transient | RF_DuplicateTransient);
+		FloatComponent->SetupAttachment(GetOwner()->GetRootComponent()); FloatComponent->SetAbsolute(true, true, true);
+		FloatComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision); FloatComponent->SetCanEverAffectNavigation(false);
+		FloatComponent->SetCastShadow(false); FloatComponent->RegisterComponent();
+	}
+	FloatComponent->SetStaticMesh(Mesh); FloatComponent->SetMaterial(0, Material);
+	FloatComponent->SetWorldScale3D(Settings.FloatScale);
+	FloatComponent->SetWorldLocation(FVector(HookPosition.X, HookPosition.Y, Rect->Height + GetDefault<UMT2GameplaySettings>()->WaterSurfaceOffset + Settings.FloatHeightOffset));
 }

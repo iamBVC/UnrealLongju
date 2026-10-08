@@ -302,9 +302,12 @@ void UMT2EquipmentComponent::OnArmorLoaded(int32 RequestId, FSoftObjectPath Mesh
 		// Recreate the AnimInstance around the mesh swap as well. Keeping the live instance preserves
 		// cached compact-pose bone indices from the previous mesh, which can distort Warrior poses.
 		UClass* AnimInstanceClass = BodyMeshComponent->GetAnimClass();
-		BodyMeshComponent->SetAnimInstanceClass(nullptr);
+		const bool bMeshChanged = BodyMeshComponent->GetSkeletalMeshAsset() != ArmorMesh;
+		// Socket/proficiency replication reapplies equipment without changing the body mesh.
+		// Preserve its live AnimInstance, including finishing fishing montages, in that case.
+		if (bMeshChanged) { BodyMeshComponent->SetAnimInstanceClass(nullptr); }
 		BodyMeshComponent->EmptyOverrideMaterials();
-		BodyMeshComponent->SetSkeletalMesh(ArmorMesh, true);
+		if (bMeshChanged) { BodyMeshComponent->SetSkeletalMesh(ArmorMesh, true); }
 		for (const FMT2ArmorMaterialOverride& Override : PendingArmorMaterialOverrides)
 		{
 			if (Override.MaterialSlotIndex >= 0 &&
@@ -316,7 +319,7 @@ void UMT2EquipmentComponent::OnArmorLoaded(int32 RequestId, FSoftObjectPath Mesh
 				}
 			}
 		}
-		if (AnimInstanceClass)
+		if (bMeshChanged && AnimInstanceClass)
 		{
 			BodyMeshComponent->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 			BodyMeshComponent->SetAnimInstanceClass(AnimInstanceClass);

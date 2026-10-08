@@ -79,6 +79,7 @@ public:
 	bool HasArmorEquipped() const { return bArmorEquipped; }
 
 private:
+	friend class FMT2FishingPresentationTest;
 	bool AttachWeaponMeshToBody();
 	bool AttachLeftWeaponMeshToBody();
 	bool UsesPairedWeaponVisual() const;
