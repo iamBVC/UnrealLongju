@@ -44,7 +44,28 @@ Implementation review: 2026-10-08. Player prediction/networking is unchanged by 
 
 Project Settings > Game > Mob Runtime / `Config/DefaultGame.ini`:
 
-- `MovementSimulationRate=6.25`: authoritative collision sampling, not client animation rate.
+- Mob simulation always uses legacy state deadlines instead of distance-band decision rates.
+  There is no alternate timing profile or enable/disable toggle.
+- `LegacyPulseRate=25`, `LegacyMovePulses=4`: 160 ms movement/chase sampling. Unreal's server tick
+  quantizes these deadlines; this is not a replacement of Unreal's clock with a 25 Hz legacy clock.
+- Idle aggressive mobs wait a random 1-3 seconds, passive mobs 3-5 seconds, and wander arrivals
+  1-3 seconds. Defaults match `char_state.cpp`; each range is configurable.
+- `LegacyWanderOneIn=7`: an idle decision has a one-in-seven wandering chance; the new destination
+  is 300-700 cm from the current position. Midpoint and destination must pass the no-walk grid.
+- Ordinary chases keep the issued destination until arrival; bosses have a configurable one-in-four
+  retarget chance per moving decision. Existing Unreal leash, acceptance-radius and target rules remain.
+- Client movement ticks follow replicated segment flags rather than independently replicated AI state,
+  preventing stale idle/attack state updates from suspending a newer command. Authority only waits on
+  enabled, unexpired segments; suspended or expired commands can be reissued without a fixed timeout.
+- Combat decisions wait for the existing motion/cooldown timers rather than polling at the near rate.
+  Target changes wake sleeping AI. This does not port race-specific boss, party/protege or stone AI branches.
+- `BaselineMobReplicationRate=1`: Unreal property polling fallback, not a legacy packet frequency.
+  Movement commands, state changes, health/max-health changes and actions force updates. Mob grid
+  lists honor these forced updates and configured periods instead of engine distance/view-angle zones.
+- `KnockbackReplicationRate=15`: temporary authoritative snapshot rate; clients interpolate ordinary
+  movement segments locally. Both existing and newly observing connections use the configured period.
+- `ReplicationGridCellSize=6400`: replication partition size only; it does not replace the existing
+  simulation-region occupancy system with the legacy nine-neighbour-sector implementation.
 - `MovementRetargetDistance=50`: suppresses small chase-destination changes; speed/acceptance changes
   still restart the segment. This is a UE tuning tolerance, not a copied legacy constant.
 - `NetCullDistance=5500`: observer visibility distance in imported-map centimetres.
@@ -58,6 +79,12 @@ with owning-client prediction; player observer traffic needs a separate measured
 `Metin2.World.MobMoveSegments` covers cadence, unchanged-request suppression, packet-free movement
 steps, client catch-up, client authority rejection, stopping, walls, no-walk cells, active-set/dormancy
 wake-up and the impulse networking handoff. Existing combat/knockback timing tests remain relevant.
+
+`Metin2.World.LegacyMobScheduling` covers configurable pulse cadence, aggressive/passive idle
+deadlines, sleeping-decision suppression, event wake-up and immediate knockback-rate transitions.
+The 2026-10-09 timing/replication update passed Editor, Client and Server Win64 Development builds
+and all 20 selected combat, fishing, world and notification-routing automation tests. These tests
+do not exercise actual packets across multiple network connections.
 
 A new packaged-server capture and multiplayer playtest are required to measure actual CPU/bandwidth
 improvements and verify visual interpolation under latency, relevancy re-entry and dense combat.

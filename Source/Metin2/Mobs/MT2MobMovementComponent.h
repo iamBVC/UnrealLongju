@@ -40,12 +40,15 @@ public:
 	void BeginExternalKnockback();
 	void FinishExternalKnockback();
 	const FMT2MobMoveSegment& GetMoveSegment() const { return MoveSegment; }
+	bool IsMoveSegmentInProgress() const;
+	void CompleteExpiredMoveSegment();
 
 protected:
 	UPROPERTY(ReplicatedUsing = OnRep_MoveSegment)
 	FMT2MobMoveSegment MoveSegment;
 	UFUNCTION() void OnRep_MoveSegment();
 	void PublishStoppedSegment();
+	void UpdateReplicationFrequency(float Frequency);
 	double GetMovementServerTime() const;
 	FVector RequestedDestination = FVector::ZeroVector;
 	float RequestedAcceptanceRadius = 0.f;

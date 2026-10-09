@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "Components/BoxComponent.h"
 #include "Mobs/MT2Mob.h"
+#include "Mobs/MT2MobAIComponent.h"
 #include "Mobs/MT2MobMovementComponent.h"
 #include "World/MT2MapPresentationActor.h"
 #include "World/MT2MapAttributes.h"
@@ -43,6 +44,8 @@ bool FMT2MobMoveSegmentsTest::RunTest(const FString&)
 	if (!TestFalse(TEXT("Test proxy is not authoritative"), Proxy->HasAuthority())) { return false; }
 	auto* ProxyMove = CastChecked<UMT2MobMovementComponent>(Proxy->GetCharacterMovement());
 	ProxyMove->MoveSegment = Move->MoveSegment; ProxyMove->OnRep_MoveSegment();
+	Proxy->GetMobAIComponent()->ApplyTickPolicy();
+	TestTrue(TEXT("Stale idle AI replication cannot suspend active client segment"), ProxyMove->IsComponentTickEnabled());
 	ProxyMove->TickComponent(.016f, LEVELTICK_All, nullptr);
 	TestTrue(TEXT("Late relevant proxy catches up from server start time"), FMath::IsNearlyEqual(Proxy->GetActorLocation().X, 450., 1.));
 	const FVector BeforeClientCommand = ProxyMove->MoveSegment.Destination;
@@ -90,6 +93,23 @@ bool FMT2MobMoveSegmentsTest::RunTest(const FString&)
 	TestTrue(TEXT("Impulse uses full-rate movement"), Move->GetComponentTickInterval() == 0.f);
 	Move->FinishExternalKnockback();
 	TestFalse(TEXT("Impulse end restores segment networking"), Mob->IsReplicatingMovement());
+	Move->StartMoveSegment(FVector(1500,0,110), 0.f);
+	const uint32 BeforeSuspension = Move->MoveSegment.Serial;
+	Move->SetComponentTickEnabled(false);
+	TestFalse(TEXT("Suspended component is not an in-progress chase"), Move->IsMoveSegmentInProgress());
+	Move->StartMoveSegment(FVector(1500,0,110), 0.f);
+	TestTrue(TEXT("Unchanged command restarts suspended movement"), Move->IsComponentTickEnabled() && Move->MoveSegment.Serial != BeforeSuspension);
+	Move->MoveSegment.ServerStartTime = Move->GetMovementServerTime() - Move->MoveSegment.Duration - .1;
+	TestFalse(TEXT("Expired segment cannot keep chase waiting forever"), Move->IsMoveSegmentInProgress());
+	const uint32 BeforeExpiry = Move->MoveSegment.Serial;
+	Move->StartMoveSegment(FVector(1500,0,110), 0.f);
+	TestTrue(TEXT("Same destination can restart after expired command"), Move->MoveSegment.Serial != BeforeExpiry);
+	Move->StopMovementImmediately(); Mob->SetActorLocation(FVector(3000,0,110));
+	Move->StartMoveSegment(FVector(3020,0,110), 0.f);
+	Move->MoveSegment.ServerStartTime = Move->GetMovementServerTime() - Move->MoveSegment.Duration - .1;
+	Move->CompleteExpiredMoveSegment();
+	TestTrue(TEXT("Short expired chase reaches its endpoint before AI retargets"), FMath::IsNearlyEqual(Mob->GetActorLocation().X, 3020., .1));
+	TestFalse(TEXT("Completed short chase publishes a stop"), Move->MoveSegment.bMoving);
 	return true;
 }
 #endif

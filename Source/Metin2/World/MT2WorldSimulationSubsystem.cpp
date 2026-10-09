@@ -14,6 +14,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/MT2ActorRelevanceComponent.h"
 #include "Engine/World.h"
+#include "Engine/NetDriver.h"
+#include "Network/MT2ReplicationGraph.h"
 #include "FramePro/FramePro.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Mobs/MT2MetinStone.h"
@@ -24,28 +26,6 @@
 #include "Mobs/MT2MobSpawnComponent.h"
 #include "UI/MT2NameplateComponent.h"
 #include "World/MT2PlayerSpatialGridSubsystem.h"
-
-namespace
-{
-	double GetMobSimulationInterval(
-		float DistanceSquared,
-		const UMT2MobRuntimeSettings& Settings)
-	{
-		if (DistanceSquared <= FMath::Square(Settings.NearSimulationDistance))
-		{
-			return 1.0 / FMath::Max(Settings.NearSimulationRate, 0.1f);
-		}
-		if (DistanceSquared <= FMath::Square(Settings.MediumSimulationDistance))
-		{
-			return 1.0 / FMath::Max(Settings.MediumSimulationRate, 0.1f);
-		}
-		if (DistanceSquared <= FMath::Square(Settings.FarSimulationDistance))
-		{
-			return 1.0 / FMath::Max(Settings.FarSimulationRate, 0.1f);
-		}
-		return 1.0 / FMath::Max(Settings.DistantSimulationRate, 0.1f);
-	}
-}
 
 template <typename T>
 void UMT2WorldSimulationSubsystem::RemoveInvalid(TSet<TWeakObjectPtr<T>>& Objects)
@@ -193,6 +173,11 @@ void UMT2WorldSimulationSubsystem::ClearMobTargetsFor(const AActor* TargetActor)
 	}
 }
 
+void UMT2WorldSimulationSubsystem::WakeMobAI(AMT2Mob* Mob)
+{
+	NextMobUpdateTimes.Remove(Mob);
+}
+
 void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 {
 	FRAMEPRO_NAMED_SCOPE("MT2.WorldSimulation.Server");
@@ -213,6 +198,8 @@ void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 			FRAMEPRO_NAMED_SCOPE("MT2.WorldSimulation.Mob");
 			AMT2Mob* Mob = WeakMob.Get();
 			if (!Mob || Mob->IsActorBeingDestroyed()) continue;
+			const double* Deadline = NextMobUpdateTimes.Find(Mob);
+			if (Deadline && Now < *Deadline) continue;
 			const EMT2MobType MobType = Mob->GetMobType();
 			if (MobType == EMT2MobType::NPC || MobType == EMT2MobType::Warp ||
 				MobType == EMT2MobType::Goto)
@@ -225,19 +212,12 @@ void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 				TRACE_CPUPROFILER_EVENT_SCOPE(MT2_WorldSimulation_PlayerDistance);
 				DistanceSquared = Grid ? Grid->GetClosestPlayerDistanceSquared(Mob->GetActorLocation(), Settings->ActiveSimulationDistance) : 0.0f;
 			}
-			const double Interval = GetMobSimulationInterval(DistanceSquared, *Settings);
-			double& NextUpdate = NextMobUpdateTimes.FindOrAdd(Mob);
-			// Promote a mob immediately when a player enters a closer simulation band. Otherwise an
-			// old one-second sleep deadline can survive after the mob becomes nearby.
-			if (NextUpdate - Now > Interval) NextUpdate = Now;
-			if (Now < NextUpdate) continue;
-			NextUpdate = Now + Interval;
-
 			UCharacterMovementComponent* Movement = Mob->GetCharacterMovement();
 			const bool bInSimulationRange =
 				DistanceSquared <= FMath::Square(Settings->ActiveSimulationDistance);
 			if (!bInSimulationRange)
 			{
+				NextMobUpdateTimes.FindOrAdd(Mob) = Now + 1.0 / FMath::Max(Settings->DistantSimulationRate, .1f);
 				FRAMEPRO_NAMED_SCOPE("MT2.WorldSimulation.StopDistantMob");
 				if (Movement) Movement->StopMovementImmediately();
 				Mob->SetNetUpdateFrequency(Settings->MinimumReplicationRate);
@@ -246,31 +226,30 @@ void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 			if (Movement && !Movement->HasRootMotionSources())
 			{
 				// Authoritative collision samples are independent of client segment interpolation.
-				Movement->SetComponentTickInterval(
-					1.0f / FMath::Max(Settings->MovementSimulationRate, 1.0f));
+				Movement->SetComponentTickInterval(Settings->GetMovementInterval());
 			}
 			if (AAIController* Controller = Cast<AAIController>(Mob->GetController()))
 			{
 				FRAMEPRO_NAMED_SCOPE("MT2.WorldSimulation.MobAI");
 				TRACE_CPUPROFILER_EVENT_SCOPE(MT2_WorldSimulation_MobAI);
-				Mob->GetMobAIComponent()->TickBehavior(Controller, static_cast<float>(Interval));
+				Mob->GetMobAIComponent()->TickBehavior(Controller, Settings->GetMovementInterval());
 			}
-
-			const EMT2MobAIState State = Mob->GetMobAIComponent()->GetState();
-			const bool bMoving = State == EMT2MobAIState::Wandering
-				|| State == EMT2MobAIState::Chasing
-				|| State == EMT2MobAIState::Fleeing
-				|| State == EMT2MobAIState::ReturningHome;
+			// Target changes during TickBehavior can remove the deadline entry; reacquire it.
+			NextMobUpdateTimes.FindOrAdd(Mob) = Now + Mob->GetMobAIComponent()->GetLegacyUpdateDelay();
 			// These checks carry gameplay state; normal locomotion sends only segment changes.
-			const float DesiredNetFrequency = bMoving
-				? static_cast<float>(1.0 / Interval)
-				: State == EMT2MobAIState::Attacking
-					? Settings->AttackingReplicationRate
-					: Settings->IdleReplicationRate;
+			const float DesiredNetFrequency = Mob->IsReplicatingMovement()
+				? Settings->KnockbackReplicationRate : Settings->BaselineMobReplicationRate;
 			if (!FMath::IsNearlyEqual(Mob->GetNetUpdateFrequency(), DesiredNetFrequency))
 			{
 				Mob->SetNetUpdateFrequency(DesiredNetFrequency);
 				Mob->SetMinNetUpdateFrequency(Settings->MinimumReplicationRate);
+				if (UNetDriver* Driver = GetWorld()->GetNetDriver())
+				{
+					if (auto* Graph = Driver->GetReplicationDriver<UMT2ReplicationGraph>())
+					{
+						Graph->SetMobReplicationFrequency(Mob, DesiredNetFrequency);
+					}
+				}
 			}
 
 		}

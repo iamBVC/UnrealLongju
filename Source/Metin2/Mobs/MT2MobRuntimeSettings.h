@@ -26,46 +26,60 @@ class METIN2_API UMT2MobRuntimeSettings : public UDeveloperSettings
 public:
 	virtual FName GetCategoryName() const override { return TEXT("Game"); }
 
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1", ClampMax="100"))
+	int32 LegacyPulseRate = 25;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyMovePulses = 4;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyAggressiveIdleMinSeconds = 1;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyAggressiveIdleMaxSeconds = 3;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyPassiveIdleMinSeconds = 3;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyPassiveIdleMaxSeconds = 5;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyPostMoveIdleMinSeconds = 1;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyPostMoveIdleMaxSeconds = 3;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyWanderOneIn = 7;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="1"))
+	int32 LegacyBossRetargetOneIn = 4;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="0", Units="cm"))
+	float LegacyWanderMinimumDistance = 300.f;
+	UPROPERTY(Config, EditAnywhere, Category="Legacy Scheduling", meta=(ClampMin="0", Units="cm"))
+	float LegacyWanderMaximumDistance = 700.f;
+
+	// UE fallback polling, not a legacy packet rate. Changed gameplay state forces an immediate update.
+	UPROPERTY(Config, EditAnywhere, Category="Replication", meta=(ClampMin="0.1", Units="Hz"))
+	float BaselineMobReplicationRate = 1.f;
+	UPROPERTY(Config, EditAnywhere, Category="Replication", meta=(ClampMin="1", Units="Hz"))
+	float KnockbackReplicationRate = 15.f;
+	UPROPERTY(Config, EditAnywhere, Category="Replication", meta=(ClampMin="100", Units="cm"))
+	float ReplicationGridCellSize = 6400.f;
+
+	float GetMovementInterval() const
+	{
+		return float(FMath::Max(LegacyMovePulses, 1)) / FMath::Clamp(LegacyPulseRate, 1, 100);
+	}
+
 	// Simulation and replication
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="1.0"))
 	float SchedulerRate = 30.0f;
-
-	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="1.0", Units="Hz"))
-	// Legacy Goto: four pulses at the default 25-pulse server cadence.
-	float MovementSimulationRate = 6.25f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.0", Units="cm"))
 	float MovementRetargetDistance = 50.f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.0", Units="cm"))
-	float NearSimulationDistance = 5000.0f;
-
-	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.0", Units="cm"))
-	float MediumSimulationDistance = 7500.0f;
-
-	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.0", Units="cm"))
-	float FarSimulationDistance = 10000.0f;
-
-	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.0", Units="cm"))
 	float ActiveSimulationDistance = 12000.0f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.1", Units="Hz"))
-	float NearSimulationRate = 20.0f;
-
-	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.1", Units="Hz"))
-	float MediumSimulationRate = 10.0f;
-
-	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.1", Units="Hz"))
-	float FarSimulationRate = 5.0f;
-
-	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.1", Units="Hz"))
+	// Retry cadence for active-region entries outside the exact simulation distance.
 	float DistantSimulationRate = 1.0f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.1", Units="Hz"))
 	float IdleReplicationRate = 2.0f;
-
-	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.1", Units="Hz"))
-	float AttackingReplicationRate = 10.0f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.1", Units="Hz"))
 	float MinimumReplicationRate = 1.0f;
@@ -170,10 +184,6 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.0", Units="cm"))
 	float AggressiveDetectionRadius = 3000.0f;
 
-	/** Minimum delay between automatic target searches performed by an aggressive mob without a target. */
-	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.01", Units="s"))
-	float TargetSearchInterval = 2.0f;
-
 	/** Multiplies the mob's imported sight radius to calculate its chase leash from its spawn point. */
 	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.0"))
 	float LeashRadiusMultiplier = 2.5f;
@@ -197,22 +207,6 @@ public:
 	/** Minimum allowed imported attack range, preventing mobs from requiring zero-distance contact. */
 	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.0", Units="cm"))
 	float MinimumAttackRange = 50.0f;
-
-	/** Smallest random distance from home used when selecting a wander destination. */
-	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.0", Units="cm"))
-	float WanderMinimumRadius = 150.0f;
-
-	/** Largest random distance from home used when selecting a wander destination. */
-	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.0", Units="cm"))
-	float WanderMaximumRadius = 700.0f;
-
-	/** Minimum idle pause after reaching a wander destination before choosing another one. */
-	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.0", Units="s"))
-	float WanderIdleMinimumTime = 3.0f;
-
-	/** Maximum idle pause after reaching a wander destination before choosing another one. */
-	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.0", Units="s"))
-	float WanderIdleMaximumTime = 5.0f;
 
 	/** Distance from a wander/flee destination considered close enough to stop moving. */
 	UPROPERTY(Config, EditAnywhere, Category="AI", meta=(ClampMin="0.0", Units="cm"))

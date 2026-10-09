@@ -9,6 +9,8 @@
 
 #include "Mobs/MT2MobAIComponent.h"
 #include "Mobs/MT2MobMovementComponent.h"
+#include "World/MT2WorldSimulationSubsystem.h"
+#include "World/MT2MapAttributes.h"
 
 #include "AIController.h"
 #include "Characters/MT2PlayerCharacter.h"
@@ -113,6 +115,14 @@ void UMT2MobAIComponent::ApplyTickPolicy()
 		|| State == EMT2MobAIState::Fleeing
 		|| State == EMT2MobAIState::ReturningHome;
 	const auto* SegmentMovement = Cast<UMT2MobMovementComponent>(Mob->GetCharacterMovement());
+	if (!Mob->HasAuthority() && SegmentMovement)
+	{
+		// State, motion and component properties can arrive in either order. A stale AI state
+		// must not suspend a newer movement command; the segment's stop flag owns that decision.
+		Mob->GetCharacterMovement()->SetComponentTickEnabled(SegmentMovement->GetMoveSegment().bMoving ||
+			SegmentMovement->GetMoveSegment().bExternalMotion || Mob->GetCharacterMovement()->HasRootMotionSources());
+		return;
+	}
 	const bool bExternalMotion = SegmentMovement && SegmentMovement->GetMoveSegment().bExternalMotion;
 	const bool bCanMove = ((bMovementState && !Mob->IsCombatMotionLocked()) ||
 		Mob->GetCharacterMovement()->HasRootMotionSources() || bExternalMotion) && !HasAIFlag(AIFlags, EMT2MobAIFlag::NoMove);
@@ -133,6 +143,22 @@ void UMT2MobAIComponent::SetForceAggressive(bool bForceAggressive)
 	const int32 AggressiveMask = 1 << static_cast<uint8>(EMT2MobAIFlag::Aggressive);
 	if (bForceAggressive) AIFlags |= AggressiveMask;
 	else AIFlags &= ~AggressiveMask;
+}
+
+float UMT2MobAIComponent::GetLegacyUpdateDelay() const
+{
+	const auto* Settings = GetDefault<UMT2MobRuntimeSettings>();
+	const float Pulse = 1.f / FMath::Clamp(Settings->LegacyPulseRate, 1, 100);
+	const auto* Mob = Cast<AMT2Mob>(GetOwner());
+	if (Mob && (Mob->IsCombatMotionLocked() || State == EMT2MobAIState::Attacking))
+	{
+		return FMath::Max(Mob->GetCombatDecisionDelay(), Pulse);
+	}
+	if (State == EMT2MobAIState::Idle && !TargetActor)
+	{
+		return FMath::Max(NextDecisionTime - (GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f), Pulse);
+	}
+	return Settings->GetMovementInterval();
 }
 
 void UMT2MobAIComponent::TickBehavior(AAIController* Controller, float DeltaSeconds)
@@ -170,9 +196,32 @@ void UMT2MobAIComponent::TickBehavior(AAIController* Controller, float DeltaSeco
 
 	const float Now = World->GetTimeSeconds();
 	const UMT2MobRuntimeSettings* Settings = GetDefault<UMT2MobRuntimeSettings>();
+	if (State == EMT2MobAIState::Idle && !TargetActor && Now < NextDecisionTime) { return; }
 	if (!IsValidTarget(TargetActor))
 	{
 		SetTargetActor(nullptr);
+	}
+	if (State == EMT2MobAIState::Chasing)
+	{
+		auto* Movement = Cast<UMT2MobMovementComponent>(Mob->GetCharacterMovement());
+		if (TargetActor && Movement && Movement->GetMoveSegment().bMoving)
+		{
+			Movement->CompleteExpiredMoveSegment();
+			if (!Movement->IsMoveSegmentInProgress())
+			{
+				Movement->StopMovementImmediately();
+			}
+			else
+			{
+				// Legacy StateMove keeps ordinary monster destinations; bosses occasionally retarget.
+				if (Mob->GetMobRank() >= EMT2MobRank::Boss &&
+					FMath::RandRange(0, FMath::Max(Settings->LegacyBossRetargetOneIn, 1) - 1) == 0)
+				{
+					MoveTowards(Mob, TargetActor->GetActorLocation(), AttackRange * Settings->ChaseAcceptanceRangeFraction);
+				}
+				return;
+			}
+		}
 	}
 	const bool bCannotMove = HasAIFlag(AIFlags, EMT2MobAIFlag::NoMove);
 	if (bCannotMove)
@@ -181,9 +230,8 @@ void UMT2MobAIComponent::TickBehavior(AAIController* Controller, float DeltaSeco
 		Mob->GetCharacterMovement()->StopMovementImmediately();
 	}
 
-	if (!TargetActor && HasAIFlag(AIFlags, EMT2MobAIFlag::Aggressive) && Now >= NextTargetSearchTime)
+	if (!TargetActor && HasAIFlag(AIFlags, EMT2MobAIFlag::Aggressive))
 	{
-		NextTargetSearchTime = Now + Settings->TargetSearchInterval;
 		SetTargetActor(FindTarget());
 	}
 
@@ -235,6 +283,10 @@ void UMT2MobAIComponent::TickBehavior(AAIController* Controller, float DeltaSeco
 
 	if (bCannotMove)
 	{
+		const bool bAggressive = HasFlag(EMT2MobAIFlag::Aggressive);
+		const int32 Min = bAggressive ? Settings->LegacyAggressiveIdleMinSeconds : Settings->LegacyPassiveIdleMinSeconds;
+		const int32 Max = bAggressive ? Settings->LegacyAggressiveIdleMaxSeconds : Settings->LegacyPassiveIdleMaxSeconds;
+		NextDecisionTime = Now + FMath::RandRange(FMath::Max(Min,1), FMath::Max3(Max,Min,1));
 		Controller->StopMovement();
 		Mob->GetCharacterMovement()->StopMovementImmediately();
 		SetState(EMT2MobAIState::Idle);
@@ -256,15 +308,18 @@ void UMT2MobAIComponent::TickBehavior(AAIController* Controller, float DeltaSeco
 			bHasWanderTarget = false;
 			// Start the idle pause now that the mob has actually arrived, not back when it started
 			// walking - otherwise the wait is spent mid-travel and it immediately picks a new point.
-			NextDecisionTime = Now + FMath::FRandRange(
-				Settings->WanderIdleMinimumTime,
-				Settings->WanderIdleMaximumTime);
+			NextDecisionTime = Now + FMath::RandRange(FMath::Max(Settings->LegacyPostMoveIdleMinSeconds,1),
+				FMath::Max3(Settings->LegacyPostMoveIdleMaxSeconds,Settings->LegacyPostMoveIdleMinSeconds,1));
 			SetState(EMT2MobAIState::Idle);
 		}
 	}
 	else if (Now >= NextDecisionTime)
 	{
-		Wander(Mob);
+		const bool bAggressive = HasFlag(EMT2MobAIFlag::Aggressive);
+		const int32 Min = bAggressive ? Settings->LegacyAggressiveIdleMinSeconds : Settings->LegacyPassiveIdleMinSeconds;
+		const int32 Max = bAggressive ? Settings->LegacyAggressiveIdleMaxSeconds : Settings->LegacyPassiveIdleMaxSeconds;
+		NextDecisionTime = Now + FMath::RandRange(FMath::Max(Min,1), FMath::Max3(Max,Min,1));
+		if (FMath::RandRange(0, FMath::Max(Settings->LegacyWanderOneIn,1) - 1) == 0) { Wander(Mob); }
 	}
 }
 
@@ -286,7 +341,16 @@ void UMT2MobAIComponent::SetTargetActor(AActor* NewTarget)
 		AActor* ValidTarget = IsValidTarget(NewTarget) ? NewTarget : nullptr;
 		if (TargetActor != ValidTarget)
 		{
+			if (ValidTarget && !TargetActor)
+			{
+				if (auto* Mob = Cast<AMT2Mob>(GetOwner())) { Mob->GetCharacterMovement()->StopMovementImmediately(); }
+			}
 			TargetActor = ValidTarget;
+			NextDecisionTime = 0.f;
+			if (UWorld* World = GetWorld())
+			{
+				if (auto* Simulation = World->GetSubsystem<UMT2WorldSimulationSubsystem>()) { Simulation->WakeMobAI(Cast<AMT2Mob>(GetOwner())); }
+			}
 			GetOwner()->ForceNetUpdate();
 		}
 	}
@@ -399,12 +463,15 @@ bool UMT2MobAIComponent::IsValidTarget(const AActor* Candidate) const
 void UMT2MobAIComponent::Wander(AMT2Mob* Mob)
 {
 	const UMT2MobRuntimeSettings* Settings = GetDefault<UMT2MobRuntimeSettings>();
-	// No navmesh reachability query - just pick a random point around home and walk straight at it.
-	const float Angle = FMath::FRandRange(0.0f, 2.0f * UE_PI);
-	const float Radius = FMath::FRandRange(
-		Settings->WanderMinimumRadius,
-		Settings->WanderMaximumRadius);
-	WanderTarget = HomeLocation + FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.0f) * Radius;
+	// Legacy idle wandering is relative to the current position.
+	const int32 Degrees = FMath::RandRange(0,359);
+	const float Distance = FMath::RandRange(FMath::FloorToInt(FMath::Max(Settings->LegacyWanderMinimumDistance,0.f)),
+		FMath::FloorToInt(FMath::Max3(Settings->LegacyWanderMaximumDistance,Settings->LegacyWanderMinimumDistance,0.f)));
+	const float Radians = FMath::DegreesToRadians(float(Degrees));
+	const FVector Delta(FMath::Cos(Radians) * Distance, FMath::Sin(Radians) * Distance, 0.f);
+	WanderTarget = Mob->GetActorLocation() + Delta;
+	const auto* Attributes = GetWorld()->GetSubsystem<UMT2MapAttributeSubsystem>();
+	if (Attributes && (Attributes->IsBlocked(WanderTarget) || Attributes->IsBlocked(Mob->GetActorLocation() + Delta * .5))) { return; }
 	bHasWanderTarget = true;
 
 	Mob->SetWalkRequested(true);

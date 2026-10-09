@@ -142,6 +142,8 @@ void AMT2Mob::BeginPlay()
 	InitializeAbilityComponents(AbilitySystemComponent);
 	GetHealthComponent()->OnDeath.AddUniqueDynamic(this, &AMT2Mob::HandleDeath);
 	GetHealthComponent()->OnRevived.AddUniqueDynamic(this, &AMT2Mob::HandleRevived);
+	GetHealthComponent()->OnValueChanged.AddUniqueDynamic(this, &AMT2Mob::HandleHealthReplicationUpdate);
+	GetHealthComponent()->OnMaxValueChanged.AddUniqueDynamic(this, &AMT2Mob::HandleHealthReplicationUpdate);
 	MobAIComponent->OnStateChanged.AddUniqueDynamic(this, &AMT2Mob::HandleAIStateChanged);
 	// Blueprint component defaults can override the native CDO, so enforce this again at runtime.
 	GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -188,6 +190,11 @@ bool AMT2Mob::IsStationaryNpc() const
 
 void AMT2Mob::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	if (UMT2HealthComponent* Health = GetHealthComponent())
+	{
+		Health->OnValueChanged.RemoveDynamic(this, &AMT2Mob::HandleHealthReplicationUpdate);
+		Health->OnMaxValueChanged.RemoveDynamic(this, &AMT2Mob::HandleHealthReplicationUpdate);
+	}
 	if (UMT2QuestManagerComponent* Manager = QuestConversationOwner.Get())
 	{
 		Manager->NotifyQuestNpcRemoved(this);
@@ -594,6 +601,18 @@ void AMT2Mob::ClearKnockdownMotion()
 {
 	GetWorldTimerManager().ClearTimer(KnockdownMotionTimer);
 	bKnockdownMotionLocked = false;
+}
+
+void AMT2Mob::HandleHealthReplicationUpdate(float OldValue, float NewValue)
+{
+	if (HasAuthority() && OldValue != NewValue) { ForceNetUpdate(); }
+}
+
+float AMT2Mob::GetCombatDecisionDelay() const
+{
+	if (bKnockdownMotionLocked) { return FMath::Max(GetWorldTimerManager().GetTimerRemaining(KnockdownMotionTimer), 0.f); }
+	if (bCombatMotionLocked) { return FMath::Max(GetWorldTimerManager().GetTimerRemaining(CombatMotionLockTimer), 0.f); }
+	return FMath::Max(GetWorldTimerManager().GetTimerRemaining(AttackCooldownTimer), 0.f);
 }
 
 void AMT2Mob::LockCombatMovement(float Duration)

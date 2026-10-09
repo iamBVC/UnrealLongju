@@ -54,7 +54,8 @@ void UMT2ReplicationGraph::InitGlobalActorClassSettings()
 
 		FClassReplicationInfo ClassInfo;
 		ClassInfo.ReplicationPeriodFrame =
-			GetReplicationPeriodFrameForFrequency(ActorCDO->GetNetUpdateFrequency());
+			GetReplicationPeriodFrameForFrequency(IsMobSpatialActor(ActorCDO)
+				? GetDefault<UMT2MobRuntimeSettings>()->BaselineMobReplicationRate : ActorCDO->GetNetUpdateFrequency());
 		ClassInfo.SetCullDistanceSquared(
 			ActorCDO->bAlwaysRelevant || ActorCDO->bOnlyRelevantToOwner
 				? 0.0f
@@ -73,7 +74,7 @@ void UMT2ReplicationGraph::InitGlobalGraphNodes()
 	AddGlobalGraphNode(SpatialGridNode);
 
 	MobGridNode = CreateNewNode<UReplicationGraphNode_GridSpatialization2D>();
-	MobGridNode->CellSize = SpatialCellSize;
+	MobGridNode->CellSize = FMath::Max(GetDefault<UMT2MobRuntimeSettings>()->ReplicationGridCellSize, 100.f);
 	MobGridNode->SpatialBias = FVector2D(-UE_OLD_WORLD_MAX, -UE_OLD_WORLD_MAX);
 	MobGridNode->CreateCellNodeOverride = [](
 		UReplicationGraphNode_GridSpatialization2D* Parent)
@@ -82,10 +83,9 @@ void UMT2ReplicationGraph::InitGlobalGraphNodes()
 			Parent->CreateChildNode<UReplicationGraphNode_GridCell>();
 		Cell->CreateDynamicNodeOverride = [](UReplicationGraphNode_GridCell* CellParent)
 		{
-			UReplicationGraphNode_DynamicSpatialFrequency* DynamicNode =
-				CellParent->CreateChildNode<UReplicationGraphNode_DynamicSpatialFrequency>();
-			DynamicNode->CSVStatName = "MT2MobDynamicSpatialFrequency";
-			return DynamicNode;
+			// Standard lists honor ForceNetUpdate and the actor's configured period. Distance/view
+			// frequency zones would otherwise silently override the state scheduler's rates.
+			return CellParent->CreateChildNode<UReplicationGraphNode_ActorList>();
 		};
 		return Cell;
 	};
@@ -93,6 +93,26 @@ void UMT2ReplicationGraph::InitGlobalGraphNodes()
 
 	AlwaysRelevantNode = CreateNewNode<UReplicationGraphNode_ActorList>();
 	AddGlobalGraphNode(AlwaysRelevantNode);
+}
+
+void UMT2ReplicationGraph::SetMobReplicationFrequency(AActor* Actor, float Frequency)
+{
+	if (!IsMobSpatialActor(Actor)) return;
+	const uint16 Period = GetReplicationPeriodFrameForFrequency(FMath::Max(Frequency, 0.1f));
+	if (auto* Info = GlobalActorReplicationInfoMap.Find(Actor)) Info->Settings.ReplicationPeriodFrame = Period;
+	auto UpdateConnections = [Actor, Period](const auto& List)
+	{
+		for (const auto& Connection : List)
+		{
+			if (auto* Info = Connection->ActorInfoMap.Find(Actor))
+			{
+				Info->ReplicationPeriodFrame = Period;
+				Info->NextReplicationFrameNum = FMath::Min(Info->NextReplicationFrameNum, Info->LastRepFrameNum + Period);
+			}
+		}
+	};
+	UpdateConnections(Connections);
+	UpdateConnections(PendingConnections);
 }
 
 void UMT2ReplicationGraph::InitConnectionGraphNodes(

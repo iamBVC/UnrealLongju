@@ -42,8 +42,8 @@ struct FMT2ConnectionAlwaysRelevantNodePair
 };
 
 /**
- * Project replication graph. Mobs use a dedicated spatial grid whose frequency is calculated for
- * each connection from distance and view direction. Other actors retain the standard spatial,
+ * Project replication graph. Mobs use a dedicated spatial grid with state-driven update periods
+ * and immediate forced updates. Other actors retain the standard spatial,
  * always-relevant and owner-relevant routing rules.
  */
 UCLASS(Transient, Config = Engine)
@@ -52,6 +52,7 @@ class METIN2_API UMT2ReplicationGraph : public UReplicationGraph
 	GENERATED_BODY()
 
 public:
+	void SetMobReplicationFrequency(AActor* Actor, float Frequency);
 	virtual void InitGlobalActorClassSettings() override;
 	virtual void InitGlobalGraphNodes() override;
 	virtual void InitConnectionGraphNodes(

@@ -32,6 +32,7 @@ public:
 	void RegisterMob(AMT2Mob* Mob);
 	void UnregisterMob(AMT2Mob* Mob);
 	void SetMobSimulationActive(AMT2Mob* Mob, bool bActive);
+	void WakeMobAI(AMT2Mob* Mob);
 	void RegisterNameplate(UMT2NameplateComponent* Nameplate);
 	void UnregisterNameplate(UMT2NameplateComponent* Nameplate);
 	void RegisterRegeneration(UMT2MobLifecycleComponent* Lifecycle);
@@ -44,6 +45,7 @@ public:
 
 private:
 	friend class FMT2MobMoveSegmentsTest;
+	friend class FMT2LegacyMobSchedulingTest;
 	template <typename T>
 	static void RemoveInvalid(TSet<TWeakObjectPtr<T>>& Objects);
 

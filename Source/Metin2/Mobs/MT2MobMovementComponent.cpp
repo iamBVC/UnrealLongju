@@ -12,6 +12,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
+#include "Engine/NetDriver.h"
+#include "Network/MT2ReplicationGraph.h"
 #include "FramePro/FramePro.h"
 #include "GameFramework/Character.h"
 #include "Mobs/MT2MobRuntimeSettings.h"
@@ -48,12 +50,29 @@ double UMT2MobMovementComponent::GetMovementServerTime() const
 	return State ? State->GetServerWorldTimeSeconds() : World ? World->GetTimeSeconds() : 0.;
 }
 
+bool UMT2MobMovementComponent::IsMoveSegmentInProgress() const
+{
+	return MoveSegment.bMoving && IsComponentTickEnabled() &&
+		GetMovementServerTime() < MoveSegment.ServerStartTime + MoveSegment.Duration;
+}
+
+void UMT2MobMovementComponent::CompleteExpiredMoveSegment()
+{
+	if (CharacterOwner && CharacterOwner->HasAuthority() && MoveSegment.bMoving && !HasRootMotionSources() &&
+		GetMovementServerTime() >= MoveSegment.ServerStartTime + MoveSegment.Duration)
+	{
+		// AI runs before movement ticks. Finish the swept endpoint before issuing another command,
+		// otherwise moves shorter than a sampling interval could repeatedly restart without advancing.
+		PhysWalking(GetDefault<UMT2MobRuntimeSettings>()->GetMovementInterval(), 0);
+	}
+}
+
 void UMT2MobMovementComponent::StartMoveSegment(const FVector& Destination, float AcceptanceRadius)
 {
 	if (!CharacterOwner || !CharacterOwner->HasAuthority() || !HasValidData() || HasRootMotionSources() ||
 		Destination.ContainsNaN() || GetMaxSpeed() <= UE_SMALL_NUMBER) { return; }
 	const float RetargetDistance = GetDefault<UMT2MobRuntimeSettings>()->MovementRetargetDistance;
-	if (MoveSegment.bMoving && FVector::DistSquared2D(RequestedDestination, Destination) <= FMath::Square(RetargetDistance) &&
+	if (IsMoveSegmentInProgress() && FVector::DistSquared2D(RequestedDestination, Destination) <= FMath::Square(RetargetDistance) &&
 		FMath::IsNearlyEqual(SegmentSpeed, GetMaxSpeed()) && FMath::IsNearlyEqual(RequestedAcceptanceRadius, AcceptanceRadius)) { return; }
 	const FVector Start = UpdatedComponent->GetComponentLocation();
 	const FVector Delta = (Destination - Start) * FVector(1,1,0);
@@ -67,7 +86,7 @@ void UMT2MobMovementComponent::StartMoveSegment(const FVector& Destination, floa
 	MoveSegment.Duration = FVector::Dist2D(Start, End) / GetMaxSpeed();
 	MoveSegment.bMoving = true; MoveSegment.bExternalMotion = false; ++MoveSegment.Serial;
 	CharacterOwner->SetReplicateMovement(false);
-	SetComponentTickInterval(1.f / FMath::Max(GetDefault<UMT2MobRuntimeSettings>()->MovementSimulationRate, 1.f));
+	SetComponentTickInterval(GetDefault<UMT2MobRuntimeSettings>()->GetMovementInterval());
 	SetComponentTickEnabled(true);
 	CharacterOwner->SetActorRotation(Delta.Rotation());
 	CharacterOwner->ForceNetUpdate();
@@ -80,7 +99,21 @@ void UMT2MobMovementComponent::PublishStoppedSegment()
 	MoveSegment.ServerStartTime = GetMovementServerTime(); MoveSegment.Duration = 0.f;
 	MoveSegment.bMoving = false; MoveSegment.bExternalMotion = false; ++MoveSegment.Serial;
 	CharacterOwner->SetReplicateMovement(false);
+	UpdateReplicationFrequency(GetDefault<UMT2MobRuntimeSettings>()->BaselineMobReplicationRate);
 	CharacterOwner->ForceNetUpdate();
+}
+
+void UMT2MobMovementComponent::UpdateReplicationFrequency(float Frequency)
+{
+	if (!CharacterOwner || !CharacterOwner->HasAuthority()) return;
+	CharacterOwner->SetNetUpdateFrequency(FMath::Max(Frequency, .1f));
+	if (UNetDriver* Driver = GetWorld()->GetNetDriver())
+	{
+		if (auto* Graph = Driver->GetReplicationDriver<UMT2ReplicationGraph>())
+		{
+			Graph->SetMobReplicationFrequency(CharacterOwner, Frequency);
+		}
+	}
 }
 
 void UMT2MobMovementComponent::StopMovementImmediately()
@@ -102,6 +135,7 @@ void UMT2MobMovementComponent::BeginExternalKnockback()
 		PublishStoppedSegment();
 		MoveSegment.bExternalMotion = true; ++MoveSegment.Serial;
 		CharacterOwner->SetReplicateMovement(true);
+		UpdateReplicationFrequency(GetDefault<UMT2MobRuntimeSettings>()->KnockbackReplicationRate);
 		CharacterOwner->ForceNetUpdate();
 	}
 	SetComponentTickInterval(0.f); SetComponentTickEnabled(true);
@@ -143,7 +177,7 @@ void UMT2MobMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 		if (CharacterOwner->HasAuthority() && MoveSegment.bExternalMotion && !HasRootMotionSources())
 		{
 			FinishExternalKnockback();
-			SetComponentTickInterval(1.f / FMath::Max(GetDefault<UMT2MobRuntimeSettings>()->MovementSimulationRate, 1.f));
+			SetComponentTickInterval(GetDefault<UMT2MobRuntimeSettings>()->GetMovementInterval());
 			if (auto* Mob = Cast<AMT2Mob>(CharacterOwner)) { Mob->GetMobAIComponent()->ApplyTickPolicy(); }
 		}
 		return;
@@ -151,7 +185,7 @@ void UMT2MobMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 	if (CharacterOwner->HasAuthority() && MoveSegment.bExternalMotion)
 	{
 		PublishStoppedSegment();
-		SetComponentTickInterval(1.f / FMath::Max(GetDefault<UMT2MobRuntimeSettings>()->MovementSimulationRate, 1.f));
+		SetComponentTickInterval(GetDefault<UMT2MobRuntimeSettings>()->GetMovementInterval());
 		if (auto* Mob = Cast<AMT2Mob>(CharacterOwner)) { Mob->GetMobAIComponent()->ApplyTickPolicy(); }
 	}
 	if (!MoveSegment.bMoving) { return; }

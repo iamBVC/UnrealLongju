@@ -53,6 +53,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Mob|AI")
 	bool HasFlag(EMT2MobAIFlag Flag) const { return (AIFlags & (1 << static_cast<int32>(Flag))) != 0; }
 	void TickBehavior(AAIController* Controller, float DeltaSeconds);
+	float GetLegacyUpdateDelay() const;
 	void NotifyDeath(AAIController* Controller);
 
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Mob|AI")
@@ -71,6 +72,7 @@ public:
 	FMT2MobAIStateChangedSignature OnStateChanged;
 
 private:
+	friend class FMT2LegacyMobSchedulingTest;
 	void SetState(EMT2MobAIState NewState);
 	AActor* FindTarget() const;
 	bool IsValidTarget(const AActor* Candidate) const;
@@ -125,6 +127,5 @@ private:
 	FVector HomeLocation = FVector::ZeroVector;
 	FVector WanderTarget = FVector::ZeroVector;
 	bool bHasWanderTarget = false;
-	float NextTargetSearchTime = 0.0f;
 	float NextDecisionTime = 0.0f;
 };

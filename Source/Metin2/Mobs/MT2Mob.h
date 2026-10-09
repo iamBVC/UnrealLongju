@@ -123,6 +123,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Mob|Combat")
 	bool IsCombatMotionLocked() const { return bCombatMotionLocked || bKnockdownMotionLocked; }
 	bool IsKnockdownMotionLocked() const { return bKnockdownMotionLocked; }
+	float GetCombatDecisionDelay() const;
 	void PlayHitReaction(const AActor* Attacker, int32 HittingType, bool bSyncPush = false);
 
 	void SetLastDamageInstigator(AActor* DamageInstigator);
@@ -260,6 +261,7 @@ private:
 
 	UFUNCTION()
 	void HandleDeath();
+	UFUNCTION() void HandleHealthReplicationUpdate(float OldValue, float NewValue);
 
 	UFUNCTION()
 	void HandleRevived();
