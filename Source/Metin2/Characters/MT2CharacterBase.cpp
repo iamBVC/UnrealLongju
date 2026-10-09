@@ -96,6 +96,34 @@ void AMT2CharacterBase::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	DOREPLIFETIME(AMT2CharacterBase, AnimationSet);
 }
 
+void AMT2CharacterBase::BeginPlay()
+{
+	Super::BeginPlay();
+	if (GetNetMode() == NM_DedicatedServer) DisableDedicatedServerVisuals();
+}
+
+void AMT2CharacterBase::DisableDedicatedServerVisuals()
+{
+	// Keep the component for movement and metadata lookup, but no Blueprint-assigned
+	// AnimBP, physics asset or socket attachments need evaluation on a headless server.
+	for (USkeletalMeshComponent* VisualMesh : {GetMesh(), HairMeshComponent.Get()})
+	{
+		VisualMesh->SetComponentTickEnabled(false);
+		VisualMesh->bNoSkeletonUpdate = true;
+		VisualMesh->SetSimulatePhysics(false);
+		VisualMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		VisualMesh->SetGenerateOverlapEvents(false);
+		VisualMesh->SetAnimInstanceClass(nullptr);
+		VisualMesh->SetSkeletalMesh(nullptr);
+	}
+	for (USceneComponent* Visual : {static_cast<USceneComponent*>(HairMeshComponent.Get()),
+		static_cast<USceneComponent*>(WeaponMeshComponent.Get()), static_cast<USceneComponent*>(LeftWeaponMeshComponent.Get())})
+	{
+		Visual->SetComponentTickEnabled(false);
+		Visual->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	}
+}
+
 void AMT2CharacterBase::SetWalkRequested(bool bNewWalkRequested)
 {
 	if (bWalkRequested == bNewWalkRequested)

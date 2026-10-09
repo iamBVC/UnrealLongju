@@ -214,6 +214,14 @@ FMT2PrimaryStats AMT2PlayerCharacter::GetCalculatedPrimaryStats() const
 void AMT2PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	if (GetNetMode() == NM_DedicatedServer)
+	{
+		CameraBoom->SetComponentTickEnabled(false);
+		CameraBoom->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+		FollowCamera->Deactivate();
+		FirstPersonCamera->Deactivate();
+		FirstPersonCamera->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
+	}
 	// Blueprint collision profiles must not restore rigid-body participation by accident.
 	GetCharacterMovement()->bEnablePhysicsInteraction = UMT2GameplaySettings::Get().bPlayerPhysicsInteraction;
 	GetCapsuleComponent()->SetCollisionEnabled(UMT2GameplaySettings::Get().bPlayerPhysicsInteraction

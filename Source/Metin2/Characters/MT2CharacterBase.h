@@ -36,6 +36,7 @@ class METIN2_API AMT2CharacterBase : public ACharacter
 public:
 	AMT2CharacterBase(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void BeginPlay() override;
 
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	UMT2CombatComponent* GetCombatComponent() const { return CombatComponent; }
@@ -128,6 +129,8 @@ protected:
 	void InitializeAbilityComponents(UAbilitySystemComponent* AbilitySystemComponent);
 
 private:
+	friend class FMT2ServerPresentationTest;
+	void DisableDedicatedServerVisuals();
 	UFUNCTION()
 	void OnRep_WalkRequested();
 

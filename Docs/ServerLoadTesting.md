@@ -39,3 +39,5 @@ Player capsules use query-only collision by default: terrain sweeps, targeting a
 Existing combat/engagement diagnostics can add logging overhead. For comparable CPU captures, set the same log verbosity in every run; for example `-LogCmds="LogMT2Combat Error,LogMT2Targeting Error"`. Restore diagnostic verbosity when investigating a failure.
 
 Automation coverage is under `Metin2.Server.FakePlayers`. A successful fixture is not a live 100-client test.
+
+Dedicated servers disable character skeletal ticks, clear cosmetic mesh/AnimBP resources and detach hair/weapon socket attachments. Combat still reads imported animation metadata; movement and knockback remain authoritative. PlayerState polling defaults to 2 Hz via `PlayerStateReplicationRate` in Metin2 Gameplay settings. Progression, appearance, vitals, primary stats, skill levels and gameplay-tag changes request immediate replication. The baseline remains a fallback for other subobject updates; equipment and PlayerState network layouts and relevancy are unchanged. Compare client-visible state under latency when changing this rate.
