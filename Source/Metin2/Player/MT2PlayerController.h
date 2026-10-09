@@ -135,9 +135,6 @@ public:
 	void ClientNotifyExperienceReceived(int64 Amount);
 
 	UFUNCTION(Client, Reliable)
-	void ClientSpawnExperienceOrbs(FVector SourceLocation, int64 ExperienceAmount);
-
-	UFUNCTION(Client, Reliable)
 	void ClientNotifyItemReceived(int32 Vnum, int32 Count, int32 SkillVnum);
 
 protected:

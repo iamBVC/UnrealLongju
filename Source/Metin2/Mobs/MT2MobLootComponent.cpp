@@ -231,10 +231,10 @@ namespace
 				const bool bExperienceAdded = Recipient->AddExperience(Share);
 				if (bExperienceAdded)
 				{
-					if (AMT2PlayerController* Controller =
-						Cast<AMT2PlayerController>(Recipient->GetOwner()))
+					if (AMT2PlayerCharacter* Character =
+						Cast<AMT2PlayerCharacter>(Recipient->GetPawn()))
 					{
-						Controller->ClientSpawnExperienceOrbs(RewardOrigin, Share);
+						Character->BroadcastExperienceOrbs(RewardOrigin, Share);
 					}
 				}
 			}

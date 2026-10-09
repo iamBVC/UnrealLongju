@@ -22,7 +22,6 @@
 #include "Engine/NetConnection.h"
 #include "Engine/LocalPlayer.h"
 #include "EngineUtils.h"
-#include "Effects/MT2ExperienceOrbActor.h"
 #include "Game/MT2GameModeBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/HUD.h"
@@ -970,16 +969,6 @@ void AMT2PlayerController::ClientNotifyExperienceReceived_Implementation(int64 A
 	AddRewardChatLine(FText::Format(
 		NSLOCTEXT("MT2Rewards", "ExperienceReceived", "You received {0} experience."),
 		FText::AsNumber(Amount)).ToString());
-}
-
-void AMT2PlayerController::ClientSpawnExperienceOrbs_Implementation(
-	FVector SourceLocation, int64 ExperienceAmount)
-{
-	if (APawn* Recipient = GetPawn())
-	{
-		AMT2ExperienceOrbActor::SpawnOrbs(
-			GetWorld(), SourceLocation, Recipient, ExperienceAmount);
-	}
 }
 
 void AMT2PlayerController::ClientNotifyItemReceived_Implementation(
