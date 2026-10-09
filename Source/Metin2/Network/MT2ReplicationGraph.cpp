@@ -12,6 +12,8 @@
 #include "Engine/ChildConnection.h"
 #include "Mobs/MT2Mob.h"
 #include "Mobs/MT2MobRuntimeSettings.h"
+#include "Player/MT2PlayerState.h"
+#include "Config/MT2GameplaySettings.h"
 #include "UObject/UObjectIterator.h"
 
 namespace
@@ -54,7 +56,9 @@ void UMT2ReplicationGraph::InitGlobalActorClassSettings()
 
 		FClassReplicationInfo ClassInfo;
 		ClassInfo.ReplicationPeriodFrame =
-			GetReplicationPeriodFrameForFrequency(IsMobSpatialActor(ActorCDO)
+			GetReplicationPeriodFrameForFrequency(ActorCDO->IsA<AMT2PlayerState>()
+				? FMath::Clamp(UMT2GameplaySettings::Get().PlayerStateReplicationRate, 1.f, 30.f)
+				: IsMobSpatialActor(ActorCDO)
 				? GetDefault<UMT2MobRuntimeSettings>()->BaselineMobReplicationRate : ActorCDO->GetNetUpdateFrequency());
 		ClassInfo.SetCullDistanceSquared(
 			ActorCDO->bAlwaysRelevant || ActorCDO->bOnlyRelevantToOwner

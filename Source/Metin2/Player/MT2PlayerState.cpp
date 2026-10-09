@@ -60,9 +60,8 @@ namespace
 
 AMT2PlayerState::AMT2PlayerState()
 {
-	// Progression and inventory mutations explicitly call ForceNetUpdate. A 10 Hz baseline avoids
-	// polling an otherwise unchanged PlayerState every server frame without delaying those events.
-	SetNetUpdateFrequency(10.0f);
+	// Mutations request immediate replication; the baseline is for unchanged state/subobjects.
+	SetNetUpdateFrequency(FMath::Clamp(UMT2GameplaySettings::Get().PlayerStateReplicationRate, 1.f, 30.f));
 
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
@@ -92,6 +91,11 @@ UAbilitySystemComponent* AMT2PlayerState::GetAbilitySystemComponent() const
 void AMT2PlayerState::BeginPlay()
 {
 	Super::BeginPlay();
+	if (HasAuthority())
+	{
+		AbilitySystemComponent->RegisterGenericGameplayTagEvent().AddWeakLambda(this,
+			[this](const FGameplayTag, int32) { ForceNetUpdate(); });
+	}
 	SkillComponent->OnSkillLevelsChanged.AddUniqueDynamic(this, &AMT2PlayerState::HandleSkillLevelsChanged);
 	PrimaryStatsComponent->OnPrimaryStatsChanged.AddUniqueDynamic(
 		this, &AMT2PlayerState::HandlePrimaryStatsChanged);
@@ -1569,12 +1573,14 @@ FGameplayTagContainer AMT2PlayerState::GetStatusEffects() const
 
 void AMT2PlayerState::OnRep_PlayerName()
 {
+	if (HasAuthority()) ForceNetUpdate();
 	Super::OnRep_PlayerName();
 	OnCharacterNameChanged.Broadcast(GetPlayerName());
 }
 
 void AMT2PlayerState::OnRep_CharacterLevel(int32 OldLevel)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnLevelChanged.Broadcast(OldLevel, CharacterLevel);
 	// Quest gates are commonly `when levelup with pc.level >= N`, so tell the quest system (server side;
 	// OnRep also runs here on a listen server, hence the authority check).
@@ -1587,46 +1593,55 @@ void AMT2PlayerState::OnRep_CharacterLevel(int32 OldLevel)
 
 void AMT2PlayerState::OnRep_Experience(int64 OldExperience)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnExperienceChanged.Broadcast(OldExperience, Experience);
 }
 
 void AMT2PlayerState::OnRep_UnspentSkillPoints(int32 OldPoints)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnSkillPointsChanged.Broadcast(OldPoints, UnspentSkillPoints);
 }
 
 void AMT2PlayerState::OnRep_UnspentStatPoints(int32 OldPoints)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnStatPointsChanged.Broadcast(OldPoints, UnspentStatPoints);
 }
 
 void AMT2PlayerState::OnRep_CharacterAppearance(const FMT2CharacterAppearance& OldAppearance)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnCharacterAppearanceChanged.Broadcast(CharacterAppearance);
 }
 
 void AMT2PlayerState::OnRep_Empire(EMT2Empire OldEmpire)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnEmpireChanged.Broadcast(Empire);
 }
 
 void AMT2PlayerState::OnRep_Guild()
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnGuildChanged.Broadcast(GuildId, GuildName);
 }
 
 void AMT2PlayerState::OnRep_KarmaPoints()
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnKarmaChanged.Broadcast(GetKarmaPoints());
 }
 
 void AMT2PlayerState::OnRep_Yang(int64 OldYang)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	OnYangChanged.Broadcast(OldYang, Yang);
 }
 
 void AMT2PlayerState::HandleSkillLevelsChanged()
 {
+	if (HasAuthority()) ForceNetUpdate();
 	if (PersistenceComponent)
 	{
 		PersistenceComponent->MarkDirty();
@@ -1636,6 +1651,7 @@ void AMT2PlayerState::HandleSkillLevelsChanged()
 void AMT2PlayerState::HandlePrimaryStatsChanged(
 	FMT2PrimaryStats OldStats, FMT2PrimaryStats NewStats)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	if (PersistenceComponent)
 	{
 		PersistenceComponent->MarkDirty();
@@ -1644,6 +1660,7 @@ void AMT2PlayerState::HandlePrimaryStatsChanged(
 
 void AMT2PlayerState::HandlePersistentAttributeChanged(const FOnAttributeChangeData& ChangeData)
 {
+	if (HasAuthority()) ForceNetUpdate();
 	if (PersistenceComponent)
 	{
 		PersistenceComponent->MarkDirty();
