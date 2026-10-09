@@ -296,7 +296,7 @@ public:
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs",
 		meta = (ClampMin = "0.0", Units = "cm/s"))
-	float ExperienceOrbInitialSpeed = 100.0f;
+	float ExperienceOrbInitialSpeed = 800.0f;
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs",
 		meta = (ClampMin = "0.0", ClampMax = "180.0", Units = "deg"))
@@ -304,15 +304,18 @@ public:
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs",
 		meta = (ClampMin = "0.0", Units = "cm/s^2"))
-	float ExperienceOrbAcceleration = 120.0f;
+	float ExperienceOrbAcceleration = 1200.0f;
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs",
 		meta = (ClampMin = "1.0", Units = "cm/s"))
-	float ExperienceOrbMaximumSpeed = 300.0f;
+	float ExperienceOrbMaximumSpeed = 1600.0f;
+	// Homing speed adapts to the recipient, including movement buffs and mounted movement.
+	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs", meta = (ClampMin = "1.05"))
+	float ExperienceOrbCatchupSpeedMultiplier = 1.5f;
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs",
 		meta = (ClampMin = "0.0", Units = "s"))
-	float ExperienceOrbHomingStartTime = 1.0f;
+	float ExperienceOrbHomingStartTime = 0.35f;
 
 	UPROPERTY(EditAnywhere, config, Category = "Progression|Experience Orbs",
 		meta = (ClampMin = "0.0", Units = "deg/s"))

@@ -13,6 +13,8 @@
 #include "Components/SceneComponent.h"
 #include "Config/MT2GameplaySettings.h"
 #include "Engine/World.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Particles/ParticleSystem.h"
 #include "Particles/ParticleSystemComponent.h"
@@ -149,8 +151,7 @@ void AMT2ExperienceOrbActor::Tick(float DeltaSeconds)
 	const FVector OldLocation = GetActorLocation();
 	ElapsedSeconds += DeltaSeconds;
 
-	// The original starts homing after one second and limits each direction correction to five
-	// degrees per old-client frame. A 300 deg/s rate preserves that motion without frame dependence.
+	// Preserve the turning arc, but guarantee a homing speed above the recipient's run speed.
 	if (ElapsedSeconds >= HomingStartTime && !Velocity.IsNearlyZero())
 	{
 		const FVector CurrentDirection = Velocity.GetSafeNormal();
@@ -168,7 +169,22 @@ void AMT2ExperienceOrbActor::Tick(float DeltaSeconds)
 		}
 	}
 
-	Velocity = (Velocity + Acceleration * DeltaSeconds).GetClampedToMaxSize(MaximumSpeed);
+	float CatchupSpeed = 0.f;
+	if (ElapsedSeconds >= HomingStartTime)
+	{
+		float TargetSpeed = Target->GetVelocity().Size();
+		if (const auto* Character = Cast<ACharacter>(Target))
+		{
+			TargetSpeed = FMath::Max(TargetSpeed, Character->GetCharacterMovement()->GetMaxSpeed());
+		}
+		CatchupSpeed = TargetSpeed * FMath::Max(UMT2GameplaySettings::Get().ExperienceOrbCatchupSpeedMultiplier, 1.05f);
+	}
+	Velocity = (Velocity + Acceleration * DeltaSeconds).GetClampedToMaxSize(FMath::Max(MaximumSpeed, CatchupSpeed));
+	if (Velocity.SizeSquared() < FMath::Square(CatchupSpeed))
+	{
+		const FVector Direction = Velocity.IsNearlyZero() ? (TargetLocation - OldLocation).GetSafeNormal() : Velocity.GetSafeNormal();
+		Velocity = Direction * CatchupSpeed;
+	}
 	const FVector NewLocation = OldLocation + Velocity * DeltaSeconds;
 	RemainingRange -= FVector::Distance(OldLocation, NewLocation);
 	if (RemainingRange <= 0.0f)

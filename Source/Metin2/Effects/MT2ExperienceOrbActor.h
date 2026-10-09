@@ -17,7 +17,7 @@ class UParticleSystemComponent;
 class UMaterialBillboardComponent;
 class USceneComponent;
 
-// Client-only visual. The server sends only one source position to each rewarded player; all orb
+// Client-only visual. The server multicasts the source position on the recipient; all orb
 // movement is simulated locally and never enters actor replication.
 UCLASS(NotBlueprintable)
 class METIN2_API AMT2ExperienceOrbActor : public AActor
@@ -35,6 +35,7 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 
 private:
+	friend class FMT2ExperienceOrbCatchupTest;
 	void InitializeOrb(AActor* Recipient, const FVector& SourceLocation);
 
 	UPROPERTY(VisibleAnywhere)
