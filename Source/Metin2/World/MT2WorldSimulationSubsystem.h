@@ -31,6 +31,7 @@ public:
 
 	void RegisterMob(AMT2Mob* Mob);
 	void UnregisterMob(AMT2Mob* Mob);
+	void SetMobSimulationActive(AMT2Mob* Mob, bool bActive);
 	void RegisterNameplate(UMT2NameplateComponent* Nameplate);
 	void UnregisterNameplate(UMT2NameplateComponent* Nameplate);
 	void RegisterRegeneration(UMT2MobLifecycleComponent* Lifecycle);
@@ -42,6 +43,7 @@ public:
 	void ClearMobTargetsFor(const AActor* TargetActor);
 
 private:
+	friend class FMT2MobMoveSegmentsTest;
 	template <typename T>
 	static void RemoveInvalid(TSet<TWeakObjectPtr<T>>& Objects);
 
@@ -50,6 +52,8 @@ private:
 	void TickClientMobAnimation();
 
 	TSet<TWeakObjectPtr<AMT2Mob>> Mobs;
+	TSet<TWeakObjectPtr<AMT2Mob>> ActiveMobs;
+	TArray<TWeakObjectPtr<AMT2Mob>> MobSchedulerSnapshot;
 	TSet<TWeakObjectPtr<UMT2NameplateComponent>> Nameplates;
 	TSet<TWeakObjectPtr<UMT2MobLifecycleComponent>> RegenerationComponents;
 	TSet<TWeakObjectPtr<UMT2MobSpawnComponent>> Spawners;

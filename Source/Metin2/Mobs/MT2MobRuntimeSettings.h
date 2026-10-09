@@ -31,7 +31,11 @@ public:
 	float SchedulerRate = 30.0f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="1.0", Units="Hz"))
-	float MovementSimulationRate = 30.0f;
+	// Legacy Goto: four pulses at the default 25-pulse server cadence.
+	float MovementSimulationRate = 6.25f;
+
+	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.0", Units="cm"))
+	float MovementRetargetDistance = 50.f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.0", Units="cm"))
 	float NearSimulationDistance = 5000.0f;
@@ -70,7 +74,8 @@ public:
 	float InitialReplicationRate = 15.0f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Simulation", meta=(ClampMin="0.0", Units="cm"))
-	float NetCullDistance = 12000.0f;
+	// Legacy VIEW_RANGE (5000) + VIEW_BONUS_RANGE (500), in the imported map's centimetres.
+	float NetCullDistance = 5500.0f;
 
 	UPROPERTY(Config, EditAnywhere, Category="Schedulers", meta=(ClampMin="0.01", Units="s"))
 	float RegenerationInterval = 5.0f;

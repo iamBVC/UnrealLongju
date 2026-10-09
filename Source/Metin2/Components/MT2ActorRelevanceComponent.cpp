@@ -14,6 +14,8 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "World/MT2PlayerSpatialGridSubsystem.h"
+#include "World/MT2WorldSimulationSubsystem.h"
+#include "Mobs/MT2Mob.h"
 
 UMT2ActorRelevanceComponent::UMT2ActorRelevanceComponent()
 {
@@ -60,6 +62,11 @@ void UMT2ActorRelevanceComponent::RefreshSpatialRelevance(const UMT2PlayerSpatia
 
 void UMT2ActorRelevanceComponent::SetSpatiallyActive(bool bNewActive)
 {
+	// Never suspend an in-flight authoritative impulse until its collision solver finishes.
+	if (const auto* Character = Cast<ACharacter>(GetOwner()); Character && Character->GetCharacterMovement()->HasRootMotionSources())
+	{
+		bNewActive = true;
+	}
 	if (bSpatiallyActive == bNewActive)
 	{
 		return;
@@ -98,6 +105,12 @@ void UMT2ActorRelevanceComponent::SetSpatiallyActive(bool bNewActive)
 	}
 	else
 	{
+		if (bPausedMobDormancy)
+		{
+			Owner->SetNetDormancy(DORM_Awake);
+			Owner->FlushNetDormancy(); Owner->ForceNetUpdate();
+			bPausedMobDormancy = false;
+		}
 		Owner->SetActorTickEnabled(bSavedActorTickEnabled);
 		for (const TPair<TWeakObjectPtr<UActorComponent>, bool>& Pair : SavedComponentTickStates)
 		{
@@ -110,6 +123,10 @@ void UMT2ActorRelevanceComponent::SetSpatiallyActive(bool bNewActive)
 
 		if (const ACharacter* Character = Cast<ACharacter>(Owner))
 		{
+			if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement(); Movement && Movement->HasRootMotionSources())
+			{
+				Movement->SetComponentTickInterval(0.f); Movement->SetComponentTickEnabled(true);
+			}
 			if (AAIController* Controller = Cast<AAIController>(Character->GetController()))
 			{
 				Controller->SetActorTickEnabled(true);
@@ -118,4 +135,16 @@ void UMT2ActorRelevanceComponent::SetSpatiallyActive(bool bNewActive)
 	}
 
 	bSpatiallyActive = bNewActive;
+	if (auto* Mob = Cast<AMT2Mob>(Owner))
+	{
+		if (auto* Simulation = GetWorld()->GetSubsystem<UMT2WorldSimulationSubsystem>())
+		{
+			Simulation->SetMobSimulationActive(Mob, bNewActive);
+		}
+		if (!bNewActive && Owner->NetDormancy == DORM_Awake)
+		{
+			Owner->SetNetDormancy(DORM_DormantAll);
+			bPausedMobDormancy = true;
+		}
+	}
 }

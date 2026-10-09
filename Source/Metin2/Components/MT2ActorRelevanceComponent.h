@@ -35,9 +35,11 @@ protected:
 	float ActivationRadius = 12000.0f;
 
 private:
+	friend class FMT2MobMoveSegmentsTest;
 	void SetSpatiallyActive(bool bNewActive);
 
 	TMap<TWeakObjectPtr<UActorComponent>, bool> SavedComponentTickStates;
 	bool bSavedActorTickEnabled = false;
 	bool bSpatiallyActive = true;
+	bool bPausedMobDormancy = false;
 };

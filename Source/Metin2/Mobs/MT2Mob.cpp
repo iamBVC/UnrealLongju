@@ -131,6 +131,12 @@ void AMT2Mob::OnConstruction(const FTransform& Transform)
 void AMT2Mob::BeginPlay()
 {
 	Super::BeginPlay();
+	GetCharacterMovement()->SetIsReplicated(true);
+	if (HasAuthority())
+	{
+		SetReplicateMovement(false);
+		SetNetCullDistanceSquared(FMath::Square(GetDefault<UMT2MobRuntimeSettings>()->NetCullDistance));
+	}
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	InitializeAbilityComponents(AbilitySystemComponent);
@@ -887,6 +893,7 @@ const FMT2MobMotionVariant* AMT2Mob::ChooseMotion(EMT2MobMotion Motion) const
 
 void AMT2Mob::HandleDeath()
 {
+	if (auto* Movement = Cast<UMT2MobMovementComponent>(GetCharacterMovement())) { Movement->FinishExternalKnockback(); }
 	GetCombatComponent()->CancelPendingBasicAttackHits();
 	ClearKnockdownMotion();
 	GetWorldTimerManager().ClearTimer(CombatMotionLockTimer);

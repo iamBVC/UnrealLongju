@@ -11,6 +11,7 @@
 
 #include "Engine/ChildConnection.h"
 #include "Mobs/MT2Mob.h"
+#include "Mobs/MT2MobRuntimeSettings.h"
 #include "UObject/UObjectIterator.h"
 
 namespace
@@ -57,7 +58,9 @@ void UMT2ReplicationGraph::InitGlobalActorClassSettings()
 		ClassInfo.SetCullDistanceSquared(
 			ActorCDO->bAlwaysRelevant || ActorCDO->bOnlyRelevantToOwner
 				? 0.0f
-				: ActorCDO->GetNetCullDistanceSquared());
+				: IsMobSpatialActor(ActorCDO)
+					? FMath::Square(GetDefault<UMT2MobRuntimeSettings>()->NetCullDistance)
+					: ActorCDO->GetNetCullDistanceSquared());
 		GlobalActorReplicationInfoMap.SetClassInfo(ActorClass, ClassInfo);
 	}
 }

@@ -12,6 +12,7 @@
 #include "AIController.h"
 #include "CollisionQueryParams.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/MT2ActorRelevanceComponent.h"
 #include "Engine/World.h"
 #include "FramePro/FramePro.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -58,6 +59,7 @@ void UMT2WorldSimulationSubsystem::RemoveInvalid(TSet<TWeakObjectPtr<T>>& Object
 void UMT2WorldSimulationSubsystem::Deinitialize()
 {
 	Mobs.Reset();
+	ActiveMobs.Reset(); MobSchedulerSnapshot.Reset();
 	Nameplates.Reset();
 	RegenerationComponents.Reset();
 	Spawners.Reset();
@@ -110,12 +112,26 @@ TStatId UMT2WorldSimulationSubsystem::GetStatId() const
 
 void UMT2WorldSimulationSubsystem::RegisterMob(AMT2Mob* Mob)
 {
-	if (Mob) Mobs.Add(Mob);
+	if (Mob)
+	{
+		Mobs.Add(Mob);
+		const auto* Relevance = Mob->FindComponentByClass<UMT2ActorRelevanceComponent>();
+		if (!Relevance || Relevance->IsSpatiallyActive()) { ActiveMobs.Add(Mob); }
+	}
 }
 
 void UMT2WorldSimulationSubsystem::UnregisterMob(AMT2Mob* Mob)
 {
 	Mobs.Remove(Mob);
+	ActiveMobs.Remove(Mob);
+	NextMobUpdateTimes.Remove(Mob);
+}
+
+void UMT2WorldSimulationSubsystem::SetMobSimulationActive(AMT2Mob* Mob, bool bActive)
+{
+	if (!Mob || !Mobs.Contains(Mob)) { return; }
+	if (bActive) { ActiveMobs.Add(Mob); }
+	else { ActiveMobs.Remove(Mob); }
 	NextMobUpdateTimes.Remove(Mob);
 }
 
@@ -188,8 +204,11 @@ void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 		FRAMEPRO_NAMED_SCOPE("MT2.WorldSimulation.MobScheduler");
 		TRACE_CPUPROFILER_EVENT_SCOPE(MT2_WorldSimulation_MobScheduler);
 		NextServerUpdateTime = Now + 1.0 / FMath::Max(Settings->SchedulerRate, 1.0f);
-		RemoveInvalid(Mobs);
-		for (const TWeakObjectPtr<AMT2Mob>& WeakMob : Mobs)
+		RemoveInvalid(ActiveMobs);
+		// Spawns/deaths during AI decisions may alter the active set. Reuse stable scratch storage.
+		MobSchedulerSnapshot.Reset(); MobSchedulerSnapshot.Reserve(ActiveMobs.Num());
+		for (const auto& Entry : ActiveMobs) { MobSchedulerSnapshot.Add(Entry); }
+		for (const TWeakObjectPtr<AMT2Mob>& WeakMob : MobSchedulerSnapshot)
 		{
 			FRAMEPRO_NAMED_SCOPE("MT2.WorldSimulation.Mob");
 			AMT2Mob* Mob = WeakMob.Get();
@@ -204,7 +223,7 @@ void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 			{
 				FRAMEPRO_NAMED_SCOPE("MT2.WorldSimulation.PlayerDistance");
 				TRACE_CPUPROFILER_EVENT_SCOPE(MT2_WorldSimulation_PlayerDistance);
-				DistanceSquared = Grid ? Grid->GetClosestPlayerDistanceSquared(Mob->GetActorLocation(), FMath::Sqrt(Mob->GetNetCullDistanceSquared())) : 0.0f;
+				DistanceSquared = Grid ? Grid->GetClosestPlayerDistanceSquared(Mob->GetActorLocation(), Settings->ActiveSimulationDistance) : 0.0f;
 			}
 			const double Interval = GetMobSimulationInterval(DistanceSquared, *Settings);
 			double& NextUpdate = NextMobUpdateTimes.FindOrAdd(Mob);
@@ -224,10 +243,9 @@ void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 				Mob->SetNetUpdateFrequency(Settings->MinimumReplicationRate);
 				continue;
 			}
-			if (Movement)
+			if (Movement && !Movement->HasRootMotionSources())
 			{
-				// AI decisions scale by distance, while physical movement stays continuous. Coupling
-				// these intervals made distant mobs advance in visible half/one-second steps.
+				// Authoritative collision samples are independent of client segment interpolation.
 				Movement->SetComponentTickInterval(
 					1.0f / FMath::Max(Settings->MovementSimulationRate, 1.0f));
 			}
@@ -243,8 +261,7 @@ void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 				|| State == EMT2MobAIState::Chasing
 				|| State == EMT2MobAIState::Fleeing
 				|| State == EMT2MobAIState::ReturningHome;
-			// Replication frequency follows AI significance. Physical movement remains continuous,
-			// and simulated proxies extrapolate the authoritative velocity between snapshots.
+			// These checks carry gameplay state; normal locomotion sends only segment changes.
 			const float DesiredNetFrequency = bMoving
 				? static_cast<float>(1.0 / Interval)
 				: State == EMT2MobAIState::Attacking

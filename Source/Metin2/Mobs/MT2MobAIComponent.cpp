@@ -8,6 +8,7 @@
 */
 
 #include "Mobs/MT2MobAIComponent.h"
+#include "Mobs/MT2MobMovementComponent.h"
 
 #include "AIController.h"
 #include "Characters/MT2PlayerCharacter.h"
@@ -111,8 +112,10 @@ void UMT2MobAIComponent::ApplyTickPolicy()
 		|| State == EMT2MobAIState::Chasing
 		|| State == EMT2MobAIState::Fleeing
 		|| State == EMT2MobAIState::ReturningHome;
+	const auto* SegmentMovement = Cast<UMT2MobMovementComponent>(Mob->GetCharacterMovement());
+	const bool bExternalMotion = SegmentMovement && SegmentMovement->GetMoveSegment().bExternalMotion;
 	const bool bCanMove = ((bMovementState && !Mob->IsCombatMotionLocked()) ||
-		Mob->GetCharacterMovement()->HasRootMotionSources()) && !HasAIFlag(AIFlags, EMT2MobAIFlag::NoMove);
+		Mob->GetCharacterMovement()->HasRootMotionSources() || bExternalMotion) && !HasAIFlag(AIFlags, EMT2MobAIFlag::NoMove);
 	if (UCharacterMovementComponent* Movement = Mob->GetCharacterMovement())
 	{
 		if (!bCanMove)
@@ -441,8 +444,9 @@ bool UMT2MobAIComponent::MoveTowards(AMT2Mob* Mob, const FVector& Destination, f
 		return true;
 	}
 
-	// Straight-line steering only; CharacterMovementComponent's own capsule sweep against the
-	// world is the "simple collision check" - no pathfinding around obstacles.
-	Mob->AddMovementInput(ToTarget2D.GetSafeNormal(), 1.0f);
+	if (auto* Movement = Cast<UMT2MobMovementComponent>(Mob->GetCharacterMovement()))
+	{
+		Movement->StartMoveSegment(Destination, AcceptanceRadius);
+	}
 	return false;
 }

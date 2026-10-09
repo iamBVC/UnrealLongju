@@ -8,6 +8,7 @@
 */
 
 #include "Characters/MT2CharacterBase.h"
+#include "Mobs/MT2MobMovementComponent.h"
 #include "Combat/MT2KnockbackRootMotion.h"
 #include "Characters/MT2CharacterMovementComponent.h"
 
@@ -290,6 +291,7 @@ void AMT2CharacterBase::StartKnockback(const FVector& Direction, float Distance,
 		return;
 	}
 	Movement->SetComponentTickEnabled(true);
+	if (auto* MobMovement = Cast<UMT2MobMovementComponent>(Movement)) { MobMovement->BeginExternalKnockback(); }
 	if (!HasAuthority() && !IsLocallyControlled()) { return; }
 	GetHealthComponent()->OnDeath.AddUniqueDynamic(this, &AMT2CharacterBase::ClearKnockbackOnDeath);
 	// Both authority and autonomous owner use UE's root-motion-source prediction/correction.
