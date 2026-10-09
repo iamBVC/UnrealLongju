@@ -33,3 +33,5 @@ TCP port bounds.
 See [water](../../../Docs/Water.md) for the retained map-bake and read-only verification workflow.
 
 Mob scheduling/movement fixtures are in `MT2LegacyMobSchedulingTests.cpp` and `MT2MobMoveSegmentTests.cpp`; knockback coverage is in `MT2KnockbackTests.cpp`. Run `Metin2.World` and `Metin2.Combat` for these groups.
+
+`MT2FakePlayersTests.cpp` covers the Development load-test harness under `Metin2.Server.FakePlayers`: authorization, quotas, staggered spawns, equipment, ephemeral identities, targeting, grid registration and cleanup. See [server load testing](../../../Docs/ServerLoadTesting.md) for command syntax and benchmark limitations.

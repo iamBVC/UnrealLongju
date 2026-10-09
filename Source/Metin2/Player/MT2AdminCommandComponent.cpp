@@ -30,6 +30,9 @@
 #include "Player/MT2PlayerController.h"
 #include "Quests/MT2QuestTableAsset.h"
 #include "Server/MT2ServerRuntimeSubsystem.h"
+#include "Server/Testing/MT2LoadTestSettings.h"
+#include "Server/Testing/MT2LoadTestSubsystem.h"
+#include "String/LexFromString.h"
 #include "Skills/MT2SkillComponent.h"
 #include "Stats/MT2CombatStatsComponent.h"
 #include "Stats/MT2PrimaryStatsComponent.h"
@@ -73,6 +76,8 @@ const TArray<UMT2AdminCommandComponent::FCommand>& UMT2AdminCommandComponent::Ge
 		{TEXT("/stats"),         1, &UMT2AdminCommandComponent::CmdStats,          TEXT("/stats")},
 		{TEXT("/itemlist"),      1, &UMT2AdminCommandComponent::CmdItemList,       TEXT("/itemlist [page]")},
 		{TEXT("/moblist"),       1, &UMT2AdminCommandComponent::CmdMobList,        TEXT("/moblist [page]")},
+		{TEXT("/fakeplayers"),   2, &UMT2AdminCommandComponent::CmdFakePlayers,
+			TEXT("/fakeplayers <count> [radius_cm] [level] | clear | status")},
 	};
 	return Table;
 }
@@ -459,6 +464,31 @@ void UMT2AdminCommandComponent::SendResult(bool bSucceeded, const FString& Messa
 			FString::Printf(TEXT("%s %s"), bSucceeded ? TEXT("[OK]") : TEXT("[ERROR]"), *Message));
 	}
 	UE_LOG(LogMT2AdminCmd, Display, TEXT("[MT2Chat] %s"), *Message);
+}
+
+void UMT2AdminCommandComponent::CmdFakePlayers(const TArray<FString>& Args)
+{
+	auto* LoadTest = GetWorld() ? GetWorld()->GetSubsystem<UMT2LoadTestSubsystem>() : nullptr;
+	if (!LoadTest) { SendResult(false, TEXT("No load-test world is available.")); return; }
+	if (Args.Num() == 2 && Args[1].Equals(TEXT("clear"), ESearchCase::IgnoreCase))
+	{
+		SendResult(true, FString::Printf(TEXT("Removed %d fake players and cancelled pending spawns."), LoadTest->ClearPlayers())); return;
+	}
+	if (Args.Num() == 2 && Args[1].Equals(TEXT("status"), ESearchCase::IgnoreCase))
+	{
+		SendResult(true, FString::Printf(TEXT("%d fake players, %d queued; zero simulated client connections."),
+			LoadTest->GetPlayerCount(), LoadTest->GetQueuedCount())); return;
+	}
+	const auto* Settings = GetDefault<UMT2LoadTestSettings>();
+	int32 Count = 0; int32 Level = Settings->DefaultLevel; float Radius = Settings->DefaultRadius;
+	if (Args.Num() > 4 || !LexTryParseString(Count, *Args[1]) ||
+		(Args.Num() > 2 && !LexTryParseString(Radius, *Args[2])) || (Args.Num() > 3 && !LexTryParseString(Level, *Args[3])))
+	{
+		SendResult(false, TEXT("Usage: /fakeplayers <count> [radius_cm] [level] | clear | status")); return;
+	}
+	FString Message;
+	const bool bQueued = LoadTest->QueuePlayers(GetPlayer(), Count, Radius, Level, Message);
+	SendResult(bQueued, Message);
 }
 
 void UMT2AdminCommandComponent::CmdGoto(const TArray<FString>& Args)

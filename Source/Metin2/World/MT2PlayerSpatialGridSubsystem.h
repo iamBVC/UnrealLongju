@@ -29,6 +29,8 @@ public:
 
 	void RegisterRelevanceComponent(UMT2ActorRelevanceComponent* Component);
 	void UnregisterRelevanceComponent(UMT2ActorRelevanceComponent* Component);
+	void RegisterSimulatedPlayer(APawn* Pawn);
+	void UnregisterSimulatedPlayer(APawn* Pawn);
 
 	UFUNCTION(BlueprintPure, Category = "MT2|Spatial Grid")
 	int32 EstimatePlayersInRadius(const FVector& Location, float Radius) const;
@@ -45,6 +47,7 @@ public:
 	bool HasTrackedPlayers() const { return !PlayersByCell.IsEmpty(); }
 
 private:
+	friend class FMT2FakePlayersTest;
 	FIntPoint ToCell(const FVector& Location) const;
 	void RebuildPlayerGrid();
 	void RefreshRelevanceComponents();
@@ -58,5 +61,6 @@ private:
 	TMap<FIntPoint, int32> PlayerCountsByCell;
 	TMap<FIntPoint, TArray<TWeakObjectPtr<APawn>>> PlayersByCell;
 	TSet<TWeakObjectPtr<UMT2ActorRelevanceComponent>> RelevanceComponents;
+	TSet<TWeakObjectPtr<APawn>> SimulatedPlayers;
 	float TimeUntilRefresh = 0.0f;
 };

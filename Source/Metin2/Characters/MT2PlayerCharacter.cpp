@@ -507,6 +507,27 @@ bool AMT2PlayerCharacter::Attack()
 	return AbilitySystem->TryActivateAbilitiesByTag(AttackTags, true);
 }
 
+void AMT2PlayerCharacter::SetServerAutoAttackTarget(AActor* Target)
+{
+	if (!HasAuthority()) return;
+	bAutoEngageTarget = IsValid(Target) && Target != this;
+	GetCombatComponent()->SetSelectedTarget(bAutoEngageTarget ? Target : nullptr);
+	if (!bAutoEngageTarget)
+	{
+		StopAutoMove();
+		GetCombatComponent()->StopBasicAttackLoop();
+	}
+}
+
+void AMT2PlayerCharacter::SetServerAutoMoveGoal(const FVector& Destination)
+{
+	if (!HasAuthority() || Destination.ContainsNaN()) return;
+	SetServerAutoAttackTarget(nullptr);
+	AutoMoveTargetActor.Reset();
+	AutoMoveTargetLocation = Destination;
+	bHasAutoMoveTarget = true;
+}
+
 void AMT2PlayerCharacter::RequestClickMove()
 {
 	if (bCameraRotateHeld || IsDead())

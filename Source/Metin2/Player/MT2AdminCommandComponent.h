@@ -55,6 +55,7 @@ private:
 	void CmdStats(const TArray<FString>& Args);
 	void CmdItemList(const TArray<FString>& Args);
 	void CmdMobList(const TArray<FString>& Args);
+	void CmdFakePlayers(const TArray<FString>& Args);
 	void SendResult(bool bSucceeded, const FString& Message) const;
 
 	AMT2PlayerCharacter* GetPlayer() const;

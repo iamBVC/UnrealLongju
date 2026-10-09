@@ -78,6 +78,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	bool Attack();
+	// Native authority intent entry points, sharing the normal click-to-move/combat executor.
+	void SetServerAutoMoveGoal(const FVector& Destination);
+	void SetServerAutoAttackTarget(AActor* Target);
 
 	UFUNCTION(BlueprintCallable, Category = "Movement")
 	void RequestClickMove();

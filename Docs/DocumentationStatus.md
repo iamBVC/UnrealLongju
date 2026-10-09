@@ -9,6 +9,7 @@ The documentation describes the current UnrealLongju codebase and the original M
 - [Architecture](Architecture.md), [persistence](PersistenceArchitecture.md) and [distributed servers](DistributedServerArchitecture.md): ownership, components, storage and process boundaries.
 - [Command-line parameters](CommandLineParameters.md): runtime roles and configuration.
 - [Automation tests](../Source/Metin2/Tests/README.md): test organization and execution.
+- [Server load testing](ServerLoadTesting.md): admin-controlled fake players and real-client benchmark limits.
 
 ## System guides
 

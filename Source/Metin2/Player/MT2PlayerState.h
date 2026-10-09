@@ -66,6 +66,7 @@ UCLASS(Blueprintable)
 class METIN2_API AMT2PlayerState : public APlayerState, public IAbilitySystemInterface, public IMT2Persistable
 {
 	GENERATED_BODY()
+	friend class FMT2FakePlayersTest;
 
 public:
 	AMT2PlayerState();

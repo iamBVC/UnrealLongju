@@ -25,6 +25,7 @@ void UMT2PlayerSpatialGridSubsystem::Initialize(FSubsystemCollectionBase& Collec
 void UMT2PlayerSpatialGridSubsystem::Deinitialize()
 {
 	RelevanceComponents.Reset();
+	SimulatedPlayers.Reset();
 	PlayerCountsByCell.Reset();
 	PlayersByCell.Reset();
 	Super::Deinitialize();
@@ -66,6 +67,16 @@ void UMT2PlayerSpatialGridSubsystem::RegisterRelevanceComponent(UMT2ActorRelevan
 void UMT2PlayerSpatialGridSubsystem::UnregisterRelevanceComponent(UMT2ActorRelevanceComponent* Component)
 {
 	RelevanceComponents.Remove(Component);
+}
+
+void UMT2PlayerSpatialGridSubsystem::RegisterSimulatedPlayer(APawn* Pawn)
+{
+	if (Pawn && Pawn->HasAuthority()) { SimulatedPlayers.Add(Pawn); TimeUntilRefresh = 0.f; }
+}
+
+void UMT2PlayerSpatialGridSubsystem::UnregisterSimulatedPlayer(APawn* Pawn)
+{
+	SimulatedPlayers.Remove(Pawn); TimeUntilRefresh = 0.f;
 }
 
 int32 UMT2PlayerSpatialGridSubsystem::EstimatePlayersInRadius(const FVector& Location, float Radius) const
@@ -198,6 +209,16 @@ void UMT2PlayerSpatialGridSubsystem::RebuildPlayerGrid()
 			PlayerCountsByCell.FindOrAdd(Cell)++;
 			PlayersByCell.FindOrAdd(Cell).Add(Pawn);
 		}
+	}
+	for (auto It = SimulatedPlayers.CreateIterator(); It; ++It)
+	{
+		APawn* Pawn = It->Get();
+		if (!Pawn || Pawn->IsActorBeingDestroyed()) { It.RemoveCurrent(); continue; }
+		// Avoid duplicates if a registered pawn is later possessed by a real player controller.
+		if (Cast<APlayerController>(Pawn->GetController())) continue;
+		const FIntPoint Cell = ToCell(Pawn->GetActorLocation());
+		PlayerCountsByCell.FindOrAdd(Cell)++;
+		PlayersByCell.FindOrAdd(Cell).Add(Pawn);
 	}
 }
 

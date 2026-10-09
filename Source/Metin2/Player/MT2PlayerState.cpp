@@ -108,6 +108,8 @@ void AMT2PlayerState::BeginPlay()
 
 void AMT2PlayerState::ResolveAdminStatus()
 {
+	// AI-owned test characters never acquire GM rights or query the account backend.
+	if (IsABot()) return;
 	UMT2AdminSubsystem* Admin = GetGameInstance()
 		? GetGameInstance()->GetSubsystem<UMT2AdminSubsystem>() : nullptr;
 	if (!Admin)
