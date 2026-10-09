@@ -1,6 +1,6 @@
 # Server load testing
 
-Development builds provide the admin-only `/fakeplayers` command. Fake players are server-controlled warrior characters with a normal PlayerState, inventory, sword +9 (VNUM 19), movement and combat. They seek nearby monsters, use ordinary chase/combo/damage handling, wander when no target is available and respawn after death. They are unavailable in Shipping builds.
+Development builds provide the admin-only `/fakeplayers` command. Fake players are server-controlled warrior characters with a normal PlayerState, inventory, sword +9 (VNUM 19), movement and combat. They seek nearby monsters, use ordinary chase/combo/damage handling, collect nearby loot reserved for them, wander when no target is available and respawn after death. They are unavailable in Shipping builds.
 
 ```text
 /fakeplayers 100

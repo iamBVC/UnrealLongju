@@ -4,12 +4,15 @@
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
+#include "GameFramework/WorldSettings.h"
+#include "AIController.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Components/BoxComponent.h"
 #include "Components/MT2HealthComponent.h"
 #include "Characters/MT2PlayerCharacter.h"
 #include "Combat/MT2CombatComponent.h"
 #include "Items/MT2InventoryComponent.h"
+#include "Items/MT2WorldItem.h"
 #include "Persistence/MT2PersistenceComponent.h"
 #include "Player/MT2PlayerController.h"
 #include "Player/MT2PlayerState.h"
@@ -36,8 +39,8 @@ bool FMT2FakePlayersTest::RunTest(const FString&)
 	Floor->SetRootComponent(Box); Box->SetBoxExtent(FVector(5000,5000,50));
 	Box->SetCollisionProfileName(TEXT("BlockAll")); Box->RegisterComponent(); Floor->SetActorLocation(FVector(0,0,-50));
 	World->InitializeActorsForPlay(FURL());
-	World->BeginPlay();
-	auto* Human = World->SpawnActor<AMT2PlayerController>();
+	World->GetWorldSettings()->NotifyBeginPlay();
+	auto* Human = World->SpawnActor<AAIController>();
 	auto* State = World->SpawnActor<AMT2PlayerState>(); Human->SetPlayerState(State);
 	auto* Requester = World->SpawnActor<AMT2PlayerCharacter>(); Human->Possess(Requester);
 	auto* Harness = World->GetSubsystem<UMT2LoadTestSubsystem>();
@@ -80,6 +83,19 @@ bool FMT2FakePlayersTest::RunTest(const FString&)
 	Mob->GetHealthComponent()->InitializeWithAbilitySystem(ASC);
 	auto* First = CastChecked<AMT2LoadTestController>(Pawns[0]->GetController()); First->Think(1.);
 	TestEqual(TEXT("AI selects a living monster through native combat"), Pawns[0]->GetCombatComponent()->GetSelectedTarget(), static_cast<AActor*>(Mob));
+	const FString FirstId = AMT2WorldItem::ResolvePlayerIdentity(States[0].Get());
+	const FString SecondId = AMT2WorldItem::ResolvePlayerIdentity(States[1].Get());
+	TestNotEqual(TEXT("Bots have distinct loot reservations"), FirstId, SecondId);
+	auto* OwnLoot = AMT2WorldItem::SpawnWorldYang(World, Pawns[0]->GetActorLocation(), 100,
+		Pawns[0].Get(), FirstId, TEXT("Bot"), 60.f);
+	auto* OtherLoot = AMT2WorldItem::SpawnWorldYang(World, Pawns[0]->GetActorLocation(), 100,
+		Pawns[0].Get(), SecondId, TEXT("Other bot"), 60.f);
+	if (!TestNotNull(TEXT("Own loot"), OwnLoot) || !TestNotNull(TEXT("Other loot"), OtherLoot)) return false;
+	const int64 PreviousYang = States[0]->GetYang();
+	First->Think(3.);
+	TestEqual(TEXT("Bot collects its own yang"), States[0]->GetYang(), PreviousYang + 100);
+	TestTrue(TEXT("Collected loot destroyed"), OwnLoot->IsActorBeingDestroyed());
+	TestFalse(TEXT("Other bot's loot remains"), OtherLoot->IsActorBeingDestroyed());
 	TestEqual(TEXT("Clear removes only fake actors"), Harness->ClearPlayers(), 3);
 	Grid->RebuildPlayerGrid();
 	TestEqual(TEXT("No fake actors remain"), Harness->GetPlayerCount(), 0);

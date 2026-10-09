@@ -261,6 +261,12 @@ FString AMT2WorldItem::ResolvePlayerIdentity(const AMT2PlayerState* PlayerState)
 	{
 		return FString();
 	}
+	// AI controllers do not receive the GameMode's human PlayerId allocation.
+	// Keep each bot's loot reservation distinct without creating a persistence identity.
+	if (PlayerState->IsABot())
+	{
+		return FString::Printf(TEXT("Bot:%u"), PlayerState->GetUniqueID());
+	}
 	if (const UMT2PersistenceComponent* Persistence = PlayerState->GetPersistenceComponent())
 	{
 		if (!Persistence->GetEntityId().IsEmpty())

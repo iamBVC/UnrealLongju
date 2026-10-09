@@ -263,6 +263,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void RequestPickupNearbyItems();
 	void RequestPickupWorldItem(AMT2WorldItem* WorldItem);
+	void BroadcastExperienceOrbs(const FVector& SourceLocation, int64 ExperienceAmount);
 
 	UFUNCTION(Client, Unreliable, Category = "Combat|Feedback")
 	void ClientShowDamageNumber(AActor* TargetActor, float Damage, EMT2DamageDisplayType DamageType);
@@ -298,6 +299,8 @@ private:
 	void ServerPickupWorldItem(AMT2WorldItem* WorldItem);
 
 	void TryPickupWorldItemOnServer(AMT2WorldItem* WorldItem);
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastSpawnExperienceOrbs(FVector_NetQuantize SourceLocation, int64 ExperienceAmount);
 
 	void HandleMoveInput(const FInputActionValue& Value);
 	void HandleLookInput(const FInputActionValue& Value);

@@ -37,6 +37,7 @@
 #include "EnhancedInputComponent.h"
 #include "Equipment/MT2EquipmentComponent.h"
 #include "Effects/MT2MotionEffectComponent.h"
+#include "Effects/MT2ExperienceOrbActor.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/PlayerController.h"
@@ -2467,6 +2468,20 @@ void AMT2PlayerCharacter::RequestPickupNearbyItems()
 	{
 		ServerPickupNearbyItems();
 	}
+}
+
+void AMT2PlayerCharacter::BroadcastExperienceOrbs(const FVector& SourceLocation, int64 ExperienceAmount)
+{
+	if (HasAuthority() && ExperienceAmount > 0 && !SourceLocation.ContainsNaN())
+	{
+		MulticastSpawnExperienceOrbs(SourceLocation, ExperienceAmount);
+	}
+}
+
+void AMT2PlayerCharacter::MulticastSpawnExperienceOrbs_Implementation(
+	FVector_NetQuantize SourceLocation, int64 ExperienceAmount)
+{
+	AMT2ExperienceOrbActor::SpawnOrbs(GetWorld(), SourceLocation, this, ExperienceAmount);
 }
 
 void AMT2PlayerCharacter::RequestPickupWorldItem(AMT2WorldItem* WorldItem)

@@ -61,6 +61,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item") int64 GetYangAmount() const { return YangAmount; }
 	UFUNCTION(BlueprintPure, Category = "Item") FString GetItemDisplayName() const;
 	UFUNCTION(BlueprintPure, Category = "Item") const FString& GetOwnershipDisplayName() const { return OwnerDisplayName; }
+	const FString& GetOwnershipCharacterId() const { return OwnerCharacterId; }
 
 	static FString ResolvePlayerIdentity(const AMT2PlayerState* PlayerState);
 

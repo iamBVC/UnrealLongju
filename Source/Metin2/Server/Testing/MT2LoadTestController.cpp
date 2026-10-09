@@ -7,6 +7,7 @@
 #include "Engine/World.h"
 #include "FramePro/FramePro.h"
 #include "Mobs/MT2Mob.h"
+#include "Items/MT2WorldItem.h"
 #include "Player/MT2PlayerState.h"
 #include "Server/Testing/MT2LoadTestSettings.h"
 #include "Server/Testing/MT2LoadTestSubsystem.h"
@@ -37,6 +38,7 @@ void AMT2LoadTestController::InitializeBehavior(const FVector& Origin, float Rad
 	Home = Origin; RoamRadius = Radius;
 	TrackedPawn = Cast<AMT2PlayerCharacter>(GetPawn());
 	NextDecisionTime = GetWorld()->GetTimeSeconds() + FMath::FRandRange(0.f, .5f);
+	NextPickupTime = NextDecisionTime + FMath::FRandRange(0.f, 1.f);
 	if (auto* Grid = GetWorld()->GetSubsystem<UMT2PlayerSpatialGridSubsystem>())
 	{
 		Grid->RegisterSimulatedPlayer(TrackedPawn.Get());
@@ -63,6 +65,24 @@ void AMT2LoadTestController::Think(double Now)
 		return;
 	}
 	DeadSince = -1.;
+	if (Now >= NextPickupTime)
+	{
+		NextPickupTime = Now + 1.;
+		const FString OwnerId = AMT2WorldItem::ResolvePlayerIdentity(GetPlayerState<AMT2PlayerState>());
+		TArray<FOverlapResult> LootHits;
+		FCollisionObjectQueryParams LootObjects; LootObjects.AddObjectTypesToQuery(ECC_WorldDynamic);
+		GetWorld()->OverlapMultiByObjectType(LootHits, BotPawn->GetActorLocation(), FQuat::Identity, LootObjects,
+			FCollisionShape::MakeSphere(1000.f),
+			FCollisionQueryParams(SCENE_QUERY_STAT(MT2FakePlayerLoot), false, BotPawn));
+		for (const auto& Hit : LootHits)
+		{
+			auto* Item = Cast<AMT2WorldItem>(Hit.GetActor());
+			if (IsValid(Item) && !Item->IsActorBeingDestroyed() && Item->GetOwnershipCharacterId() == OwnerId)
+			{
+				BotPawn->RequestPickupWorldItem(Item);
+			}
+		}
+	}
 	auto IsCandidate = [this](const AMT2Mob* Mob)
 	{
 		return IsValid(Mob) && !Mob->IsActorBeingDestroyed() && Mob->GetMobType() == EMT2MobType::Monster &&

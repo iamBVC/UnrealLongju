@@ -24,6 +24,7 @@ private:
 	double NextDecisionTime = 0.;
 	double DeadSince = -1.;
 	double NextWanderTime = 0.;
+	double NextPickupTime = 0.;
 	TWeakObjectPtr<AMT2Mob> Target;
 	TWeakObjectPtr<AMT2PlayerCharacter> TrackedPawn;
 };
