@@ -19,6 +19,7 @@
 #include "Player/MT2PlayerController.h"
 #include "Player/MT2PlayerState.h"
 #include "Mobs/MT2Mob.h"
+#include "Mobs/MT2MetinStone.h"
 #include "AbilitySystemComponent.h"
 #include "Abilities/MT2CoreAttributeSet.h"
 #include "Server/Testing/MT2LoadTestController.h"
@@ -100,6 +101,15 @@ bool FMT2FakePlayersTest::RunTest(const FString&)
 	TestEqual(TEXT("Bot collects its own yang"), States[0]->GetYang(), PreviousYang + 100);
 	TestTrue(TEXT("Collected loot destroyed"), OwnLoot->IsActorBeingDestroyed());
 	TestFalse(TEXT("Other bot's loot remains"), OtherLoot->IsActorBeingDestroyed());
+	Mob->Destroy();
+	auto* Stone = World->SpawnActor<AMT2MetinStone>();
+	FMT2MobDefinition StoneDefinition; StoneDefinition.Type = EMT2MobType::Stone;
+	Stone->ConfigureFromDefinition(StoneDefinition);
+	Stone->SetActorLocation(Pawns[0]->GetActorLocation() + FVector(200, 0, 0));
+	Stone->GetAbilitySystemComponent()->SetNumericAttributeBase(UMT2CoreAttributeSet::GetMaxHealthAttribute(), 100.f);
+	Stone->GetAbilitySystemComponent()->SetNumericAttributeBase(UMT2CoreAttributeSet::GetHealthAttribute(), 100.f);
+	First->Think(5.);
+	TestEqual(TEXT("Bots target Metin stones through native combat"), Pawns[0]->GetCombatComponent()->GetSelectedTarget(), static_cast<AActor*>(Stone));
 	TestEqual(TEXT("Clear removes only fake actors"), Harness->ClearPlayers(), 3);
 	Grid->RebuildPlayerGrid();
 	TestEqual(TEXT("No fake actors remain"), Harness->GetPlayerCount(), 0);

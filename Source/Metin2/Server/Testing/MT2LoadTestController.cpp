@@ -85,7 +85,8 @@ void AMT2LoadTestController::Think(double Now)
 	}
 	auto IsCandidate = [this](const AMT2Mob* Mob)
 	{
-		return IsValid(Mob) && !Mob->IsActorBeingDestroyed() && Mob->GetMobType() == EMT2MobType::Monster &&
+		return IsValid(Mob) && !Mob->IsActorBeingDestroyed() &&
+			(Mob->GetMobType() == EMT2MobType::Monster || Mob->IsMetinStone()) &&
 			!Mob->GetHealthComponent()->IsDead() && FVector::DistSquared2D(Home, Mob->GetActorLocation()) <= FMath::Square(RoamRadius);
 	};
 	if (!IsCandidate(Target.Get())) Target.Reset();
