@@ -237,8 +237,7 @@ void UMT2WorldSimulationSubsystem::TickServerSimulation(double Now)
 			// Target changes during TickBehavior can remove the deadline entry; reacquire it.
 			NextMobUpdateTimes.FindOrAdd(Mob) = Now + Mob->GetMobAIComponent()->GetLegacyUpdateDelay();
 			// These checks carry gameplay state; normal locomotion sends only segment changes.
-			const float DesiredNetFrequency = Mob->IsReplicatingMovement()
-				? Settings->KnockbackReplicationRate : Settings->BaselineMobReplicationRate;
+			const float DesiredNetFrequency = Settings->BaselineMobReplicationRate;
 			if (!FMath::IsNearlyEqual(Mob->GetNetUpdateFrequency(), DesiredNetFrequency))
 			{
 				Mob->SetNetUpdateFrequency(DesiredNetFrequency);

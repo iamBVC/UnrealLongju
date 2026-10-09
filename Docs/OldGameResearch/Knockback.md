@@ -71,18 +71,25 @@ Skills carry their own values (e.g. `skill/palbang.msa` = HittingType 1, Externa
 - On a landed hit, push the victim away from the attacker by a distance scaled from
   ExternalForce; skip when the victim is NOMOVE (matching the CRUSH rule).
 - The current player skill path uses CRUSH/CRUSH_LONG distances of 200/400, independent of motion force. Original NPC-attacker 400/800 variants are not implemented by that player-only casting path.
-- `AMT2CharacterBase` applies a native `FMT2KnockbackRootMotion` source, with reliable
+- For player victims, `AMT2CharacterBase` applies a native `FMT2KnockbackRootMotion` source, with reliable
   notification to the autonomous owner. Simulated proxies follow replicated movement rather
   than launching independently. Movement stays collision-aware and retains no-walk checks.
-- Mob movement uses UE's walking solver only while root-motion sources are active, and AI tick
-  policy keeps the movement component enabled during the shove and is restored afterward.
-  Death clears the named source so it cannot resume on revival. Normal mob attacks also use
+- Mob victims replicate a persistent `MoveSegment` with start, destination, server time, duration
+  and external-motion flag. Both authority and observers evaluate `t * (2 - t)`: a straight
+  horizontal slide starting at twice average speed and slowing to zero. The server samples at
+  the configured legacy movement interval; clients render every frame, including mid-slide
+  relevancy entry. There are no mob root-motion sources, movement snapshots or knockback RPCs.
+  A single ground probe maintains capsule height per step; authoritative capsule sweeps and
+  no-walk checks stop at obstructions without lateral sliding. Facing is preserved. Start and
+  final/blocked stop force property updates; ordinary samples do not publish corrections.
+  AI steering cannot replace or cancel a shove. Completion restores AI tick policy; death clears
+  the segment so it cannot resume on revival. Normal mob attacks also use
   the actual played motion's force. Stones, NPCs, buildings, doors, NOMOVE and legacy huge
   race 2493 reject pushes; dead victims are not moved.
 - Player swing metadata is resolved from the configured animation-class defaults and the
   authoritative weapon set, even when the server has no live AnimInstance. Equipped swings
   must never silently fall back to the zero-force unarmed attack. The warrior sword regression
-  exercises all four hits through damage delivery and checks the target's movement source.
+  exercises all four hits through damage delivery and checks the target's displacement segment.
 - The warrior sword finisher stores force 17 in a special-attack event at 0.659316 seconds,
   while its base block says force 0 and has no active normal window. Combat schedules damage,
   reaction and shove together at that event, divided by the actual attack-motion play rate.

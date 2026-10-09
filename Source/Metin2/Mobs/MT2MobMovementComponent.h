@@ -37,7 +37,7 @@ public:
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void StopMovementImmediately() override;
 	void StartMoveSegment(const FVector& Destination, float AcceptanceRadius);
-	void BeginExternalKnockback();
+	void BeginExternalKnockback(const FVector& Direction, float Distance, float Duration);
 	void FinishExternalKnockback();
 	const FMT2MobMoveSegment& GetMoveSegment() const { return MoveSegment; }
 	bool IsMoveSegmentInProgress() const;
@@ -53,14 +53,7 @@ protected:
 	FVector RequestedDestination = FVector::ZeroVector;
 	float RequestedAcceptanceRadius = 0.f;
 	float SegmentSpeed = 0.f;
-	bool bClientExternalMotion = false;
 	friend class FMT2MobMoveSegmentsTest;
-	bool bHadKnockbackMovement = false;
+	friend class FMT2KnockbackMovementTest;
 	virtual void PhysWalking(float DeltaSeconds, int32 Iterations) override;
-	virtual void SimulatedTick(float DeltaSeconds) override;
-	virtual void SmoothCorrection(
-		const FVector& OldLocation,
-		const FQuat& OldRotation,
-		const FVector& NewLocation,
-		const FQuat& NewRotation) override;
 };

@@ -27,7 +27,6 @@ bool FMT2LegacyMobSchedulingTest::RunTest(const FString&)
 	TestTrue(TEXT("Pulse setting changes movement cadence"), FMath::IsNearlyEqual(Settings->GetMovementInterval(), .08f));
 	Settings->LegacyPulseRate = 25;
 	TGuardValue<float> Baseline(Settings->BaselineMobReplicationRate, 1.f);
-	TGuardValue<float> Knockback(Settings->KnockbackReplicationRate, 15.f);
 	TGuardValue<int32> AggressiveMin(Settings->LegacyAggressiveIdleMinSeconds, 1);
 	TGuardValue<int32> AggressiveMax(Settings->LegacyAggressiveIdleMaxSeconds, 3);
 	TGuardValue<int32> PassiveMin(Settings->LegacyPassiveIdleMinSeconds, 3);
@@ -62,8 +61,8 @@ bool FMT2LegacyMobSchedulingTest::RunTest(const FString&)
 	Simulation->WakeMobAI(Mob);
 	TestFalse(TEXT("An event clears the old idle deadline"), Simulation->NextMobUpdateTimes.Contains(Mob));
 	auto* Movement = CastChecked<UMT2MobMovementComponent>(Mob->GetCharacterMovement());
-	Movement->BeginExternalKnockback();
-	TestEqual(TEXT("Knockback raises rate without waiting for sleeping AI"), Mob->GetNetUpdateFrequency(), 15.f);
+	Movement->BeginExternalKnockback(FVector::ForwardVector, 200.f, 1.f);
+	TestEqual(TEXT("Knockback retains event-driven baseline rate"), Mob->GetNetUpdateFrequency(), 1.f);
 	Movement->FinishExternalKnockback();
 	TestEqual(TEXT("Knockback completion restores baseline rate"), Mob->GetNetUpdateFrequency(), 1.f);
 	auto* Target = World->SpawnActor<AMT2Mob>(); Target->SetActorLocation(FVector(1000,0,110));

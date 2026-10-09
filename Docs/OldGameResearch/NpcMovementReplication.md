@@ -25,9 +25,9 @@
 - Ground projection, swept capsule collision and the cooked no-walk grid remain authoritative.
   A blocked movement or missing ground terminates the segment and publishes the actual endpoint.
   This intentionally retains Unreal world collision instead of copying the legacy server's flat XY-only model.
-- Knockback temporarily restores the existing full-rate swept root-motion/snapshot path. Completing
-  the impulse or dying publishes a stopped segment and disables ordinary actor movement replication
-  again. Client smoothing offsets are cleared when returning to segment presentation.
+- Knockback uses the same segment path with the legacy ease-out curve and preserved victim facing.
+  Completing the impulse, hitting an obstruction or dying publishes a stopped segment at the actual
+  location. Native movement/root-motion replication stays disabled throughout mob locomotion.
 - The frequent mob scheduler iterates an active set instead of checking all registered mobs.
   Existing spatial-relevance region occupancy removes/adds members and resets their next AI deadline.
   The relevance refresh still runs once per second and scans registered relevance components;
@@ -59,8 +59,9 @@ Project Settings > Game > Mob Runtime / `Config/DefaultGame.ini`:
 - `BaselineMobReplicationRate=1`: Unreal property polling fallback, not a legacy packet frequency.
   Movement commands, state changes, health/max-health changes and actions force updates. Mob grid
   lists honor these forced updates and configured periods instead of engine distance/view-angle zones.
-- `KnockbackReplicationRate=15`: temporary authoritative snapshot rate; clients interpolate ordinary
-  movement segments locally. Both existing and newly observing connections use the configured period.
+- Knockback uses a timed ease-out segment at the same baseline polling rate, with forced start/stop
+  updates. Observers evaluate the trajectory locally; mobs do not stream native movement/root-motion
+  snapshots during a shove. Capsule sweeps and no-walk checks remain authoritative.
 - `ReplicationGridCellSize=6400`: replication partition size only; it does not replace the existing
   simulation-region occupancy system with the legacy nine-neighbour-sector implementation.
 - `MovementRetargetDistance=50`: suppresses small chase-destination changes; speed/acceptance changes
@@ -74,10 +75,11 @@ with owning-client prediction; player observer traffic needs a separate measured
 
 `Metin2.World.MobMoveSegments` covers cadence, unchanged-request suppression, packet-free movement
 steps, client catch-up, client authority rejection, stopping, walls, no-walk cells, active-set/dormancy
-wake-up and the impulse networking handoff. Existing combat/knockback timing tests remain relevant.
+wake-up, eased shove timing, facing, ground stability and late-observer convergence. Existing
+combat/knockback timing tests remain relevant.
 
 `Metin2.World.LegacyMobScheduling` covers configurable pulse cadence, aggressive/passive idle
-deadlines, sleeping-decision suppression, event wake-up and immediate knockback-rate transitions.
+deadlines, sleeping-decision suppression, event wake-up and event-driven knockback polling.
 These fixtures do not exercise actual packets across multiple network connections.
 
 A packaged-server capture and multiplayer playtest are required to measure actual CPU/bandwidth

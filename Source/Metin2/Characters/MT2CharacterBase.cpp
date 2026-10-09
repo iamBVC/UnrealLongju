@@ -298,7 +298,11 @@ void AMT2CharacterBase::ApplyKnockback(const AActor* KnockbackInstigator, float 
 	const float SlideDuration = Duration > 0 ? Duration : 1.f;
 	if (!FMath::IsFinite(SlideDuration) || SlideDuration < .05f || SlideDuration > 5.f) { return; }
 	StartKnockback(Direction.GetSafeNormal2D(), Distance, SlideDuration);
-	MulticastKnockback(Direction.GetSafeNormal2D(), Distance, SlideDuration);
+	// Mobs replicate their timed segment, including to observers entering relevancy mid-slide.
+	if (!Cast<UMT2MobMovementComponent>(GetCharacterMovement()))
+	{
+		MulticastKnockback(Direction.GetSafeNormal2D(), Distance, SlideDuration);
+	}
 	ForceNetUpdate();
 }
 
@@ -319,7 +323,15 @@ void AMT2CharacterBase::StartKnockback(const FVector& Direction, float Distance,
 		return;
 	}
 	Movement->SetComponentTickEnabled(true);
-	if (auto* MobMovement = Cast<UMT2MobMovementComponent>(Movement)) { MobMovement->BeginExternalKnockback(); }
+	if (auto* MobMovement = Cast<UMT2MobMovementComponent>(Movement))
+	{
+		if (HasAuthority())
+		{
+			GetHealthComponent()->OnDeath.AddUniqueDynamic(this, &AMT2CharacterBase::ClearKnockbackOnDeath);
+			MobMovement->BeginExternalKnockback(Direction, Distance, Duration);
+		}
+		return;
+	}
 	if (!HasAuthority() && !IsLocallyControlled()) { return; }
 	GetHealthComponent()->OnDeath.AddUniqueDynamic(this, &AMT2CharacterBase::ClearKnockbackOnDeath);
 	// Both authority and autonomous owner use UE's root-motion-source prediction/correction.
@@ -344,5 +356,6 @@ void AMT2CharacterBase::ClearKnockbackOnDeath()
 	if (auto* Movement = GetCharacterMovement())
 	{
 		Movement->RemoveRootMotionSource(FName(TEXT("MT2Knockback")));
+		if (auto* MobMovement = Cast<UMT2MobMovementComponent>(Movement)) { MobMovement->FinishExternalKnockback(); }
 	}
 }

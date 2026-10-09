@@ -54,8 +54,6 @@ public:
 	// UE fallback polling, not a legacy packet rate. Changed gameplay state forces an immediate update.
 	UPROPERTY(Config, EditAnywhere, Category="Replication", meta=(ClampMin="0.1", Units="Hz"))
 	float BaselineMobReplicationRate = 1.f;
-	UPROPERTY(Config, EditAnywhere, Category="Replication", meta=(ClampMin="1", Units="Hz"))
-	float KnockbackReplicationRate = 15.f;
 	UPROPERTY(Config, EditAnywhere, Category="Replication", meta=(ClampMin="100", Units="cm"))
 	float ReplicationGridCellSize = 6400.f;
 

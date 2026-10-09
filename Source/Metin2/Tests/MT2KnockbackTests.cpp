@@ -7,6 +7,7 @@
 #include "Mobs/MT2Mob.h"
 #include "Mobs/MT2MetinStone.h"
 #include "Mobs/MT2MobAIComponent.h"
+#include "Mobs/MT2MobMovementComponent.h"
 #include "Animation/MT2AnimationMotionData.h"
 #include "Animation/MT2CharacterAnimInstance.h"
 #include "Animation/MT2MobAnimInstance.h"
@@ -87,15 +88,26 @@ bool FMT2KnockbackMovementTest::RunTest(const FString&)
 	ASC->SetNumericAttributeBase(UMT2CoreAttributeSet::GetMaxHealthAttribute(), 100);
 	ASC->SetNumericAttributeBase(UMT2CoreAttributeSet::GetHealthAttribute(), 100);
 	Victim->GetHealthComponent()->InitializeWithAbilitySystem(ASC);
-	auto* Move = Victim->GetCharacterMovement(); Move->bRunPhysicsWithNoController = true;
+	auto* Move = CastChecked<UMT2MobMovementComponent>(Victim->GetCharacterMovement()); Move->bRunPhysicsWithNoController = true;
+	const auto StepSlide = [Move]()
+	{
+		// Advance the replicated timeline without ticking unrelated AI/spawners in this fixture.
+		for (int32 Step = 0; Step < 21; ++Step)
+		{
+			Move->MoveSegment.ServerStartTime -= .05;
+			Move->TickComponent(.05f, LEVELTICK_All, nullptr);
+		}
+	};
 	Move->SetMovementMode(MOVE_Walking);
 	AddInfo(FString::Printf(TEXT("Fixture authority=%d health=%.1f movable=%d type=%d"), Victim->HasAuthority(), Victim->GetHealthComponent()->GetHealth(), Victim->CanBeKnockedBack(), int32(Victim->GetMobType())));
 	Victim->ApplyKnockback(Attacker, 200);
-	TestTrue(TEXT("Authoritative shove installs root motion"), Move->HasRootMotionSources());
+	TestTrue(TEXT("Authoritative shove publishes external segment"), Move->GetMoveSegment().bExternalMotion);
+	TestFalse(TEXT("Mob shove does not install replicated root motion"), Move->HasRootMotionSources());
+	TestFalse(TEXT("Mob shove does not stream movement snapshots"), Victim->IsReplicatingMovement());
 	TestTrue(TEXT("Stationary victim movement tick enabled"), Move->IsComponentTickEnabled());
 	Victim->GetMobAIComponent()->ApplyTickPolicy();
 	TestTrue(TEXT("AI cannot disable active shove"), Move->IsComponentTickEnabled());
-	for (int32 Step = 0; Step < 21; ++Step) { Move->TickComponent(.05f, LEVELTICK_All, nullptr); }
+	StepSlide();
 	AddInfo(FString::Printf(TEXT("Victim position after slide: %s"), *Victim->GetActorLocation().ToString()));
 	TestTrue(TEXT("Victim moved away a bounded distance"), Victim->GetActorLocation().X > 450 && Victim->GetActorLocation().X < 520);
 	TestTrue(TEXT("Slide stays grounded"), Move->IsMovingOnGround());
@@ -103,7 +115,7 @@ bool FMT2KnockbackMovementTest::RunTest(const FString&)
 	TestFalse(TEXT("Idle AI tick policy restored after shove"), Move->IsComponentTickEnabled());
 	Victim->SetActorLocation(FVector(300,0,110)); Move->SetMovementMode(MOVE_Walking);
 	Victim->ApplyKnockback(Attacker, 200, 0.f, true);
-	for (int32 Step = 0; Step < 21; ++Step) { Move->TickComponent(.05f, LEVELTICK_All, nullptr); }
+	StepSlide();
 	TestTrue(TEXT("Horse-style shove is sideways"), Victim->GetActorLocation().Y > 150 && FMath::Abs(Victim->GetActorLocation().X - 300) < 1);
 	auto* Map = World->SpawnActor<AMT2MapPresentationActor>();
 	Map->WorldMin = FVector2D(0,-1000); Map->WorldMax = FVector2D(1000,1000);
@@ -112,7 +124,7 @@ bool FMT2KnockbackMovementTest::RunTest(const FString&)
 	World->GetSubsystem<UMT2MapAttributeSubsystem>()->RegisterMap(Map);
 	Victim->SetActorLocation(FVector(300,0,110)); Move->SetMovementMode(MOVE_Walking);
 	Victim->ApplyKnockback(Attacker, 200);
-	for (int32 Step = 0; Step < 21; ++Step) { Move->TickComponent(.05f, LEVELTICK_All, nullptr); }
+	StepSlide();
 	TestTrue(TEXT("Shove respects no-walk boundary"), Victim->GetActorLocation().X > 300 && Victim->GetActorLocation().X < 400.1);
 	World->GetSubsystem<UMT2MapAttributeSubsystem>()->UnregisterMap(Map);
 	auto* Wall = World->SpawnActor<AActor>(); auto* WallBox = NewObject<UBoxComponent>(Wall);
@@ -120,14 +132,14 @@ bool FMT2KnockbackMovementTest::RunTest(const FString&)
 	WallBox->SetCollisionProfileName(TEXT("BlockAll")); WallBox->RegisterComponent(); Wall->SetActorLocation(FVector(440,0,100));
 	Victim->SetActorLocation(FVector(300,0,110)); Move->SetMovementMode(MOVE_Walking);
 	Victim->ApplyKnockback(Attacker, 200);
-	for (int32 Step = 0; Step < 21; ++Step) { Move->TickComponent(.05f, LEVELTICK_All, nullptr); }
+	StepSlide();
 	TestTrue(TEXT("Shove sweeps against physical walls"), Victim->GetActorLocation().X > 300 && Victim->GetActorLocation().X < 430);
 	Victim->ApplyKnockback(Attacker, 200);
 	ASC->SetNumericAttributeBase(UMT2CoreAttributeSet::GetHealthAttribute(), 0);
-	for (int32 Step = 0; Step < 21; ++Step) { Move->TickComponent(.05f, LEVELTICK_All, nullptr); }
-	TestFalse(TEXT("Death cancels the active shove"), Move->HasRootMotionSources());
+	StepSlide();
+	TestFalse(TEXT("Death cancels the active shove"), Move->GetMoveSegment().bExternalMotion);
 	Victim->ApplyKnockback(Attacker, 200);
-	TestFalse(TEXT("Dead victims reject further pushes"), Move->HasRootMotionSources());
+	TestFalse(TEXT("Dead victims reject further pushes"), Move->GetMoveSegment().bExternalMotion);
 	auto* Stone = World->SpawnActor<AMT2MetinStone>(); Stone->ApplyKnockback(Attacker, 200);
 	TestFalse(TEXT("Stone cannot be pushed"), Stone->GetCharacterMovement()->HasRootMotionSources());
 	Move->RemoveRootMotionSource(FName(TEXT("MT2Knockback")));
@@ -182,21 +194,20 @@ bool FMT2WarriorComboKnockbackTest::RunTest(const FString&)
 		TargetASC->SetNumericAttributeBase(UMT2CoreAttributeSet::GetHealthAttribute(), 10000);
 		Target->GetHealthComponent()->InitializeWithAbilitySystem(TargetASC);
 		TestTrue(TEXT("Sword hit reaches mob damage pipeline"), Player->GetCombatComponent()->PerformBasicAttackOnTarget(Target));
-		TestFalse(TEXT("No knockback at swing start"), Target->GetCharacterMovement()->HasRootMotionSources());
+		TestFalse(TEXT("No knockback at swing start"), CastChecked<UMT2MobMovementComponent>(Target->GetCharacterMovement())->GetMoveSegment().bExternalMotion);
 		TestEqual(TEXT("No damage at swing start"), Target->GetHealthComponent()->GetHealth(), 10000.f);
 		const float PlayRate = FMath::Max(Player->GetCombatStatsComponent()->GetCalculatedStats().AttackSpeed / 100.f, .1f);
 		const float HitDelay = Motion->AttackEvents[0].TimeSeconds / PlayRate;
 		TickTimers(HitDelay - .001f);
-		TestFalse(TEXT("No knockback before authored hit"), Target->GetCharacterMovement()->HasRootMotionSources());
+		TestFalse(TEXT("No knockback before authored hit"), CastChecked<UMT2MobMovementComponent>(Target->GetCharacterMovement())->GetMoveSegment().bExternalMotion);
 		TestEqual(TEXT("No damage before authored hit"), Target->GetHealthComponent()->GetHealth(), 10000.f);
 		TickTimers(.002f);
 		TestTrue(TEXT("Damage lands with authored hit"), Target->GetHealthComponent()->GetHealth() < 10000.f);
-		const auto Source = Target->GetCharacterMovement()->GetRootMotionSource(FName(TEXT("MT2Knockback")));
-		TestTrue(TEXT("Landed sword hit starts mob knockback"), Expected <= 0 || Source.IsValid());
-		if (Source.IsValid())
+		const auto& Segment = CastChecked<UMT2MobMovementComponent>(Target->GetCharacterMovement())->GetMoveSegment();
+		TestTrue(TEXT("Landed sword hit starts mob knockback"), Expected <= 0 || Segment.bExternalMotion);
+		if (Segment.bExternalMotion)
 		{
-			const auto Force = StaticCastSharedPtr<FRootMotionSource_ConstantForce>(Source);
-			TestTrue(TEXT("Sword hit uses the correct authored displacement"), FMath::IsNearlyEqual(Force->Force.Size2D() * Force->Duration, double(Expected), .01));
+			TestTrue(TEXT("Sword hit uses the correct authored displacement"), FMath::IsNearlyEqual(FVector::Dist2D(Segment.Start, Segment.Destination), double(Expected), .01));
 		}
 	}
 	// Separate timings and force values survive speed scaling and timer capture.
@@ -221,12 +232,12 @@ bool FMT2WarriorComboKnockbackTest::RunTest(const FString&)
 	TickTimers(.101f);
 	const float FirstHealth = Target->GetHealthComponent()->GetHealth();
 	TestTrue(TEXT("First hit scales to 0.1 seconds"), FirstHealth < 10000.f);
-	TestFalse(TEXT("First hit does not borrow finisher force"), Target->GetCharacterMovement()->HasRootMotionSources());
+	TestFalse(TEXT("First hit does not borrow finisher force"), CastChecked<UMT2MobMovementComponent>(Target->GetCharacterMovement())->GetMoveSegment().bExternalMotion);
 	TickTimers(.1f);
 	TestTrue(TEXT("Second hit has independent damage"), Target->GetHealthComponent()->GetHealth() < FirstHealth);
-	TestFalse(TEXT("Second hit does not borrow finisher force"), Target->GetCharacterMovement()->HasRootMotionSources());
+	TestFalse(TEXT("Second hit does not borrow finisher force"), CastChecked<UMT2MobMovementComponent>(Target->GetCharacterMovement())->GetMoveSegment().bExternalMotion);
 	TickTimers(.2f);
-	TestTrue(TEXT("Final event alone starts knockback"), Target->GetCharacterMovement()->HasRootMotionSources());
+	TestTrue(TEXT("Final event alone starts knockback"), CastChecked<UMT2MobMovementComponent>(Target->GetCharacterMovement())->GetMoveSegment().bExternalMotion);
 	Player->GetCombatComponent()->PerformBasicAttackOnTarget(Target);
 	const float BeforeCancel = Target->GetHealthComponent()->GetHealth();
 	Player->GetCombatComponent()->CancelPendingBasicAttackHits();

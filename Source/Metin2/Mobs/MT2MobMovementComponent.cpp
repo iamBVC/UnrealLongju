@@ -69,7 +69,7 @@ void UMT2MobMovementComponent::CompleteExpiredMoveSegment()
 
 void UMT2MobMovementComponent::StartMoveSegment(const FVector& Destination, float AcceptanceRadius)
 {
-	if (!CharacterOwner || !CharacterOwner->HasAuthority() || !HasValidData() || HasRootMotionSources() ||
+	if (!CharacterOwner || !CharacterOwner->HasAuthority() || !HasValidData() || HasRootMotionSources() || MoveSegment.bExternalMotion ||
 		Destination.ContainsNaN() || GetMaxSpeed() <= UE_SMALL_NUMBER) { return; }
 	const float RetargetDistance = GetDefault<UMT2MobRuntimeSettings>()->MovementRetargetDistance;
 	if (IsMoveSegmentInProgress() && FVector::DistSquared2D(RequestedDestination, Destination) <= FMath::Square(RetargetDistance) &&
@@ -118,6 +118,8 @@ void UMT2MobMovementComponent::UpdateReplicationFrequency(float Frequency)
 
 void UMT2MobMovementComponent::StopMovementImmediately()
 {
+	// AI stopping locomotion must not cancel a combat shove. Death/teardown use FinishExternalKnockback.
+	if (MoveSegment.bExternalMotion) { return; }
 	Super::StopMovementImmediately();
 	if (MoveSegment.bMoving && CharacterOwner && CharacterOwner->HasAuthority())
 	{
@@ -126,33 +128,31 @@ void UMT2MobMovementComponent::StopMovementImmediately()
 	}
 }
 
-void UMT2MobMovementComponent::BeginExternalKnockback()
+void UMT2MobMovementComponent::BeginExternalKnockback(const FVector& Direction, float Distance, float Duration)
 {
-	if (!CharacterOwner) { return; }
-	if (!CharacterOwner->HasAuthority()) { bClientExternalMotion = true; }
-	if (CharacterOwner->HasAuthority())
-	{
-		PublishStoppedSegment();
-		MoveSegment.bExternalMotion = true; ++MoveSegment.Serial;
-		CharacterOwner->SetReplicateMovement(true);
-		UpdateReplicationFrequency(GetDefault<UMT2MobRuntimeSettings>()->KnockbackReplicationRate);
-		CharacterOwner->ForceNetUpdate();
-	}
-	SetComponentTickInterval(0.f); SetComponentTickEnabled(true);
+	if (!HasValidData() || !CharacterOwner->HasAuthority() || Direction.ContainsNaN() ||
+		Direction.GetSafeNormal2D().IsNearlyZero() || !FMath::IsFinite(Distance) || Distance <= 0.f ||
+		!FMath::IsFinite(Duration) || Duration < .05f || Duration > 5.f) { return; }
+	Super::StopMovementImmediately();
+	MoveSegment.Start = UpdatedComponent->GetComponentLocation();
+	MoveSegment.Destination = FVector(MoveSegment.Start) + Direction.GetSafeNormal2D() * Distance;
+	MoveSegment.ServerStartTime = GetMovementServerTime();
+	MoveSegment.Duration = Duration;
+	MoveSegment.bMoving = true;
+	MoveSegment.bExternalMotion = true;
+	++MoveSegment.Serial;
+	// One persistent command drives authority and observers. Never mix floor prediction or
+	// replicated root motion with the mob's locally evaluated displacement.
+	CharacterOwner->SetReplicateMovement(false);
+	UpdateReplicationFrequency(GetDefault<UMT2MobRuntimeSettings>()->BaselineMobReplicationRate);
+	SetComponentTickInterval(GetDefault<UMT2MobRuntimeSettings>()->GetMovementInterval());
+	SetComponentTickEnabled(true);
+	CharacterOwner->ForceNetUpdate();
 }
 
 void UMT2MobMovementComponent::OnRep_MoveSegment()
 {
 	if (!CharacterOwner || CharacterOwner->HasAuthority()) { return; }
-	if (bClientExternalMotion && !MoveSegment.bExternalMotion)
-	{
-		ResetPredictionData_Client();
-		if (USkeletalMeshComponent* Mesh = CharacterOwner->GetMesh())
-		{
-			Mesh->SetRelativeLocationAndRotation(CharacterOwner->GetBaseTranslationOffset(), CharacterOwner->GetBaseRotationOffset());
-		}
-	}
-	bClientExternalMotion = MoveSegment.bExternalMotion;
 	SetComponentTickInterval(0.f);
 	SetComponentTickEnabled(MoveSegment.bMoving || MoveSegment.bExternalMotion);
 	if (!MoveSegment.bMoving && !MoveSegment.bExternalMotion)
@@ -164,30 +164,16 @@ void UMT2MobMovementComponent::OnRep_MoveSegment()
 
 void UMT2MobMovementComponent::FinishExternalKnockback()
 {
+	if (!CharacterOwner || !CharacterOwner->HasAuthority() || !MoveSegment.bExternalMotion) { return; }
 	Super::StopMovementImmediately();
 	PublishStoppedSegment();
+	SetComponentTickInterval(GetDefault<UMT2MobRuntimeSettings>()->GetMovementInterval());
+	if (auto* Mob = Cast<AMT2Mob>(CharacterOwner)) { Mob->GetMobAIComponent()->ApplyTickPolicy(); }
 }
 
 void UMT2MobMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	if (!HasValidData() || !CharacterOwner) { return; }
-	if (HasRootMotionSources() || (!CharacterOwner->HasAuthority() && (MoveSegment.bExternalMotion || bClientExternalMotion)))
-	{
-		Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-		if (CharacterOwner->HasAuthority() && MoveSegment.bExternalMotion && !HasRootMotionSources())
-		{
-			FinishExternalKnockback();
-			SetComponentTickInterval(GetDefault<UMT2MobRuntimeSettings>()->GetMovementInterval());
-			if (auto* Mob = Cast<AMT2Mob>(CharacterOwner)) { Mob->GetMobAIComponent()->ApplyTickPolicy(); }
-		}
-		return;
-	}
-	if (CharacterOwner->HasAuthority() && MoveSegment.bExternalMotion)
-	{
-		PublishStoppedSegment();
-		SetComponentTickInterval(GetDefault<UMT2MobRuntimeSettings>()->GetMovementInterval());
-		if (auto* Mob = Cast<AMT2Mob>(CharacterOwner)) { Mob->GetMobAIComponent()->ApplyTickPolicy(); }
-	}
 	if (!MoveSegment.bMoving) { return; }
 	// Normal NPC locomotion does not need the full CharacterMovement tick/prediction pipeline.
 	PhysWalking(DeltaTime, 0);
@@ -202,26 +188,15 @@ void UMT2MobMovementComponent::PhysWalking(float DeltaSeconds, int32 Iterations)
 		return;
 	}
 
-	if (HasRootMotionSources())
-	{
-		bHadKnockbackMovement = true;
-		// Use the full swept walking solver during a shove so AI steering cannot replace its velocity.
-		Super::PhysWalking(DeltaSeconds, Iterations);
-		return;
-	}
-	if (bHadKnockbackMovement)
-	{
-		bHadKnockbackMovement = false;
-		if (auto* Mob = Cast<AMT2Mob>(CharacterOwner)) { Mob->GetMobAIComponent()->ApplyTickPolicy(); }
-		if (!IsComponentTickEnabled()) { return; }
-	}
 	// Mobs only need direct planar steering. Avoid CharacterMovement's floor cache, step solver,
 	// based movement and repeated floor sweeps, while retaining a swept capsule against obstacles.
 	// Server steps sample the timed segment; clients independently render its continuous trajectory.
 	const FVector Start = UpdatedComponent->GetComponentLocation();
 	if (!MoveSegment.bMoving || MoveSegment.Duration <= 0.f) { return; }
 	const float Alpha = FMath::Clamp(float((GetMovementServerTime() - MoveSegment.ServerStartTime) / MoveSegment.Duration), 0.f, 1.f);
-	FVector Target = FMath::Lerp(FVector(MoveSegment.Start), FVector(MoveSegment.Destination), Alpha);
+	// Legacy CEaseOutInterpolation starts at twice average speed and decelerates to zero.
+	const float TravelAlpha = MoveSegment.bExternalMotion ? Alpha * (2.f - Alpha) : Alpha;
+	FVector Target = FMath::Lerp(FVector(MoveSegment.Start), FVector(MoveSegment.Destination), TravelAlpha);
 
 	const UCapsuleComponent* Capsule = CharacterOwner ? CharacterOwner->GetCapsuleComponent() : nullptr;
 	const float HalfHeight = Capsule ? Capsule->GetScaledCapsuleHalfHeight() : 90.0f;
@@ -241,7 +216,8 @@ void UMT2MobMovementComponent::PhysWalking(float DeltaSeconds, int32 Iterations)
 		GroundHit, ProbeTop, ProbeBottom,
 		FCollisionObjectQueryParams(ECC_WorldStatic), QueryParams))
 	{
-		StopMovementImmediately();
+		if (MoveSegment.bExternalMotion) { FinishExternalKnockback(); }
+		else { StopMovementImmediately(); }
 		return;
 	}
 
@@ -249,9 +225,11 @@ void UMT2MobMovementComponent::PhysWalking(float DeltaSeconds, int32 Iterations)
 	FVector Delta = Target - Start;
 	FHitResult MoveHit;
 	const bool bAuthority = CharacterOwner->HasAuthority();
-	const FQuat Facing = (FVector(MoveSegment.Destination) - FVector(MoveSegment.Start)).Rotation().Quaternion();
+	// A shove must not turn the victim away from the attacker or change its reaction direction.
+	const FQuat Facing = MoveSegment.bExternalMotion ? UpdatedComponent->GetComponentQuat() :
+		(FVector(MoveSegment.Destination) - FVector(MoveSegment.Start)).Rotation().Quaternion();
 	SafeMoveUpdatedComponent(Delta, Facing, bAuthority, MoveHit);
-	if (MoveHit.IsValidBlockingHit())
+	if (MoveHit.IsValidBlockingHit() && !MoveSegment.bExternalMotion)
 	{
 		Delta.Z = 0.0f;
 		SlideAlongSurface(Delta, 1.0f - MoveHit.Time, MoveHit.Normal, MoveHit, true);
@@ -262,32 +240,7 @@ void UMT2MobMovementComponent::PhysWalking(float DeltaSeconds, int32 Iterations)
 	UpdateComponentVelocity();
 	if (bAuthority && (Alpha >= 1.f || MoveHit.IsValidBlockingHit()))
 	{
-		StopMovementImmediately();
+		if (MoveSegment.bExternalMotion) { FinishExternalKnockback(); }
+		else { StopMovementImmediately(); }
 	}
-}
-
-void UMT2MobMovementComponent::SimulatedTick(float DeltaSeconds)
-{
-	FRAMEPRO_NAMED_SCOPE("MT2.MobMovement.SimulatedTick");
-	// Keep UE's simulated-proxy prediction and mesh smoothing. The previous snapshot-only path left
-	// the capsule parked between updates, producing visible steps at low simulation frequencies.
-	Super::SimulatedTick(DeltaSeconds);
-}
-
-void UMT2MobMovementComponent::SmoothCorrection(
-	const FVector& OldLocation,
-	const FQuat& OldRotation,
-	const FVector& NewLocation,
-	const FQuat& NewRotation)
-{
-	if (FNetworkPredictionData_Client_Character* ClientData =
-		GetPredictionData_Client_Character())
-	{
-		const UMT2MobRuntimeSettings* Settings = GetDefault<UMT2MobRuntimeSettings>();
-		ClientData->MaxClientSmoothingDeltaTime = Settings->MaximumSnapshotInterpolationTime;
-		ClientData->MaxSmoothNetUpdateDist = Settings->MaximumSmoothCorrectionDistance;
-		ClientData->NoSmoothNetUpdateDist = Settings->NoSmoothCorrectionDistance;
-	}
-
-	Super::SmoothCorrection(OldLocation, OldRotation, NewLocation, NewRotation);
 }
