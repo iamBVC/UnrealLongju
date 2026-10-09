@@ -19,6 +19,10 @@ For admin mob placement, `/m <vnum> [count] [radius_cm]` spreads up to 20 mobs o
 
 ## What this measures
 
+Remote player movement uses native quantized Unreal snapshots, rounded to centimetres, at `PlayerMovementReplicationRate` (10 Hz by default). Simulated proxies use `PlayerObserverSmoothingTime`; owner movement RPCs, saved moves and reconciliation retain their native path. Active root-motion sources temporarily use `PlayerRootMotionReplicationRate` (30 Hz by default), with forced updates at transitions. These settings live under Metin2 Gameplay > Networking and require matching staged client/server builds. This is not a replacement of player prediction with the legacy mob segment system.
+
+Equipment instances (counts, bonuses, sockets and recovery state) replicate only to their owning client. Observers receive body/weapon template identifiers for visuals, fishing rods and animation selection; hair/style remains in character appearance. Observer `GetEquipment()` is a compatibility view with only those visual slots, not an inspectable inventory. Initial appearance and unequipping are represented by persistent replicated state rather than transient RPCs. Validate observer motion under latency/packet loss, root-motion knockback and late joining before treating a bandwidth reduction as production capacity.
+
 - Server-side character movement/collision, attacks, mob reactions and ordinary combat/reward work.
 - Mob activation and target queries with many player-like pawns.
 - Replication preparation and delivery of those actors to the real clients actually connected.
@@ -42,4 +46,4 @@ Existing combat/engagement diagnostics can add logging overhead. For comparable 
 
 Automation coverage is under `Metin2.Server.FakePlayers`. A successful fixture is not a live 100-client test.
 
-Dedicated servers disable character skeletal ticks, clear cosmetic mesh/AnimBP resources and detach hair/weapon socket attachments. Combat still reads imported animation metadata; movement and knockback remain authoritative. PlayerState polling defaults to 2 Hz via `PlayerStateReplicationRate` in Metin2 Gameplay settings. Progression, appearance, vitals, primary stats, skill levels and gameplay-tag changes request immediate replication. The baseline remains a fallback for other subobject updates; equipment and PlayerState network layouts and relevancy are unchanged. Compare client-visible state under latency when changing this rate.
+Dedicated servers disable character skeletal ticks, clear cosmetic mesh/AnimBP resources and detach hair/weapon socket attachments. Combat still reads imported animation metadata; movement and knockback remain authoritative. PlayerState polling defaults to 2 Hz via `PlayerStateReplicationRate` in Metin2 Gameplay settings. Progression, appearance, vitals, primary stats, skill levels and gameplay-tag changes request immediate replication. The baseline remains a fallback for other subobject updates; PlayerState layout and actor relevancy are unchanged. Equipment uses the owner/observer split described above. Compare client-visible state under latency when changing this rate.

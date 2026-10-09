@@ -20,6 +20,14 @@ class UMT2Item;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMT2InventoryChangedSignature);
 
+USTRUCT()
+struct METIN2_API FMT2EquipmentAppearance
+{
+	GENERATED_BODY()
+	UPROPERTY() int32 BodyVnum = 0;
+	UPROPERTY() int32 WeaponVnum = 0;
+};
+
 // Slot-based, server-authoritative item grid replicated to the owning client, matching the old game's
 // inventory model. Inventory slots (four 45-cell pages) and equipment slots (indexed by EWearPositions
 // from the old client's enums.h: BODY=0, HEAD=1, FOOTS=2, WRIST=3, WEAPON=4, NECK=5, EAR=6, SHIELD=10, ...)
@@ -38,6 +46,7 @@ public:
 
 	UMT2InventoryComponent();
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 	// Server-only. Adds Count of Vnum into the first free run of cells big enough for the item's size,
@@ -151,6 +160,7 @@ public:
 	const TArray<FMT2ItemSlot>& GetSlots() const { return Slots; }
 
 	UFUNCTION(BlueprintPure, Category = "Inventory")
+	// Server/owner: complete instances. Observers: body/weapon identifiers only.
 	const TArray<FMT2ItemSlot>& GetEquipment() const { return Equipment; }
 
 	// Server-only restore used after the player's normalized item rows are loaded.
@@ -173,6 +183,9 @@ protected:
 	virtual void BeginPlay() override;
 
 private:
+	friend class FMT2ObserverReplicationTest;
+	UFUNCTION() void OnRep_PublicAppearance();
+	void RefreshPublicAppearance();
 	friend class FMT2QuestItemCopyTest;
 	bool CopyAndReplaceQuestItemWithTemplates(int32 InventorySlot, const FMT2ItemSlot& ExpectedSource,
 		int32 ResultVnum, const UMT2ItemTemplate* SourceTemplate, const UMT2ItemTemplate* ResultTemplate,
@@ -202,6 +215,8 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_Equipment)
 	TArray<FMT2ItemSlot> Equipment;
+	UPROPERTY(ReplicatedUsing = OnRep_PublicAppearance)
+	FMT2EquipmentAppearance PublicAppearance;
 
 	FTimerHandle AutoRecoveryTimer;
 };

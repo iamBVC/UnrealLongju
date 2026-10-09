@@ -64,8 +64,32 @@ void UMT2InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME_CONDITION(UMT2InventoryComponent, Slots, COND_OwnerOnly);
-	// Worn VNUM/count is public appearance state; backpack contents remain private to the owner.
-	DOREPLIFETIME(UMT2InventoryComponent, Equipment);
+	DOREPLIFETIME_CONDITION(UMT2InventoryComponent, Equipment, COND_OwnerOnly);
+	DOREPLIFETIME_CONDITION(UMT2InventoryComponent, PublicAppearance, COND_SkipOwner);
+}
+
+void UMT2InventoryComponent::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker)
+{
+	Super::PreReplication(ChangedPropertyTracker);
+	RefreshPublicAppearance();
+}
+
+void UMT2InventoryComponent::RefreshPublicAppearance()
+{
+	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
+	PublicAppearance.BodyVnum = Equipment.IsValidIndex(0) && !Equipment[0].IsEmpty() ? Equipment[0].Vnum : 0;
+	PublicAppearance.WeaponVnum = Equipment.IsValidIndex(4) && !Equipment[4].IsEmpty() ? Equipment[4].Vnum : 0;
+}
+
+void UMT2InventoryComponent::OnRep_PublicAppearance()
+{
+	// Observer compatibility view contains template identifiers only, never private instance data.
+	Equipment.Reset(); Equipment.SetNum(EquipmentCount);
+	Equipment[0].Vnum = PublicAppearance.BodyVnum;
+	Equipment[0].Count = PublicAppearance.BodyVnum > 0 ? 1 : 0;
+	Equipment[4].Vnum = PublicAppearance.WeaponVnum;
+	Equipment[4].Count = PublicAppearance.WeaponVnum > 0 ? 1 : 0;
+	OnEquipmentChanged.Broadcast();
 }
 
 const UMT2ItemTemplate* UMT2InventoryComponent::ResolveTemplate(int32 Vnum) const

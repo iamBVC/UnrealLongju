@@ -280,6 +280,7 @@ public:
 	FMT2InventoryItemActorInteractionSignature OnInventoryItemActorInteractionRequested;
 
 protected:
+	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
@@ -287,6 +288,7 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
+	friend class FMT2ObserverReplicationTest;
 	friend class FMT2QuestAlignmentApiTest;
 	friend class FMT2WarriorComboKnockbackTest;
 	UFUNCTION(Client, Reliable)
@@ -525,6 +527,8 @@ private:
 	int32 InteractionUIOpenCount = 0;
 	void UpdateSafeZoneNotification();
 	bool bSafeZoneNotified = false;
+	bool bObserverRootMotionActive = false;
+	void RefreshObserverReplicationPolicy();
 	bool bLastSafeZone = false;
 	TWeakObjectPtr<AController> SafeZoneNotifiedController;
 

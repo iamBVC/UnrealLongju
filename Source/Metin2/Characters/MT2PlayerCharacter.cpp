@@ -34,6 +34,8 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Combat/MT2CombatComponent.h"
 #include "Config/MT2GameplaySettings.h"
+#include "Network/MT2ReplicationGraph.h"
+#include "Engine/NetDriver.h"
 #include "EnhancedInputComponent.h"
 #include "Equipment/MT2EquipmentComponent.h"
 #include "Effects/MT2MotionEffectComponent.h"
@@ -111,6 +113,8 @@ namespace
 AMT2PlayerCharacter::AMT2PlayerCharacter()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	SetNetUpdateFrequency(FMath::Clamp(UMT2GameplaySettings::Get().PlayerMovementReplicationRate, 1.f, 30.f));
+	GetReplicatedMovement_Mutable().LocationQuantizationLevel = EVectorQuantization::RoundWholeNumber;
 
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
@@ -211,9 +215,22 @@ FMT2PrimaryStats AMT2PlayerCharacter::GetCalculatedPrimaryStats() const
 	return Result;
 }
 
+void AMT2PlayerCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	// Enforce before the first replicated bunch, including Blueprint component defaults.
+	GetReplicatedMovement_Mutable().LocationQuantizationLevel = EVectorQuantization::RoundWholeNumber;
+	SetNetUpdateFrequency(FMath::Clamp(UMT2GameplaySettings::Get().PlayerMovementReplicationRate, 1.f, 30.f));
+}
+
 void AMT2PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	if (GetLocalRole() == ROLE_SimulatedProxy)
+	{
+		GetCharacterMovement()->NetworkSimulatedSmoothLocationTime = FMath::Clamp(UMT2GameplaySettings::Get().PlayerObserverSmoothingTime, .01f, .5f);
+		GetCharacterMovement()->NetworkSimulatedSmoothRotationTime = GetCharacterMovement()->NetworkSimulatedSmoothLocationTime;
+	}
 	if (GetNetMode() == NM_DedicatedServer)
 	{
 		CameraBoom->SetComponentTickEnabled(false);
@@ -252,6 +269,7 @@ void AMT2PlayerCharacter::BeginPlay()
 void AMT2PlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	RefreshObserverReplicationPolicy();
 	UpdateSafeZoneNotification();
 
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
@@ -2565,10 +2583,26 @@ void AMT2PlayerCharacter::ClientConfirmInventoryAction_Implementation(int32 Vnum
 	OnInventoryActionConfirmed.Broadcast(Vnum, bUseSound);
 }
 
+void AMT2PlayerCharacter::RefreshObserverReplicationPolicy()
+{
+	if (!HasAuthority()) return;
+	const bool bRootMotion = GetCharacterMovement()->HasRootMotionSources();
+	if (bRootMotion == bObserverRootMotionActive) return;
+	bObserverRootMotionActive = bRootMotion;
+	const auto& Settings = UMT2GameplaySettings::Get();
+	const float Baseline = FMath::Clamp(Settings.PlayerMovementReplicationRate, 1.f, 30.f);
+	const float Frequency = bRootMotion ? FMath::Max(Baseline, FMath::Clamp(Settings.PlayerRootMotionReplicationRate, 1.f, 60.f)) : Baseline;
+	SetNetUpdateFrequency(Frequency);
+	if (UNetDriver* Driver = GetWorld()->GetNetDriver())
+		if (auto* Graph = Driver->GetReplicationDriver<UMT2ReplicationGraph>()) Graph->SetPlayerReplicationFrequency(this, Frequency);
+	ForceNetUpdate();
+}
+
 void AMT2PlayerCharacter::HandleEquipmentChanged()
 {
 	if (HasAuthority())
 	{
+		ForceNetUpdate();
 		if (AMT2PlayerState* State = GetPlayerState<AMT2PlayerState>())
 		{
 			// UNIQUE_ITEM_HIDE_ALIGNMENT_TITLE masks presentation, never real alignment.
@@ -2651,6 +2685,7 @@ void AMT2PlayerCharacter::HandleEquipmentChanged()
 void AMT2PlayerCharacter::HandleInventoryChanged()
 {
 	if (!HasAuthority()) return;
+	ForceNetUpdate();
 	if (AMT2PlayerState* State = GetPlayerState<AMT2PlayerState>())
 	{
 		if (UMT2PersistenceComponent* Persistence = State->GetPersistenceComponent())

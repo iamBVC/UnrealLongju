@@ -105,6 +105,12 @@ public:
 	bool bPlayerPhysicsInteraction = false;
 	UPROPERTY(EditAnywhere, config, Category = "Networking", meta = (ClampMin = "1", ClampMax = "30", Units = "Hz"))
 	float PlayerStateReplicationRate = 2.f;
+	UPROPERTY(EditAnywhere, config, Category = "Networking", meta = (ClampMin = "1", ClampMax = "30", Units = "Hz"))
+	float PlayerMovementReplicationRate = 10.f;
+	UPROPERTY(EditAnywhere, config, Category = "Networking", meta = (ClampMin = "1", ClampMax = "60", Units = "Hz"))
+	float PlayerRootMotionReplicationRate = 30.f;
+	UPROPERTY(EditAnywhere, config, Category = "Networking", meta = (ClampMin = "0.01", ClampMax = "0.5", Units = "s"))
+	float PlayerObserverSmoothingTime = .1f;
 
 	// A surface material/instance for the client-generated water mesh. Unset disables rendering.
 	UPROPERTY(EditAnywhere, config, Category = "Water")

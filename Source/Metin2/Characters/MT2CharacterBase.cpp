@@ -336,6 +336,7 @@ void AMT2CharacterBase::StartKnockback(const FVector& Direction, float Distance,
 	Source->FinishVelocityParams.Mode = ERootMotionFinishVelocityMode::SetVelocity;
 	Source->FinishVelocityParams.SetVelocity = FVector::ZeroVector;
 	Movement->ApplyRootMotionSource(Source);
+	if (HasAuthority()) ForceNetUpdate();
 }
 
 void AMT2CharacterBase::ClearKnockbackOnDeath()

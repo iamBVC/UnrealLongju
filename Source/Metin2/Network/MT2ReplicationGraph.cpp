@@ -13,6 +13,7 @@
 #include "Mobs/MT2Mob.h"
 #include "Mobs/MT2MobRuntimeSettings.h"
 #include "Player/MT2PlayerState.h"
+#include "Characters/MT2PlayerCharacter.h"
 #include "Config/MT2GameplaySettings.h"
 #include "UObject/UObjectIterator.h"
 
@@ -58,6 +59,8 @@ void UMT2ReplicationGraph::InitGlobalActorClassSettings()
 		ClassInfo.ReplicationPeriodFrame =
 			GetReplicationPeriodFrameForFrequency(ActorCDO->IsA<AMT2PlayerState>()
 				? FMath::Clamp(UMT2GameplaySettings::Get().PlayerStateReplicationRate, 1.f, 30.f)
+				: ActorCDO->IsA<AMT2PlayerCharacter>()
+				? FMath::Clamp(UMT2GameplaySettings::Get().PlayerMovementReplicationRate, 1.f, 30.f)
 				: IsMobSpatialActor(ActorCDO)
 				? GetDefault<UMT2MobRuntimeSettings>()->BaselineMobReplicationRate : ActorCDO->GetNetUpdateFrequency());
 		ClassInfo.SetCullDistanceSquared(
@@ -102,6 +105,16 @@ void UMT2ReplicationGraph::InitGlobalGraphNodes()
 void UMT2ReplicationGraph::SetMobReplicationFrequency(AActor* Actor, float Frequency)
 {
 	if (!IsMobSpatialActor(Actor)) return;
+	SetActorReplicationFrequency(Actor, Frequency);
+}
+
+void UMT2ReplicationGraph::SetPlayerReplicationFrequency(AActor* Actor, float Frequency)
+{
+	if (Actor && Actor->IsA<AMT2PlayerCharacter>()) SetActorReplicationFrequency(Actor, Frequency);
+}
+
+void UMT2ReplicationGraph::SetActorReplicationFrequency(AActor* Actor, float Frequency)
+{
 	const uint16 Period = GetReplicationPeriodFrameForFrequency(FMath::Max(Frequency, 0.1f));
 	if (auto* Info = GlobalActorReplicationInfoMap.Find(Actor)) Info->Settings.ReplicationPeriodFrame = Period;
 	auto UpdateConnections = [Actor, Period](const auto& List)

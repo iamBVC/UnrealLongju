@@ -53,6 +53,7 @@ class METIN2_API UMT2ReplicationGraph : public UReplicationGraph
 
 public:
 	void SetMobReplicationFrequency(AActor* Actor, float Frequency);
+	void SetPlayerReplicationFrequency(AActor* Actor, float Frequency);
 	virtual void InitGlobalActorClassSettings() override;
 	virtual void InitGlobalGraphNodes() override;
 	virtual void InitConnectionGraphNodes(
@@ -69,6 +70,7 @@ protected:
 		const FRenamedReplicatedActorInfo& ActorInfo) override;
 
 private:
+	void SetActorReplicationFrequency(AActor* Actor, float Frequency);
 	UReplicationGraphNode_AlwaysRelevant_ForConnection* GetAlwaysRelevantNodeForConnection(
 		UNetConnection* Connection) const;
 
