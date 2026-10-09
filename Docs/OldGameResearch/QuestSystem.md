@@ -1,14 +1,12 @@
 # Quest & Dialog System (porting the old Lua .quest scripts)
 
-Source review: 2026-10-05. For measured conversion coverage and the historical implementation passes, use [QuestPortingStatus](QuestPortingStatus.md). Its latest recorded baseline is **482 unconverted statements, 67 failed gates, and 27 unsupported triggers**. This review did not rerun imports or tests.
+See [QuestPortingStatus](QuestPortingStatus.md) for supported subsets, diagnostic interpretation and unresolved backends.
 
 ## Original model
 
 Legacy quests use `quest / state / when` structure around Lua bodies. Each player owns quest state and flags. Events select current-state triggers, NPC/item/target identities, and optional `with` conditions.
 
 Dialogue is resumable: `say` accumulates text, while `select`, `wait`, and `input` suspend execution until a player response. Quest letters and named targets are separate state, not only dialogue decoration.
-
-External corpus counts vary by dataset and import selection. Older 285-script/2,040-TODO figures are historical, not the current baseline.
 
 ## Unreal representation
 
@@ -32,7 +30,7 @@ Triggers filter by event type, state, optional VNUM, and named event/target. Con
 
 NPC conversation locks use server-owned leases. Completion, cancellation, actor removal, pawn changes, and teardown clean up ownership. New interactive requests cannot replace a suspended conversation; deferred broadcast delivery and dialogue-generation validation still need fidelity review.
 
-Quest entity IDs identify live character instances, not template VNUMs. `find_npc_by_vnum`, `npc.get_vid`, and entity-backed `target.vid` use the per-world registry. Older serialized VNUM-only target nodes retain their previous meaning until reimport. Cross-map entity lookup/relevancy and optional target arguments remain separate work.
+Quest entity IDs identify live character instances, not template VNUMs. `find_npc_by_vnum`, `npc.get_vid`, and entity-backed `target.vid` use the per-world registry. VNUM-only target nodes identify templates rather than live character instances. Cross-map entity lookup/relevancy and optional target arguments remain separate work.
 
 ## Executor and Lua subset
 
@@ -83,6 +81,6 @@ Untranslated statements retain their source/line in `UMT2QuestNode_Unconverted`.
 
 ## Next work and validation
 
-Continue from [the current audit's remaining work](QuestPortingStatus.md#remaining-work-in-recommended-order), not the older milestone counts. Zero diagnostics alone is insufficient: audit accepted placeholder bindings and play through quests in a real authoritative session.
+Continue from [the current audit's remaining work](QuestPortingStatus.md#remaining-gameplay-work). Zero diagnostics alone is insufficient: audit accepted placeholder bindings and play through quests in a real authoritative session.
 
-The latest recorded pass reports 238 parsed scripts, 237 refreshed Blueprints, 6,595 triggers, and 27,761 nodes. Its 32 quest/safezone tests passed, but networked dialogue, cooked targets, and end-to-end quest parity were not established by that pass or this documentation review.
+Run the quest automation group, inspect the conversion report for the intended corpus and validate networked dialogue, cooked targets and complete quest playthroughs.

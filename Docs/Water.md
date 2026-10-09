@@ -1,8 +1,5 @@
 # Map water
 
-Implementation: 2026-10-07, UE 5.7.4.
-Visual-water paint mode added: 2026-10-08.
-
 ## Setup
 
 Assign **Project Settings > Metin2 > Metin2 Gameplay > Water > Water Material**
@@ -60,12 +57,8 @@ not disabling depth testing on the water material.
 
 `WaterGridSize` and `WaterRectangles` are serialized in the map-presentation actor.
 All visual tile files must be available and valid. Water rendering validates the
-native grid dimensions and rectangles, without bake-version fields or gameplay
-attribute checksums. Safezone/no-walk edits do not invalidate visual water.
-The obsolete attribute-mask compatibility path has been removed; all 28 launcher
-maps already contain independent visual-water bakes. Existing saved geometry
-fields retain their names and types. Rebuild/cook packaged targets after changing
-reflected source code rather than mixing old cooked packages with new binaries.
+native grid dimensions and rectangles. Safezone/no-walk edits do not invalidate visual water.
+Use matching cooked content and client/server binaries.
 
 For existing maps, bake only water without reimporting landscapes or changing
 lighting/music/spawn settings:
@@ -86,7 +79,7 @@ against a fresh bake without saving. Failed maps are not saved.
 Re-bake after changing source water files or shoreline padding. Area-painter
 water-bit edits affect gameplay attributes, not the independent visual water
 layer; they neither remove water under crossings nor define new surface heights.
-Visual water can now be edited directly in Unreal without changing legacy files.
+Visual water can be edited directly in Unreal without changing legacy files.
 
 ## Editing visual water
 
@@ -121,25 +114,7 @@ no geometry replication, per-frame rebuild, collision generation, or navigation
 obstacle creation. Attribute-based safezones and no-walk rules are unchanged.
 Mesh chunks are replaced on refresh and destroyed with their owning actor.
 
-## Validation
 
-Before cleanup, all eight water tests passed with a real RHI in
-`Saved/Logs/WaterVisualCoverageTests.log`. Coverage included independent visual
-water at crossings, bounded shoreline overlap, height boundaries, unchanged
-gameplay flags, component/settings lifecycle, both legacy height formats, and
-above/below GPU depth readback. All 28 launcher maps were baked and verified
-against their source data (`Saved/Logs/WaterVisualMapBake.log`,
-`Saved/Logs/WaterVisualMapVerification.log`). The user subsequently confirmed
-the water's appearance, including the shoreline and crossing corrections.
+## Authoring verification
 
-The three water-test source files and obsolete bake-version/checksum logic were
-removed at the user's request after validation. Unrelated automation tests remain
-in place. The manual `-Inspect` and read-only `-Verify` commandlet modes are
-retained for authoring diagnostics. Saved geometry property names and types are
-unchanged; cleanup does not require asset resaving. These records do not establish
-Shipping or freshly cooked packaged-runtime validation.
-
-Cleanup validation (2026-10-07): Editor, Client, and Server Win64 Development
-built successfully. All 28 existing saved bakes loaded and matched source data
-in the read-only `Saved/Logs/WaterCleanupAssetVerification.log` run, without
-resaving assets. The configured-path audit and diff whitespace checks passed.
+Use the bake commandlet's `-Inspect` mode to inspect source geometry and `-Verify` to compare saved bakes against that source without saving. Authored visual-water edits intentionally differ from a fresh legacy bake. Test material appearance, shoreline coverage and crossings in the intended editor and cooked client builds; source comparison does not validate rendered pixels.

@@ -5,7 +5,7 @@ Built to close the quest-conversion gaps that needed real game features rather t
 
 ## Guild system
 
-Source review: 2026-10-05. The subsection below describes the older local `UMT2GuildSubsystem` path, not authoritative coordinator guild operations. Cluster guild state now lives in SQLite `guilds`, `guild_members`, and `guild_ranks`, with 15 editable ranks and `UMT2GuildComponent` player-facing state. The local JSON subsystem remains in source and must not be mistaken for the cluster store. See [Persistence Architecture](../PersistenceArchitecture.md).
+The subsection below describes the local `UMT2GuildSubsystem` fallback, not authoritative coordinator guild operations. Cluster guild state lives in SQLite `guilds`, `guild_members`, and `guild_ranks`, with 15 editable ranks and `UMT2GuildComponent` player-facing state. The local JSON subsystem remains in source and must not be mistaken for the cluster store. See [Persistence Architecture](../PersistenceArchitecture.md).
 
 `UMT2GuildSubsystem` (GameInstance) owns every guild on the server. Guild records live in the
 subsystem, not on the player, so a guild keeps existing while its members are offline; a player's

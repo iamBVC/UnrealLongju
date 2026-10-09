@@ -31,8 +31,8 @@ monsters) and the HP gauge for monsters.
 
 ## UE5 replication (this project)
 
-`UMT2TargetInfoWidget` keeps the existing generated board (name + HP + close) and now adds
+`UMT2TargetInfoWidget` provides name, HP and close controls together with
 a runtime-built row of small-thin-style buttons shown ONLY when the selected target is
 another player: Message, Trade, Duel, Party, Friend, Guild. The HP bar is hidden for player
 targets (old client only shows it once PVP damage flows). The buttons broadcast
-`OnPlayerActionRequested` (action name + target actor). Source review (2026-10-05): Whisper opens the HUD conversation, Friend sends a messenger request, and Trade calls the controller's trade request. The remaining action path still shows a not-implemented chat line; the existence of party/guild/duel systems elsewhere does not prove that these target-board buttons are wired to them.
+`OnPlayerActionRequested` (action name + target actor). Whisper, friendship and trade use their corresponding HUD/controller operations. Duel uses the server-authoritative challenge/accept/revenge flow; see [Duels](../Duels.md). Other actions require the corresponding server authorization and UI integration.

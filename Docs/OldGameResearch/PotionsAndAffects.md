@@ -66,5 +66,5 @@ this project instead **denies re-use while the same buff is active** (design cho
     consume) once `current + pending` already reaches the max.
   - `AttackSpeed` / `MovementSpeed` — carry `ApplyType` 7/8 + `ApplyValue` %, so the existing
     equipment/affect stat recompute applies them; `DeniesReapplyWhileActive` blocks re-use while active.
-- `USE_POTION` (0) now applies the over-time recovery effect (was instant); `USE_POTION_NODELAY` (11)
+- `USE_POTION` (0) applies the over-time recovery effect; `USE_POTION_NODELAY` (11)
   stays instant; `USE_ABILITY_UP` (7) applies the timed speed buff.

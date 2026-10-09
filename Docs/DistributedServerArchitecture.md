@@ -2,7 +2,7 @@
 
 ## Process Roles
 
-Source review: 2026-10-05. Parameter defaults come from `FMT2ServerRuntimeConfig` and `ParseCommandLine`; launcher overrides are not runtime defaults.
+Parameter defaults come from `FMT2ServerRuntimeConfig` and `ParseCommandLine`; launcher overrides are not runtime defaults.
 
 `UnrealLongjuServer.exe` has three server runtime modes selected only through command-line parameters.
 
@@ -104,9 +104,10 @@ Prefer `co_token_env`. Direct `co_token` is supported, but command-line secrets 
 - `-co_ip=...`, `-co_port=11099` and coordinator token options.
 
 For uncooked development, `Scripts\StartAllLocal.bat` and `Scripts\StartClientLocal.bat` use
-`UnrealEditor.exe -server/-game`, but retain hard-coded engine/older map paths that need review.
-The formerly documented root per-role launchers are not present. Prefer `Scripts\StartAllDevelopment.bat`
-after packaging for the current map list. Game/server target executables need cooked/staged content.
+`UnrealEditor.exe -server/-game`, with engine and map paths that must be configured for the environment.
+Use `Scripts\StartAllDevelopment.bat`
+after packaging for the configured map list. Game/server target executables need cooked/staged content.
+`Scripts\StartClientDevelopment.bat` launches only the client from `Saved\Staged\WindowsClient`; servers must already be running. `MT2_CLIENT_ADDRESS` selects the gateway address.
 
 ## Cluster Administration
 

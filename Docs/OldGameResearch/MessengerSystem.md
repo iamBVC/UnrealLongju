@@ -1,6 +1,6 @@
 # Messenger (friends, presence, private messages)
 
-Source review: 2026-10-06. Original references: `game/src/messenger_manager.{h,cpp}`, `uimessenger.py`, `messengerwindow.py`, and `whisperdialog.py`. These are external legacy datasets, not checkout prerequisites.
+Original references: `game/src/messenger_manager.{h,cpp}`, `uimessenger.py`, `messengerwindow.py`, and `whisperdialog.py`. These are external legacy datasets, not checkout prerequisites.
 
 ## Original behavior and deliberate extension
 
@@ -62,7 +62,7 @@ Missing required names/types are Blueprint integration errors, not silently opti
 
 Dynamic rows are generated from component state. Single click selects; a second click within the configured double-click interval opens a whisper. Online/offline row art is configurable, with a texture-backed colored fallback. Headers collapse groups and empty groups retain an Empty row.
 
-`MT2GameHUD` owns required messenger, whisper, friend-add, and related child widgets. Treat placement/dragging according to current HUD/Canvas ownership; the earlier instruction to create every window as an independent viewport widget is obsolete.
+`MT2GameHUD` owns required messenger, whisper, friend-add, and related child widgets. Treat placement/dragging according to current HUD/Canvas ownership..
 
 ## Conversation and notification state
 

@@ -3,7 +3,6 @@
 All first-party Unreal automation test implementations live in this directory.
 Fishing gameplay and persistence coverage is in `MT2FishingTests.cpp`, compiled
 by the runtime module. See [fishing](../../../Docs/Fishing.md).
-Test names, behaviour, and automation categories are unchanged by the move.
 
 | Files | Compiling module |
 | --- | --- |
@@ -15,7 +14,7 @@ The editor test headers contain implementations, not public APIs. Include each
 from its designated editor translation unit only. Keeping registration there
 avoids adding editor dependencies to the runtime module, and lets importer tests
 exercise existing private parser helpers without exposing them or duplicating
-production code. `WITH_DEV_AUTOMATION_TESTS` guards are retained.
+production code. Implementations are guarded by `WITH_DEV_AUTOMATION_TESTS`.
 
 Build `UnrealLongjuEditor` and run the `Metin2` group through Session Frontend's
 Automation tab. Save work before running PIE integration tests: they load the
@@ -24,20 +23,13 @@ editor; NullRHI does not validate those paths. See
 [PIE map travel](../../../Docs/PIETravel.md) and
 [area painting](../../../Docs/AreaPainting.md) for fixture details.
 
-Relocation validation (2026-10-06, before adding duels): Editor Win64 Development built successfully, and all 47
-`Metin2` tests passed in `Saved/Logs/CentralizedTestsValidation.log`, including
-real standalone PIE startup and the area-preview fixtures. The run used an
-offscreen RHI with FXAA to isolate the existing TSR shader ensure; project
-settings were not changed. The configured-path audit also passed. Cooked targets
-were not rebuilt for this source-only reorganization.
-
 Duel coverage includes `Metin2.Combat.Duels.Lifecycle`, `.DeathPenalties`, and
-`.ButtonLabels`. See [duels](../../../Docs/Duels.md) for the latest validation
-scope and log.
+`.ButtonLabels`. See [duels](../../../Docs/Duels.md) for scope and limitations.
 
 `Metin2.Config.FrameProPort` covers the startup game-port offset, independent
 voice-port overrides, engine URL defaults, explicit profiler overrides, and
 TCP port bounds.
 
-Water-specific fixtures were removed at the user's request after validation.
 See [water](../../../Docs/Water.md) for the retained map-bake and read-only verification workflow.
+
+Mob scheduling/movement fixtures are in `MT2LegacyMobSchedulingTests.cpp` and `MT2MobMoveSegmentTests.cpp`; knockback coverage is in `MT2KnockbackTests.cpp`. Run `Metin2.World` and `Metin2.Combat` for these groups.

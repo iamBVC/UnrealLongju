@@ -1,7 +1,5 @@
 # NPC movement and replication
 
-Implementation review: 2026-10-08. Player prediction/networking is unchanged by this stage.
-
 ## Verified legacy behavior
 
 - `game/src/config.cpp`: defaults to 25 pulses/second, view range 5000 plus a 500-unit margin.
@@ -34,10 +32,10 @@ Implementation review: 2026-10-08. Player prediction/networking is unchanged by 
   Existing spatial-relevance region occupancy removes/adds members and resets their next AI deadline.
   The relevance refresh still runs once per second and scans registered relevance components;
   this is not yet a complete port of the legacy sector entry/exit notification system.
-- Previously awake, inactive mobs enter network dormancy. Reactivation wakes/flushed replication;
+- Inactive mobs enter network dormancy when they were awake. Reactivation wakes/flushed replication;
   NPCs already configured dormant are not mistakenly awakened. In-flight impulses cannot be suspended.
 - Mob visibility uses `NetCullDistance=5500` through both actor instances and Replication Graph class
-  settings, so previously baked Blueprint cull defaults do not silently retain the old 12000-unit radius.
+  settings, overriding individual Blueprint cull defaults.
   Simulation activation stays broader than visibility, reflecting the legacy neighbour-sector distinction.
 
 ## Settings and compatibility
@@ -45,7 +43,6 @@ Implementation review: 2026-10-08. Player prediction/networking is unchanged by 
 Project Settings > Game > Mob Runtime / `Config/DefaultGame.ini`:
 
 - Mob simulation always uses legacy state deadlines instead of distance-band decision rates.
-  There is no alternate timing profile or enable/disable toggle.
 - `LegacyPulseRate=25`, `LegacyMovePulses=4`: 160 ms movement/chase sampling. Unreal's server tick
   quantizes these deadlines; this is not a replacement of Unreal's clock with a 25 Hz legacy clock.
 - Idle aggressive mobs wait a random 1-3 seconds, passive mobs 3-5 seconds, and wander arrivals
@@ -70,8 +67,7 @@ Project Settings > Game > Mob Runtime / `Config/DefaultGame.ini`:
   still restart the segment. This is a UE tuning tolerance, not a copied legacy constant.
 - `NetCullDistance=5500`: observer visibility distance in imported-map centimetres.
 
-The network schema changes: clients and dedicated servers must be rebuilt/deployed together.
-No imported asset packages or map files are regenerated. Stock player movement remains authoritative
+Clients and dedicated servers must use matching network definitions. Stock player movement remains authoritative
 with owning-client prediction; player observer traffic needs a separate measured optimization pass.
 
 ## Validation
@@ -82,10 +78,8 @@ wake-up and the impulse networking handoff. Existing combat/knockback timing tes
 
 `Metin2.World.LegacyMobScheduling` covers configurable pulse cadence, aggressive/passive idle
 deadlines, sleeping-decision suppression, event wake-up and immediate knockback-rate transitions.
-The 2026-10-09 timing/replication update passed Editor, Client and Server Win64 Development builds
-and all 20 selected combat, fishing, world and notification-routing automation tests. These tests
-do not exercise actual packets across multiple network connections.
+These fixtures do not exercise actual packets across multiple network connections.
 
-A new packaged-server capture and multiplayer playtest are required to measure actual CPU/bandwidth
+A packaged-server capture and multiplayer playtest are required to measure actual CPU/bandwidth
 improvements and verify visual interpolation under latency, relevancy re-entry and dense combat.
 Passing these unit tests does not establish 200-player capacity.

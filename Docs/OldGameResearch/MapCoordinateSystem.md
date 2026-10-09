@@ -64,6 +64,6 @@ in lock-step; changing one without the other slides markers off their tiles.
 
 ## Current source recheck and validation boundary
 
-- Source review (2026-10-05): object rotations now reflect headings through `180 - source angle`, and spawn direction conversion also includes the reflection. The earlier "not applied" note is obsolete.
-- `LoadTownSpawnLocations` now mirrors X and scales its source coordinates by 100; warp resolution uses imported region origins and widths. See the [warp routing audit](QuestPortingStatus.md#warp-routing--empire-village-pass).
+- Object rotations reflect headings through `180 - source angle`; spawn direction conversion includes the same reflection.
+- `LoadTownSpawnLocations` mirrors X and scales its source coordinates by 100; warp resolution uses imported region origins and widths. See the [warp routing audit](QuestPortingStatus.md#gameplay-bindings).
 - These source changes require reimport for serialized placements. This documentation review did not visually confirm every object, heading, town spawn, or minimap tile.

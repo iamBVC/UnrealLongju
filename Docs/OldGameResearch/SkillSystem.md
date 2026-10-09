@@ -10,7 +10,7 @@ Sources studied:
 - Data: `my_dump/936skilltable.txt` (server proto as text), `my_dump/936skilldesc.txt`
   (client-side names/descriptions/formulas/icons).
 
-Source review: 2026-10-06. Sections 1–5 describe the external original game, not current port coverage. Current learning/casting is implemented in `UMT2SkillComponent` / `UMT2SkillCastComponent`; current book rules and grand-master backend are documented in [SkillBooks](SkillBooks.md) and [QuestPortingStatus](QuestPortingStatus.md). Earlier design recommendations below do not establish complete gameplay parity.
+Sections 1–5 describe the external original game, not current port coverage. Current learning/casting is implemented in `UMT2SkillComponent` / `UMT2SkillCastComponent`; current book rules and grand-master backend are documented in [SkillBooks](SkillBooks.md) and [QuestPortingStatus](QuestPortingStatus.md). The implementation does not establish complete gameplay parity.
 
 ## 1. Data model
 
@@ -157,7 +157,7 @@ drive the server damage.
 
 ## 6. Recreation notes for UE
 
-- The importer now produces `UMT2SkillDefinition` assets and skill sets, not merely a proposed data table. Definitions carry type/job, group, max level, level
+- The importer produces `UMT2SkillDefinition` assets and skill sets. Definitions carry type/job, group, max level, level
   limit, prerequisite, up to 3 (point, formula) pairs, SP/duration/cooldown/master-bonus
   formulas, flags, affect flags, splash/target range, max hits, per-grade motion + icon.
 - Skill definitions carry `SkillPowerPercentByLevel` curves, and the runtime formula evaluator supplies supported variables. The original table is source data, not a promised separate runtime table.
@@ -341,13 +341,11 @@ while a magic skill scales with IQ through the magic `atk`.
 
 ### Port
 
-`AMT2PlayerCharacter::BuildSkillFormulaVariables` provides all of the above. `atk` is now selected
+`AMT2PlayerCharacter::BuildSkillFormulaVariables` provides all of the above. `atk` is selected
 by the skill's `USE_MAGIC_DAMAGE` flag (magic -> `Combat.MagicAttack`, else `Combat.DamageMax`),
 both of which already move with allocated points via `MT2PlayerStatFormula::Calculate`
 (`DamageMax = 2*level + statAttack`, `MagicAttack = 2*level + 2*IQ`).  `maxhp/maxsp/def/odef/ar` are
-now populated too. The cast and the tooltip share this one function, so shown == dealt. The
-previous bug: `atk` was always the physical attack power, so magic skills didn't scale with IQ, and
-`maxhp/def/ar` were absent (any poly referencing them evaluated them as 0).
+populated too. The cast and tooltip share this function for formula inputs.
 
 ## Motion effect orientation (.msa MotionEventData)
 
@@ -366,7 +364,7 @@ the rotation the emitter spawned with never went through the same conversion, so
 effect came out turned 90°. The three skills above make it obvious because their effects are
 directional planes rather than radial bursts.
 
-The +90° yaw is now applied on every motion-effect spawn path (independent, attached-following,
+The +90° yaw is applied on every motion-effect spawn path (independent, attached-following,
 attached-snapshot, and mesh-root fallback). The separate **+90° roll about local X** for weapon
 attachments (`equip_*`, `* R Hand`, `* L Hand`) is a different correction — it compensates the
 imported weapon mesh, not the basis — so weapon-attached effects carry both, composed as

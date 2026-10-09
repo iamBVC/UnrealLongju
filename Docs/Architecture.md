@@ -2,8 +2,6 @@
 
 ## Principles
 
-Source review: 2026-10-05. These are implementation boundaries, not a new multiplayer validation.
-
 - Use Unreal Engine framework classes, replication, movement, components, and subsystems.
 - The dedicated server owns gameplay state, validation, simulation, and persistence.
 - The client owns input, presentation, camera, UI, prediction, and interpolation.
@@ -23,7 +21,7 @@ Source review: 2026-10-05. These are implementation boundaries, not a new multip
 ## Gameplay Framework
 
 - Enhanced Input owns device mappings and input actions. Native mappings provide a playable fallback; a `UMT2InputConfig` data asset can replace them without changing character code.
-- Standard `ACharacter` movement provides client prediction, server correction, and replicated movement.
+- Player `ACharacter` movement provides client prediction and server correction. Mobs use timed movement segments and local interpolation with temporary swept snapshot movement during knockback; see [NPC movement](OldGameResearch/NpcMovementReplication.md).
 - The Gameplay Ability System owns attributes, effects, abilities, costs, cooldowns, and gameplay tags.
 - The player Ability System Component lives on `AMT2PlayerState`, so it survives pawn replacement and map travel.
 - `AMT2PlayerCharacter` is the current avatar and initializes the Player State as the ability owner.

@@ -41,4 +41,4 @@ Centralized configurable gameplay asset references resolve through
 `UMT2GameplaySettings` (a `UDeveloperSettings`, category "Metin2", saved to `DefaultGame.ini` under
 `[/Script/Metin2.MT2GameplaySettings]`), so they are editable in Project Settings or the ini.
 
-Source review: 2026-10-05. Some runtime/UI paths still contain explicit asset references; this is not a claim that every hard-coded path has been removed. Asset availability requires the matching content submodule revision.
+Runtime asset paths are configurable through the project's asset/file path catalog. Asset availability requires the matching content submodule revision.

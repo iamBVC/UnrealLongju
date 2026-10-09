@@ -1,7 +1,5 @@
 # Persistence Architecture
 
-Source review: 2026-10-05. This describes the checked-in implementation, not a new database/reconnect test.
-
 ## Authority and threading
 
 Only coordinator mode opens the cluster SQLite database. Gateway and map processes proxy requests through their authenticated coordinator connection; clients never receive database paths or cluster credentials.
@@ -24,7 +22,7 @@ One database, `metin2.db`, lives below `db_root`. The schema is embedded in [MT2
 | `guilds`, `guild_members`, `guild_ranks` | Coordinator guild records, membership, contributions, and editable ranks. |
 | `messenger_friends`, `messenger_messages` | Friend graph and stored private messages. |
 
-The old four-table description is obsolete. JSON is a transport envelope, not a generic SQLite entity blob. Skills, quickslots, and affects currently use compact delimited TEXT fields on `players`; they are not fully normalized child tables. Item rows include a persisted instance identifier, but the runtime slot/quest-selection model still lacks the stable item identity required for complete legacy `item.select` parity.
+JSON is a transport envelope, not a generic SQLite entity blob. Skills, quickslots, and affects currently use compact delimited TEXT fields on `players`; they are not fully normalized child tables. Item rows include a persisted instance identifier, but the runtime slot/quest-selection model still lacks the stable item identity required for complete legacy `item.select` parity.
 
 WAL, foreign keys, busy timeout, integrity checks, transactions, and checkpoints are configured by the backend. Missing tables are created with `CREATE TABLE IF NOT EXISTS`. There is no automatic versioned schema migration: older tables are not upgraded merely by restarting. Back up data and plan explicit migrations when changing the schema.
 

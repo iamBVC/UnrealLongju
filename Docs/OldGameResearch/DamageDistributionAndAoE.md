@@ -135,4 +135,4 @@ else f(this);
 Old units are treated as centimetres 1:1 in UE, so the 5000 (50 m) exp range check and the
 legacy attack ranges inform the port. Current attack/skill range values are data/configuration-driven; do not assume every ability uses those fixed values.
 
-Source review: 2026-10-06. This maps selected mechanisms, not complete reward/party/splash parity. Safezone policy additionally checks BANPK on player combat at actual hit time.
+This maps selected mechanisms, not complete reward/party/splash parity. Safezone policy additionally checks BANPK on player combat at actual hit time.

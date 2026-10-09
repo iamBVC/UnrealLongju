@@ -13,15 +13,12 @@ divide evenly by `sizeof(TMobTable)` — the client validates exactly that, noth
 
 ## Record layout variants (all `#pragma pack(1)`)
 
-Three layouts existed across the builds we imported from. **Only the 40250/255-byte format is
-supported now** — the project imports exclusively from `<SourceRoot>/locale/en/` protos and the
-legacy readers were deleted (classic raw 291-byte arrays, GF 292-byte MMPT+Snappy `MCSP`).
-The kept container path is MMPT + TEA + LZO (`MCOZ`).
+Legacy data uses several record layouts. The current importer supports only the 40250/255-byte format from `<SourceRoot>/locale/en/` protos, using MMPT + TEA + LZO (`MCOZ`).
 
 | Variant | Size | Status | Distinguishing traits |
 |---|---|---|---|
-| Classic raw | 291 | **removed** | `bRank` before `bType`; flags+empire+folder[101] before stats; gold/exp/HP mid-record |
-| GF v21/v25 | 292 | **removed** | Extended: scale percent, elemental attacks, extra resists, hit range, folder[65] |
+| Classic raw | 291 | **unsupported** | `bRank` before `bType`; flags+empire+folder[101] before stats; gold/exp/HP mid-record |
+| GF v21/v25 | 292 | **unsupported** | Extended: scale percent, elemental attacks, extra resists, hit range, folder[65] |
 | **40250 client** | **255** | **the only supported format** | See below |
 
 Likewise `item_proto` is MIPX v1 only (TEA + LZO `MCOZ`, 156-byte records matching the 40250

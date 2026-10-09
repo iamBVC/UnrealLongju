@@ -37,7 +37,7 @@ Sources studied:
 
 ## UE recreation decisions
 
-- Source review: 2026-10-05. Legacy source paths above identify historical external datasets, not files included in this repository.
+- Legacy source paths above identify external reference datasets, not files included in this repository.
 - Admin list: the `admins` table in the coordinator's single `metin2.db`, accessed through the persistence backend. Character names are normalized for lookup. There is no separate admins database/shard or `RouteEntityType` routing path.
 - PIE sessions grant admin to everyone, replicating `test_server` behavior.
 - Only admins may execute `/` chat commands (server-side gate in

@@ -1,7 +1,5 @@
 # Damage Feedback
 
-Source review: 2026-10-06.
-
 `AMT2FloatingDamageActor` displays authoritative damage results on the attacking client. Its head-positioned text rises with horizontal variation and fades in/out. Client presentation does not determine gameplay damage.
 
 Current `EMT2DamageDisplayType` colors:

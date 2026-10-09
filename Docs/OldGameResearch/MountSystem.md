@@ -2,7 +2,7 @@
 
 ## Scope
 
-Source review: 2026-10-06. Code presence below does not establish horse quest/progression parity or live mounted-animation validation.
+Code presence below does not establish horse quest/progression parity or live mounted-animation validation.
 
 This records the original client/server behaviour and the UE architecture selected for mounts. It
 separates the first playable foundation from horse progression, mount items, and content import.

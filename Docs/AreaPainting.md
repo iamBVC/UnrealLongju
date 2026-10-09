@@ -79,7 +79,6 @@ flag texture containing its original source-grid cells. Flags are decoded and
 colored per pixel; no byte truncation, attribute resampling, or camera-dependent
 grouping occurs. Painting uploads only changed rectangular regions. Texture
 coordinates follow mirrored map coordinates and remain fixed as the camera moves.
-The former adaptive-quad budget/LOD hysteresis no longer controls this preview.
 Zoom in to inspect small cells that are subpixel at a distance.
 
 The native pass follows Landscape sculpt/LOD updates. **Refresh terrain overlay**
@@ -127,74 +126,3 @@ reflected serialization, and actual editor transactions. Run these alongside
 Viewport interaction, rendering, World Partition streaming, multiplayer, and
 cooked builds require separate validation; automated data tests do not establish
 visual correctness.
-
-Recorded validation (2026-10-06): `UnrealLongjuEditor Win64 Development` built
-successfully with UE 5.7.4. All 36 area-paint/world/quest tests passed in a
-NullRHI editor run, including the three new area-paint fixtures. No errors were
-reported; existing unrelated deprecation and fixture warnings remain. Log:
-`Saved/Logs/AreaPaintTests.log`. No content assets were rewritten. The colored
-overlay and interactive brush have not yet been visually verified in a live
-viewport, and cooked/multiplayer validation remains separate work.
-
-Overlay correction validation (2026-10-06): Editor Development build succeeded
-and all 37 area-paint/world/quest tests passed (`Saved/Logs/AreaPaintOverlayTests.log`).
-The added fixture verifies standard-pass translucency, editor-compositing usage,
-connected material outputs, and read-only Details visibility for dimensions.
-This NullRHI run validates configuration, not the final GPU-rendered overlay.
-
-Viewport coverage validation (2026-10-06): Editor Development rebuilt successfully
-and all 38 area-paint/world/quest tests passed (`Saved/Logs/AreaPaintViewportTests.log`).
-The new coverage fixture checks frustum filtering/cropping, mirrored cell ranges,
-map-bound clipping, an overview of a 2048x2560 grid beyond the old distance cap,
-and unchanged native dimensions. The user confirmed the earlier material fix
-renders colors in Yongan; this new viewport-wide coverage still requires live
-GPU/camera-movement verification. No content assets were modified.
-
-Camera-alignment correction (2026-10-06): view-dependent grouping origins and
-arbitrary strides were replaced by source-origin-aligned, power-of-two partitions
-with LOD hysteresis. Editor Development built successfully, and all 39
-area-paint/world/quest tests passed (`Saved/Logs/AreaPaintAlignmentTests.log`).
-The new fixture verifies that overlapping source cells retain the same group
-after a camera pan, close views refine to individual cells, and overview geometry
-stays in budget. Visual confirmation of the reported camera-motion artifact is
-still required; these tests do not reproduce GPU/temporal-AA behavior.
-
-Native-surface correction (2026-10-06): the user confirmed camera stability, then
-reported terrain intersecting the coarse preview triangles. The custom quad
-renderer and its now-unused grouping helper were replaced by Landscape's native
-editor-tool surface pass. Editor Development built successfully; all 39 revised
-area/world/quest fixtures passed without errors (`Saved/Logs/AreaPaintSurfaceFinalTests.log`).
-The native-surface fixture also passed with a real RHI in an offscreen editor,
-including successful Landscape shader compilation (`Saved/Logs/AreaPaintSurfaceShaderFinalTests.log`).
-It verifies original-byte tile copies, partial-update bounds, +4-unit world-Z WPO,
-depth testing, Landscape shader support, prior-material restoration, and transient
-PIE-excluded references. Earlier failed runs exposed a test-fixture Outer error
-and concurrent startup registry-save contention; final validation was isolated
-and clean. The Content submodule has no changes. Visual hill clearance, sculpting,
-streaming, large-map performance, Nanite/custom-WPO cases still require live testing.
-
-Opacity correction (2026-10-06): after the user reported opaque colors and black
-unflagged ground, the preview switched to explicit alpha-composite blending with
-premultiplied color. Flagged cells use 0.5 opacity; all other cells use zero.
-Editor Development built, all 39 regressions passed (`Saved/Logs/AreaPaintOpacityTests.log`),
-and the native-surface shader test passed on the real RHI
-(`Saved/Logs/AreaPaintOpacityShaderTests.log`). Checks now cover active opacity
-and the effective Landscape/GPU blend mode, rather than only expression connections.
-The Content submodule remains unchanged; final viewport appearance needs a retest.
-
-Follow-up alpha correction (2026-10-06): the user confirmed the previous blending
-change was insufficient. Engine shader inspection found that editor-compositing
-usage overwrote output alpha with 1; this flag is now disabled while native
-Landscape shader support, depth testing, and +4-unit clearance are retained.
-The regression fixture now reads actual GPU pixels over a known background,
-checking clear cells, 50/50 flagged tint, and hidden flags. Its Canvas-only draw
-removes vertex displacement to avoid screen-space clipping; Landscape WPO and
-vertex-factory compilation are checked separately. This is not a live Yongan
-viewport test.
-Editor Development rebuilt successfully and all 39 area/world/quest tests passed
-with the real RHI (`Saved/Logs/AreaPaintAlphaReadbackFinalTests.log`), including
-the pixel-readback assertions and native Landscape shader compilation. The first
-readback run failed because +4-unit WPO clipped the Canvas tile; only the fixture
-was corrected, without changing production terrain clearance. No Content assets
-were changed. Restart Unreal to replace existing transient preview materials;
-live Yongan viewport verification remains required.

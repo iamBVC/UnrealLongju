@@ -59,11 +59,11 @@ Key mechanics:
 
 ## UE recreation
 
-- Source review: 2026-10-06. `AMT2MetinStone : AMT2Mob` exists; it is not a proposed `AMT2Metin` class. It disables movement, registers with the world simulation scheduler, and checks health changes authoritatively.
+- `AMT2MetinStone : AMT2Mob` implements stone behavior. It disables movement, registers with the world simulation scheduler, and checks health changes authoritatively.
 - `ProcessStoneBehavior` walks every crossed threshold once using `LastFiredStep`; it can process several thresholds after a large hit. It plays the attack motion as a spawn tell.
-- Imported `MetinSpawnGroups` supply group entries, resolved through the VNUM registry and spawned around the stone. Group import is not wholly missing; direct VNUM spawning is not the documented current design.
+- Imported `MetinSpawnGroups` supply group entries, resolved through the VNUM registry and spawned around the stone.
 - Spawned mobs retain a weak stone link, and available AI targets the stone's attacker. Stone death removes its surviving wave without normal combat rewards; mob death banks half its experience on the stone.
-- Ring placement, group composition, animations, and scheduler cadence still need dataset-specific/live validation. This source review did not run a stone encounter.
+- Ring placement, group composition, animations, and scheduler cadence still need dataset-specific/live validation.
 
 ## Stone <-> spawned mob linkage (char.cpp:4955-4990, char_battle.cpp:1488, 2734)
 

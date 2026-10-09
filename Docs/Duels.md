@@ -1,8 +1,6 @@
 # Player duels
 
-The existing target-board Duel button now drives a server-authoritative,
-map-local agreement rather than a placeholder message. No UI assets or legacy
-source files are modified.
+The target-board Duel button controls a server-authoritative, map-local agreement.
 
 ## Playing a duel
 
@@ -62,7 +60,7 @@ version; stale VID behaviour is not reproduced.
 
 ## Legacy references and scope
 
-Compared the three local Graphify graphs, then inspected server
+Legacy behavior is defined in server
 `game/src/pvp.cpp`, `pvp.h`, `cmd_general.cpp::do_pvp`, `battle.cpp::battle_is_attackable`,
 and `char_battle.cpp::Dead`, plus client
 `source/UserInterface/PythonNetworkStreamPhaseGame.cpp::RecvPVPPacket` and the
@@ -73,18 +71,3 @@ arena/tournament system. Complete legacy PK protection modes and unrelated death
 experience penalties are not added here. Live two-client UI, network delivery,
 late joining, and cooked dedicated-server validation must be reported separately
 from native-world automation tests.
-
-Validation (2026-10-06): Editor Win64 Development built; all 49 `Metin2` tests
-passed in `Saved/Logs/DuelVerifiedRegressionTests.log`, including the two new native
-duel fixtures, existing real PIE startup, and RHI area-preview regressions. The
-duel fixtures check challenge/consent, revenge, safezones, range/cooldown, multiple
-pairs, cancellation, activity/expiry, and a real lethal skill-to-death callback
-with no agreed-duel karma penalty. This is not a remote-client duel/UI test or an
-equipment-drop integration test. The RHI run used FXAA to isolate the existing
-TSR ensure. The configured-path audit passed; Content stayed unchanged.
-
-Winner-label correction (2026-10-06): the post-victory winner now sees **Duel**
-instead of the pending-challenge **Waiting...** label. Consent rules are unchanged.
-Editor Development built and all three duel tests passed in
-`Saved/Logs/DuelStandardLabelTests.log`, including all button labels. This run used
-NullRHI; live tooltip/viewport rendering was not checked.

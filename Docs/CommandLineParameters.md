@@ -12,7 +12,7 @@ Executables:
 - Shipping: `Saved\StagedShipping\WindowsClient\UnrealLongjuClient.exe` / `Saved\StagedShipping\WindowsServer\UnrealLongju\Binaries\Win64\UnrealLongjuServer-Win64-Shipping.exe`
   (server exe implies `-server`; the client exe never runs server roles)
 
-Source review: 2026-10-05. Defaults below are runtime defaults, not launcher overrides. MT2 boolean parameters use `-name=1` / `-name=0` (not bare switches), except the role switches
+Defaults below are runtime defaults, not launcher overrides. MT2 boolean parameters use `-name=1` / `-name=0` (not bare switches), except the role switches
 `-Coordinator` and `-Gateway` which are bare.
 
 ## Shared parameters (all server roles)
@@ -150,6 +150,5 @@ This is a local launch check, not account authentication. No `-game` argument is
   **11099** coordinator (TCP, private), and **11101–11128** map voice relays (UDP). Map processes all use channel 1;
   their game ports increase by map index, not by channel. Plan distinct endpoints if adding processes/channels.
 - `Scripts\StartAllPackaged.bat` is the shared current map/port list. The uncooked `StartAllLocal.bat`
-  and `StartClientLocal.bat` still use machine-specific/older map paths. Previously documented root
-  `StartCoordinatorLocal.bat`, `StartGatewayLocal.bat`, and `StartMapServerLocal.bat` files are absent.
+  and `StartClientLocal.bat` use engine and map paths that must be configured for the environment. Configure the existing scripts for the intended engine and map paths.
 - Examples require the corresponding assets in the content submodule and a token of at least 16 characters in `MT2_COORDINATOR_TOKEN`.

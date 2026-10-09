@@ -1,6 +1,6 @@
 # Skill Books (skill mastery progression)
 
-Source review: 2026-10-05. Original references: `game/src/char_skill.cpp`, `char_item.cpp`, and the grand-master training quest. See [QuestPortingStatus](QuestPortingStatus.md#grand-master-learning-pass) for recorded native API tests.
+Original references: `game/src/char_skill.cpp`, `char_item.cpp`, and the grand-master training quest. See [QuestPortingStatus](QuestPortingStatus.md#gameplay-bindings) for the current backend scope.
 
 ## Mastery model
 
@@ -12,7 +12,7 @@ The original international Master-book path spends EXP on accepted success/failu
 
 `UMT2SkillComponent::CanReadSkillBook` requires a resolvable definition, Master mastery, sufficient EXP, and an expired deadline or the no-cooldown affect. `LearnSkillByBook` is authoritative.
 
-Current settings are `SkillBookExperienceCost`, `SkillBookCooldownSeconds`, and `SkillBookSuccessChance`. C++ defaults are 10,000 EXP, 86,400 seconds, and 0.35; project/config overrides may differ. The former documentation's **5% EXP cost and no cooldown** no longer describe this implementation.
+Current settings are `SkillBookExperienceCost`, `SkillBookCooldownSeconds`, and `SkillBookSuccessChance`. C++ defaults are 10,000 EXP, 86,400 seconds, and 0.35; project/config overrides may differ.
 
 Every accepted read spends the configured flat EXP cost and writes a per-skill Unix deadline. Normal success/progress is probabilistic; the guaranteed-success effect changes that next read. Both no-cooldown and guaranteed-success one-shot effects are consumed on the next accepted read. Read counts/deadlines are captured in player skill persistence.
 

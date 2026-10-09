@@ -14,9 +14,9 @@ specular, gainSocketPct, addonType. The `my_dump` locale item_proto is a **raw u
 of these records; the GF dumps use a MIPX+TEA+Snappy container instead (reader in
 `GameLib/ItemManager.cpp:255` with key at `:7`).
 
-This paragraph describes an older dataset, not the current reader. Source review (2026-10-05): `MT2ItemProtoReader` accepts MIPX v1 with 156-byte 40250 records and TEA/LZO payloads. Raw 162-byte and Snappy variants are not supported by that reader. See [MobProtoFormats](MobProtoFormats.md) for current format constraints.
+This record describes legacy data. The current `MT2ItemProtoReader` accepts MIPX v1 with 156-byte 40250 records and TEA/LZO payloads. Raw 162-byte and Snappy variants are not supported by that reader. See [MobProtoFormats](MobProtoFormats.md) for current format constraints.
 
-- **Weapons**: the current template/tooltip convention uses `values[3]/values[4]` for physical attack and `values[1]/values[2]` for magic attack, with `values[5]` refinement addition. Do not use the former reversed description when importing item data.
+- **Weapons**: the current template/tooltip convention uses `values[3]/values[4]` for physical attack and `values[1]/values[2]` for magic attack, with `values[5]` refinement addition.
 - **Armor**: `values[1]` = defense.
 - **Applies**: up to 3 `{EApplyTypes ordinal, value}` stat bonuses granted while equipped — same
   ordinals used by affects (APPLY_MAX_HP=1, CON=3, INT=4, STR=5, DEX=6, ATT_SPEED=7, MOV_SPEED=8,

@@ -34,7 +34,7 @@ The project separates authoritative gameplay from client presentation:
 - **Editor tooling:** the bundled `MT2UE` plugin imports and converts supported legacy asset formats and gameplay definitions into Unreal content.
 - **Distribution tooling:** Windows client/server packaging scripts and a standalone .NET patcher.
 
-For review scope and historical-versus-current guidance, see [Documentation Status](Docs/DocumentationStatus.md).
+For documentation scope and system guides, see [Documentation Status](Docs/DocumentationStatus.md).
 
 For implementation details, start with [Runtime Architecture](Docs/Architecture.md), [Distributed Server Architecture](Docs/DistributedServerArchitecture.md), and [Persistence Architecture](Docs/PersistenceArchitecture.md).
 
@@ -77,7 +77,7 @@ git clone --recurse-submodules https://github.com/iamBVC/UnrealLongju.git Unreal
 Set-Location .\UnrealLongju
 ```
 
-The `Content` directory is the [UnrealLongju-Content](https://github.com/iamBVC/UnrealLongju-Content.git) submodule. Recursive cloning initializes the content revision recorded by this repository. A ZIP download is not an equivalent submodule-aware checkout. The current content checkout includes starter assets; the initial documentation-only revision is historical. Use the parent-pinned content commit, not an arbitrary branch tip, and verify that the assets required by your build are available.
+The `Content` directory is the [UnrealLongju-Content](https://github.com/iamBVC/UnrealLongju-Content.git) submodule. Recursive cloning initializes the content revision recorded by this repository. A ZIP download is not an equivalent submodule-aware checkout. The current content checkout includes starter assets; Use the parent-pinned content commit, not an arbitrary branch tip, and verify that the assets required by your build are available.
 
 For an existing checkout cloned without recursive initialization:
 

@@ -1,7 +1,6 @@
 # Fishing
 
-Implemented 2026-10-08 against UE 5.7.4. Gameplay is authoritative on the map
-server; visual-water meshes are not used to decide whether a spot is fishable.
+Gameplay is authoritative on the map server; visual-water meshes are not used to decide whether a spot is fishable.
 
 ## Playing and configuration
 
@@ -28,11 +27,10 @@ The 37 rows and five timing profiles come from the local legacy server's
 and items by soft item-class reference, editable in Project Settings. The server
 loads the selected class and derives its numeric identity only for the existing
 inventory/save format. Fishing result events also carry the item class, not a vnum.
-Old `CatchTable` overrides using `Vnum` must be changed to `ItemTemplate` references.
 No runtime access to that legacy directory is required. Tables 2 and 3 are
 available to configure; premium/event switching, regional suppression of gold
 and disguise rewards, fishing-event leaderboards, fish opening and grilling
-are not part of this first gameplay pass.
+are not implemented.
 
 ## Server validation and inventory
 
@@ -55,15 +53,14 @@ reaction timestamp, hook coordinate, item class, or random seed. The server:
 
 Timers are cleared on teardown. Fishing sessions do not persist across travel,
 death or disconnect. Rod proficiency, bait and fish length use existing numeric
-socket columns: no new database schema or asset-version fields were introduced.
+socket columns: their values persist with the item instance.
 Equipment Metin stones keep their existing encoding.
 
 ## Rod progression and fisherman
 
 Legacy Value0 is fishing power, Value1 is the practice-roll denominator, Value2
 is the proficiency cap, Value3 is upgrade success percent, and Value4 is the
-failed-upgrade result vnum. `FishingDelayTenths` retains its historical property
-name for saved-asset compatibility, but is interpreted as Value0 power.
+failed-upgrade result vnum. `FishingDelayTenths` stores Value0 fishing power, despite its name.
 
 Reeling after a bite can raise socket 0 proficiency by one, on successes or
 failures, until the cap. It does **not** automatically replace the rod with the
@@ -73,8 +70,7 @@ offered slot and unchanged server snapshot after the dialog, then atomically
 replaces the item on success/downgrade and resets its sockets. Invalid requests
 return legacy result 2 and preserve the item.
 
-The 20 imported rod templates have been refreshed with previously omitted
-practice and downgrade values. To refresh only those templates again:
+Rod templates carry practice and downgrade values. To import only fishing rods:
 
 ```powershell
 & "$EngineRoot\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" $ProjectFile `
@@ -87,9 +83,9 @@ All eight player AnimBPs bind the nine existing `fishing` actions. Native idle
 switches to `fishing_wait` during a cast, with one-shot throw/react/catch/fail/
 cancel montages through `DefaultSlot`. Nearby clients receive fishing events;
 late joiners can reconstruct waiting state from replicated phase/hook data.
-Rods now attach their imported item mesh to the character's weapon socket.
+Rods attach their imported item mesh to the character's weapon socket.
 `RodMesh` in Fishing settings supplies the existing imported rod mesh when an
-older item template has no world-mesh reference; a template's explicit mesh wins.
+item template has no world-mesh reference; a template's explicit mesh wins.
 The local float uses the replicated hook XY and baked visual-water elevation,
 including the global water offset, rather than the character's capsule height.
 It has no collision, navigation influence, or server mesh loading.
@@ -110,14 +106,12 @@ imported animations. All eight variants have sound events for throw, catch,
 failure and cancellation, imported from the legacy `.mss` motion scripts.
 Python registers the motions but does not define their sound timings. Waiting
 and bite-reaction animations have no sound events in the supplied assets.
-The redundant native sound table and timer playback have been removed. Edit
-sounds and their timings on the animation's Notify track; no Content packages
-were modified by this cleanup.
+Edit sounds and their timings on the animation's Notify track.
 
-Fishing and other system feedback now share the existing loot history. Player,
-guild and administrator chat messages remain in the chat history. Existing
-`AddInfoChatLine`/`SendSystemChatMessage` names are retained for compatibility,
-but route to the notification log; guild text uses the separate player-chat path.
+Fishing and other system feedback use the loot/info history. Player,
+guild and administrator chat messages, plus administrator command feedback,
+use chat history. `AddInfoChatLine`/`SendSystemChatMessage` route to the info log;
+`SendAdminCommandMessage` routes command feedback to chat.
 Chat and info logs have independent visibility deadlines: messages immediately
 show only their own history, hold for five seconds, then fade over one second.
 Opening/pinning chat does not keep info visible. Shared widget containers remain
