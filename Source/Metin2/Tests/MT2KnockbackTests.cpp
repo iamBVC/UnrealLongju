@@ -15,6 +15,8 @@
 #include "Combat/MT2KnockbackRootMotion.h"
 #include "Animation/AnimBlueprint.h"
 #include "Animation/AnimSequence.h"
+#include "Animation/AnimMontage.h"
+#include "Components/CapsuleComponent.h"
 #include "Config/MT2PathSettings.h"
 #include "GameFramework/RootMotionSource.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -276,6 +278,23 @@ bool FMT2MobKnockdownTest::RunTest(const FString&)
 	const float FallDuration = (*Fall)->GetPlayLength();
 	const float StandupDuration = (*Standup)->GetPlayLength();
 	AddInfo(FString::Printf(TEXT("Authored fall %.3fs, recovery %.3fs"), FallDuration, StandupDuration));
+	UAnimInstance* LiveAnim = Victim->GetMesh()->GetAnimInstance();
+	if (!TestNotNull(TEXT("Visual fixture has live animation instance"), LiveAnim)) { return false; }
+	TestTrue(TEXT("Reaction montage starts"), Victim->PlayMobMotion(EMT2MobMotion::FrontDamage));
+	UAnimMontage* Reaction = Victim->ActiveMotionMontage.Get();
+	if (!TestNotNull(TEXT("Reaction owns a montage"), Reaction)) { return false; }
+	TestTrue(TEXT("WAIT returns to locomotion"), Victim->PlayMobMotion(EMT2MobMotion::Wait));
+	TestTrue(TEXT("WAIT stops reaction instead of overriding walking with idle"), LiveAnim->Montage_GetIsStopped(Reaction));
+	TestFalse(TEXT("WAIT owns no one-shot montage"), Victim->ActiveMotionMontage.IsValid());
+	const float VisualHalfHeight = Victim->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight();
+	const float VisualRadius = Victim->GetCapsuleComponent()->GetUnscaledCapsuleRadius();
+	const FVector VisualOffset = Victim->GetMesh()->GetRelativeLocation();
+	Victim->GetMesh()->SetSkeletalMesh(nullptr);
+	Victim->ApplyVisualConfiguration();
+	TestEqual(TEXT("Headless capsule height matches visual peer"), Victim->GetCapsuleComponent()->GetUnscaledCapsuleHalfHeight(), VisualHalfHeight);
+	TestEqual(TEXT("Headless capsule radius matches visual peer"), Victim->GetCapsuleComponent()->GetUnscaledCapsuleRadius(), VisualRadius);
+	TestEqual(TEXT("Headless mesh alignment remains identical"), Victim->GetMesh()->GetRelativeLocation(), VisualOffset);
+	TestNull(TEXT("Collision fit does not restore server cosmetic mesh"), Victim->GetMesh()->GetSkeletalMeshAsset());
 	Victim->GetMesh()->SetAnimInstanceClass(nullptr); // Dedicated-server-like animation scheduling.
 	TGuardValue<uint64> FrameGuard(GFrameCounter, GFrameCounter);
 	const auto TickTimers = [World](float Delta)

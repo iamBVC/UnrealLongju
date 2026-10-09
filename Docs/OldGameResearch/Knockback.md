@@ -120,6 +120,10 @@ Skills carry their own values (e.g. `skill/palbang.msa` = HittingType 1, Externa
   cannot interrupt fall/recovery; active special motions are not interrupted by GREAT hits.
   Death/teardown cancel queued recovery. The selected animation variant is replicated, so peers
   do not randomly select clips of different lengths. The importer recognizes `BACK_STANDUP` entries.
+- WAIT releases the mob's current action montage and returns to the idle/walk/run graph; it does
+  not play an idle montage over resumed chasing. Dedicated-server capsule fitting uses imported
+  class-default mesh bounds when instance cosmetics are released, retaining the same capsule height
+  and mesh alignment as visual peers. Segment stop coordinates therefore use the same ground offset.
 - Some legacy mob lists (including wild dog) contain back knockdown but no back stand-up.
   This port reuses the existing front recovery in that case; no additional recovery delay is invented.
 - Full legacy parity is not claimed: UE swept collision/no-walk movement intentionally replaces

@@ -245,6 +245,7 @@ protected:
 	float CorpseLifetime = 5.0f;
 
 private:
+	friend class FMT2MobKnockdownTest;
 	// Server-only, non-persistent leases. Weak references cannot keep a disconnected pawn alive.
 	TWeakObjectPtr<UMT2QuestManagerComponent> QuestConversationOwner;
 	TWeakObjectPtr<AMT2PlayerCharacter> QuestConversationPawn;
@@ -313,6 +314,7 @@ private:
 	bool bKnockdownMotionLocked = false;
 	FTimerHandle DeathAnimFreezeTimer;
 	TWeakObjectPtr<UAnimMontage> DeathAnimMontage;
+	TWeakObjectPtr<UAnimMontage> ActiveMotionMontage;
 	bool bAttackReady = true;
 	bool bCombatMotionLocked = false;
 	bool bRewardsDistributed = false;

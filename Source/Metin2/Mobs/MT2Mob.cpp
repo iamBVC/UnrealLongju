@@ -496,6 +496,17 @@ bool AMT2Mob::PlayMobMotion(EMT2MobMotion Motion)
 	{
 		if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
 		{
+			// WAIT belongs to the locomotion graph. A one-shot idle montage would mask
+			// walk/run for its full duration after authority has resumed chasing.
+			if (Motion == EMT2MobMotion::Wait)
+			{
+				if (UAnimMontage* Active = ActiveMotionMontage.Get())
+				{
+					AnimInstance->Montage_Stop(GetDefault<UMT2MobRuntimeSettings>()->MontageBlendTime, Active);
+				}
+				ActiveMotionMontage.Reset();
+				return true;
+			}
 			// Attack motions play at AttackSpeed/100 like the old client; other motions at 1.0.
 			const float PlayRate = Motion == EMT2MobMotion::NormalAttack ? GetAttackMotionPlayRate() : 1.0f;
 			const UMT2MobRuntimeSettings* Settings = GetDefault<UMT2MobRuntimeSettings>();
@@ -503,6 +514,7 @@ bool AMT2Mob::PlayMobMotion(EMT2MobMotion Motion)
 				Sequence, TEXT("DefaultSlot"), Settings->MontageBlendTime,
 				bDeathMotion ? 0.0f : Settings->MontageBlendTime,
 				PlayRate, 1, -1.0f, 0.0f);
+			ActiveMotionMontage = Montage;
 
 			if (bDeathMotion && Montage)
 			{
@@ -808,6 +820,13 @@ void AMT2Mob::CalculateVisualCollision(
 	const USkeletalMeshComponent* MeshComponent = GetMesh();
 	const USkeletalMesh* SkeletalMesh =
 		MeshComponent ? MeshComponent->GetSkeletalMeshAsset() : nullptr;
+	if (!SkeletalMesh)
+	{
+		// Headless instances release visual assets before gameplay initialization. The
+		// imported class defaults still supply identical collision bounds on every peer.
+		const AMT2Mob* Defaults = GetClass()->GetDefaultObject<AMT2Mob>();
+		SkeletalMesh = Defaults && Defaults->GetMesh() ? Defaults->GetMesh()->GetSkeletalMeshAsset() : nullptr;
+	}
 	if (!Settings->bFitCapsuleToSkeletalMesh || !SkeletalMesh)
 	{
 		return;
