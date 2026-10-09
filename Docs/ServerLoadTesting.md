@@ -1,6 +1,6 @@
 # Server load testing
 
-Development builds provide the admin-only `/fakeplayers` command. Fake players are server-controlled warrior characters with a normal PlayerState, inventory, sword +9 (VNUM 19), movement and combat. They seek nearby monsters, use ordinary chase/combo/damage handling, collect nearby loot reserved for them, wander when no target is available and respawn after death. They are unavailable in Shipping builds.
+Development builds provide the admin-only `/fakeplayers` command. Fake players are server-controlled warrior characters with a normal PlayerState, inventory, sword +9 (VNUM 19), movement and combat. They seek nearby monsters and Metin stones, use ordinary chase/combo/damage handling, collect nearby loot reserved for them, wander when no target is available and respawn after death. They are unavailable in Shipping builds.
 
 ```text
 /fakeplayers 100
@@ -14,6 +14,8 @@ Arguments are count, optional radius in centimetres and optional level. Defaults
 Configure **Project Settings > Game > Server Load Testing**, or `[/Script/Metin2.MT2LoadTestSettings]` in `Config/DefaultGame.ini`. Limits, spawn batching, radius, level, target-search radius, decision interval and respawn delay are configurable. Warrior appearance and weapon VNUM 19 are fixed.
 
 Fake players have no account/persistence identity and do not acquire admin rights. They do not exercise login, character loading or database saves. Their pawns are included in the player spatial grid, so they activate mobs and can be selected by monster AI. Characters and PlayerStates replicate normally to real clients observing them. Controller decisions have the `MT2.LoadTest.BotDecision` FramePro scope; the harness has `MT2.LoadTest.Tick`.
+
+For admin mob placement, `/m <vnum> [count] [radius_cm]` spreads up to 20 mobs over a random disk around the player (radius 0..20000 cm), with ordinary ground/capsule placement checks. Without a radius, mobs use the standard nearby placement. Example: `/m 101 20 5000`.
 
 ## What this measures
 

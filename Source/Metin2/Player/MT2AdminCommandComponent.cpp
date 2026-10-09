@@ -53,7 +53,7 @@ AMT2PlayerCharacter* UMT2AdminCommandComponent::GetPlayer() const
 const TArray<UMT2AdminCommandComponent::FCommand>& UMT2AdminCommandComponent::GetCommandTable()
 {
 	static const TArray<FCommand> Table = {
-		{TEXT("/m"),             2, &UMT2AdminCommandComponent::CmdSpawnMob,      TEXT("/m <vnum> [count]")},
+		{TEXT("/m"),             2, &UMT2AdminCommandComponent::CmdSpawnMob,      TEXT("/m <vnum> [count] [radius_cm]")},
 		{TEXT("/i"),             2, &UMT2AdminCommandComponent::CmdGiveItem,      TEXT("/i <vnum> [count]")},
 		{TEXT("/xp"),            2, &UMT2AdminCommandComponent::CmdAddExperience, TEXT("/xp <positive amount>")},
 		{TEXT("/money"),         2, &UMT2AdminCommandComponent::CmdAddMoney,      TEXT("/money <positive amount>")},
@@ -260,8 +260,16 @@ void UMT2AdminCommandComponent::CmdSpawnMob(const TArray<FString>& Args)
 	UGameInstance* GameInstance = World ? World->GetGameInstance() : nullptr;
 	UMT2VnumRegistrySubsystem* Registry =
 		GameInstance ? GameInstance->GetSubsystem<UMT2VnumRegistrySubsystem>() : nullptr;
-	const int32 Vnum = FCString::Atoi(*Args[1]);
-	const int32 Count = Args.IsValidIndex(2) ? FMath::Clamp(FCString::Atoi(*Args[2]), 1, 20) : 1;
+	int32 Vnum = 0, Count = 1;
+	float Radius = 0.f;
+	if (Args.Num() > 4 || !LexTryParseString(Vnum, *Args[1]) || Vnum <= 0 ||
+		(Args.IsValidIndex(2) && (!LexTryParseString(Count, *Args[2]) || Count <= 0)) ||
+		(Args.IsValidIndex(3) && (!LexTryParseString(Radius, *Args[3]) || !FMath::IsFinite(Radius) || Radius < 0.f || Radius > 20000.f)))
+	{
+		SendResult(false, TEXT("Usage: /m <vnum> [count] [radius_cm] (radius 0..20000; count capped at 20)."));
+		return;
+	}
+	Count = FMath::Min(Count, 20);
 	const TSubclassOf<AMT2Mob> MobClass = Registry ? Registry->ResolveMobClass(Vnum) : nullptr;
 	if (!Player || !MobClass)
 	{
@@ -274,8 +282,15 @@ void UMT2AdminCommandComponent::CmdSpawnMob(const TArray<FString>& Args)
 		// Search out from a ring in front of the player for ground the mob's capsule actually fits
 		// on, rather than dropping it at a fixed offset and letting the spawn handler shove it out
 		// of whatever it landed inside.
+		FVector SpawnOrigin = Player->GetActorLocation();
+		if (Args.IsValidIndex(3))
+		{
+			const float Angle = FMath::FRand() * 2.f * UE_PI;
+			const float Distance = FMath::Sqrt(FMath::FRand()) * Radius;
+			SpawnOrigin += FVector(FMath::Cos(Angle), FMath::Sin(Angle), 0.f) * Distance;
+		}
 		const FVector Location = AMT2Mob::FindGroundSpawnLocation(
-			World, MobClass, Player->GetActorLocation(), 150.0f, Player);
+			World, MobClass, SpawnOrigin, Args.IsValidIndex(3) ? 0.f : 150.f, Player);
 		const FTransform SpawnTransform(Player->GetActorRotation(), Location);
 
 		FActorSpawnParameters SpawnParameters;
