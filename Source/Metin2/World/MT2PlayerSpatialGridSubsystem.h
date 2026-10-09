@@ -48,6 +48,7 @@ public:
 
 private:
 	friend class FMT2FakePlayersTest;
+	friend class FMT2SpatialQueriesTest;
 	FIntPoint ToCell(const FVector& Location) const;
 	void RebuildPlayerGrid();
 	void RefreshRelevanceComponents();

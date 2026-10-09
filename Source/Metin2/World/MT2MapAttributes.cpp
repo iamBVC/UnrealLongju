@@ -20,6 +20,13 @@ bool FMT2MapAttributes::TraceBlockedSegment(const FVector& Start, const FVector&
 	if (!FMath::IsFinite(Origin.X) || !FMath::IsFinite(Origin.Y) ||
 		!FMath::IsFinite(Direction.X) || !FMath::IsFinite(Direction.Y)) { return false; }
 	if (Direction.X == 0.0 && Direction.Y == 0.0) { return false; }
+	const FVector2D Destination = Origin + Direction;
+	// A straight segment entirely inside one cell cannot enter a different blocked area.
+	// This also preserves the existing escape rule for an initially blocked spawn.
+	if (Origin.X >= 0 && Origin.Y >= 0 && Origin.X < Size.X && Origin.Y < Size.Y &&
+		Destination.X >= 0 && Destination.Y >= 0 && Destination.X < Size.X && Destination.Y < Size.Y &&
+		FMath::FloorToInt(Origin.X) == FMath::FloorToInt(Destination.X) &&
+		FMath::FloorToInt(Origin.Y) == FMath::FloorToInt(Destination.Y)) { return false; }
 
 	// Clip to this map, then traverse crossed cells rather than sampling the endpoint.
 	double Enter = 0.0, Exit = 1.0;

@@ -34,6 +34,8 @@ Use this as a gameplay-load test, then use independent client processes with act
 
 Low-level warriors can die frequently and idle between respawns; choose a representative level explicitly for sustained combat. Wandering uses the game's direct movement/collision, not a new navigation system. Blocked terrain can prevent reaching a chosen target.
 
+Player capsules use query-only collision by default: terrain sweeps, targeting and portal overlaps remain active, but capsules do not participate as Chaos rigid bodies or push physics objects. Enable `bPlayerPhysicsInteraction` in Metin2 Gameplay settings only when rigid-body interaction is required, using matching client/server configuration and newly spawned players. Knockback retains Unreal root-motion-source prediction and replication. Local player-grid queries use neighbor buckets; large sparse searches scan occupied buckets. These settings do not replace real-client capacity testing.
+
 Existing combat/engagement diagnostics can add logging overhead. For comparable CPU captures, set the same log verbosity in every run; for example `-LogCmds="LogMT2Combat Error,LogMT2Targeting Error"`. Restore diagnostic verbosity when investigating a failure.
 
 Automation coverage is under `Metin2.Server.FakePlayers`. A successful fixture is not a live 100-client test.

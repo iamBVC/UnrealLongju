@@ -6,6 +6,8 @@
 #include "Engine/World.h"
 #include "GameFramework/WorldSettings.h"
 #include "AIController.h"
+#include "Components/CapsuleComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Components/BoxComponent.h"
 #include "Components/MT2HealthComponent.h"
@@ -63,6 +65,8 @@ bool FMT2FakePlayersTest::RunTest(const FString&)
 		auto* BotState = Controller->GetPlayerState<AMT2PlayerState>();
 		if (!TestNotNull(TEXT("Bot pawn"), Pawn) || !TestNotNull(TEXT("Bot PlayerState"), BotState)) return false;
 		Pawns.Add(Pawn); States.Add(BotState);
+		TestEqual(TEXT("Player capsule retains queries without Chaos body"), Pawn->GetCapsuleComponent()->GetCollisionEnabled(), ECollisionEnabled::QueryOnly);
+		TestFalse(TEXT("Players do not push physics bodies"), Pawn->GetCharacterMovement()->bEnablePhysicsInteraction);
 		TestTrue(TEXT("Bot identity"), BotState->IsABot());
 		TestFalse(TEXT("Bot never has admin rights"), BotState->IsAdmin());
 		TestEqual(TEXT("Warrior appearance"), BotState->GetCharacterAppearance().Race, EMT2CharacterRace::Warrior);

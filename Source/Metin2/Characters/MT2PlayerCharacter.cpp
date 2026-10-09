@@ -119,6 +119,9 @@ AMT2PlayerCharacter::AMT2PlayerCharacter()
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
 	Movement->bOrientRotationToMovement = true;
 	Movement->RotationRate = FRotator(0.0, 540.0, 0.0);
+	Movement->bEnablePhysicsInteraction = UMT2GameplaySettings::Get().bPlayerPhysicsInteraction;
+	GetCapsuleComponent()->SetCollisionEnabled(UMT2GameplaySettings::Get().bPlayerPhysicsInteraction
+		? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::QueryOnly);
 	JumpMaxCount = 0;
 
 	GetMesh()->SetRelativeLocation(FVector(0.0, 0.0, -90.0));
@@ -211,6 +214,10 @@ FMT2PrimaryStats AMT2PlayerCharacter::GetCalculatedPrimaryStats() const
 void AMT2PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	// Blueprint collision profiles must not restore rigid-body participation by accident.
+	GetCharacterMovement()->bEnablePhysicsInteraction = UMT2GameplaySettings::Get().bPlayerPhysicsInteraction;
+	GetCapsuleComponent()->SetCollisionEnabled(UMT2GameplaySettings::Get().bPlayerPhysicsInteraction
+		? ECollisionEnabled::QueryAndPhysics : ECollisionEnabled::QueryOnly);
 	// Reapply after Blueprint defaults/collision profiles have loaded. This must run on every client
 	// because cursor traces are local and target simulated player proxies there.
 	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);

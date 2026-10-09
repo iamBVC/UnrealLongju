@@ -73,6 +73,10 @@ bool FMT2NoWalkTest::RunTest(const FString& Parameters)
 		Data.TraceBlockedSegment(FVector(450, -250, 0), FVector(50, -250, 0), Minimum, Maximum, Time, Normal));
 	TestFalse(TEXT("Vertical motion is unaffected"),
 		Data.TraceBlockedSegment(FVector(250, -50, 0), FVector(250, -50, 100), Minimum, Maximum, Time, Normal));
+	TestFalse(TEXT("Short motion within a clear cell stays clear"),
+		Data.TraceBlockedSegment(FVector(450, -50, 0), FVector(440, -55, 0), Minimum, Maximum, Time, Normal));
+	TestFalse(TEXT("Short motion inside an initially blocked cell can escape"),
+		Data.TraceBlockedSegment(FVector(250, -50, 0), FVector(240, -55, 0), Minimum, Maximum, Time, Normal));
 	TestFalse(TEXT("Invalid authored blocked spawn can escape"),
 		Data.TraceBlockedSegment(FVector(250, -50, 0), FVector(450, -50, 0), Minimum, Maximum, Time, Normal));
 	TestTrue(TEXT("Entering a map from outside still checks its blocked cells"),

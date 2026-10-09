@@ -9,11 +9,15 @@ bool UMT2CharacterMovementComponent::MoveUpdatedComponentImpl(const FVector& Del
 {
 	// Server simulation and autonomous prediction use the same cooked attribute grid.
 	// Replicated proxy corrections and deliberate teleports must not be intercepted.
+	if (!bSweep || Teleport != ETeleportType::None || !UpdatedComponent || !CharacterOwner ||
+		CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy || (Delta.X == 0.0 && Delta.Y == 0.0))
+	{
+		return Super::MoveUpdatedComponentImpl(Delta, NewRotation, bSweep, OutHit, Teleport);
+	}
 	const UWorld* World = GetWorld();
 	const UMT2MapAttributeSubsystem* Attributes = World ? World->GetSubsystem<UMT2MapAttributeSubsystem>() : nullptr;
 	FHitResult AttributeHit;
-	if (!bSweep || Teleport != ETeleportType::None || !UpdatedComponent || !CharacterOwner ||
-		CharacterOwner->GetLocalRole() == ROLE_SimulatedProxy || !Attributes ||
+	if (!Attributes ||
 		!Attributes->TraceBlockedMovement(UpdatedComponent->GetComponentLocation(),
 			UpdatedComponent->GetComponentLocation() + Delta, AttributeHit))
 	{

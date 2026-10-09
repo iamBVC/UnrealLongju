@@ -16,6 +16,30 @@
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
+namespace
+{
+	template<typename Value, typename Visitor>
+	void VisitNearbyCells(const TMap<FIntPoint, Value>& Cells, FIntPoint MinCell, FIntPoint MaxCell, Visitor Visit)
+	{
+		const int64 Width = int64(MaxCell.X) - MinCell.X + 1;
+		const int64 Height = int64(MaxCell.Y) - MinCell.Y + 1;
+		if (Cells.IsEmpty() || Width <= 0 || Height <= 0) return;
+		// Neighbor lookups for local queries; occupied buckets for large sparse queries.
+		if (Width <= Cells.Num() && Height <= Cells.Num() / Width)
+		{
+			for (int64 X = MinCell.X; X <= MaxCell.X; ++X)
+				for (int64 Y = MinCell.Y; Y <= MaxCell.Y; ++Y)
+					if (const Value* Bucket = Cells.Find(FIntPoint(int32(X), int32(Y)))) Visit(*Bucket);
+		}
+		else
+		{
+			for (const auto& Pair : Cells)
+				if (Pair.Key.X >= MinCell.X && Pair.Key.X <= MaxCell.X &&
+					Pair.Key.Y >= MinCell.Y && Pair.Key.Y <= MaxCell.Y) Visit(Pair.Value);
+		}
+	}
+}
+
 void UMT2PlayerSpatialGridSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
@@ -90,14 +114,7 @@ int32 UMT2PlayerSpatialGridSubsystem::EstimatePlayersInRadius(const FVector& Loc
 	const FIntPoint MinCell = ToCell(Location - FVector(Radius, Radius, 0.0f));
 	const FIntPoint MaxCell = ToCell(Location + FVector(Radius, Radius, 0.0f));
 	int32 Count = 0;
-	for (const TPair<FIntPoint, int32>& Pair : PlayerCountsByCell)
-	{
-		if (Pair.Key.X >= MinCell.X && Pair.Key.X <= MaxCell.X &&
-			Pair.Key.Y >= MinCell.Y && Pair.Key.Y <= MaxCell.Y)
-		{
-			Count += Pair.Value;
-		}
-	}
+	VisitNearbyCells(PlayerCountsByCell, MinCell, MaxCell, [&Count](int32 CellCount) { Count += CellCount; });
 	return Count;
 }
 
@@ -113,14 +130,9 @@ void UMT2PlayerSpatialGridSubsystem::GetPlayerPawnsInRadius(
 	const float RadiusSquared = FMath::Square(Radius);
 	const FIntPoint MinCell = ToCell(Location - FVector(Radius, Radius, 0.0f));
 	const FIntPoint MaxCell = ToCell(Location + FVector(Radius, Radius, 0.0f));
-	for (const TPair<FIntPoint, TArray<TWeakObjectPtr<APawn>>>& Pair : PlayersByCell)
+	VisitNearbyCells(PlayersByCell, MinCell, MaxCell, [&](const auto& Bucket)
 	{
-		if (Pair.Key.X < MinCell.X || Pair.Key.X > MaxCell.X ||
-			Pair.Key.Y < MinCell.Y || Pair.Key.Y > MaxCell.Y)
-		{
-			continue;
-		}
-		for (const TWeakObjectPtr<APawn>& WeakPawn : Pair.Value)
+		for (const TWeakObjectPtr<APawn>& WeakPawn : Bucket)
 		{
 			APawn* Pawn = WeakPawn.Get();
 			if (Pawn && FVector::DistSquared2D(Location, Pawn->GetActorLocation()) <= RadiusSquared)
@@ -128,7 +140,7 @@ void UMT2PlayerSpatialGridSubsystem::GetPlayerPawnsInRadius(
 				OutPawns.Add(Pawn);
 			}
 		}
-	}
+	});
 }
 
 float UMT2PlayerSpatialGridSubsystem::GetClosestPlayerDistanceSquared(
@@ -139,21 +151,16 @@ float UMT2PlayerSpatialGridSubsystem::GetClosestPlayerDistanceSquared(
 	const FIntPoint MinCell = ToCell(Location - FVector(MaxRadius, MaxRadius, 0.0f));
 	const FIntPoint MaxCell = ToCell(Location + FVector(MaxRadius, MaxRadius, 0.0f));
 	float Best = TNumericLimits<float>::Max();
-	for (const TPair<FIntPoint, TArray<TWeakObjectPtr<APawn>>>& Pair : PlayersByCell)
+	VisitNearbyCells(PlayersByCell, MinCell, MaxCell, [&](const auto& Bucket)
 	{
-		if (Pair.Key.X < MinCell.X || Pair.Key.X > MaxCell.X ||
-			Pair.Key.Y < MinCell.Y || Pair.Key.Y > MaxCell.Y)
-		{
-			continue;
-		}
-		for (const TWeakObjectPtr<APawn>& WeakPawn : Pair.Value)
+		for (const TWeakObjectPtr<APawn>& WeakPawn : Bucket)
 		{
 			if (const APawn* Pawn = WeakPawn.Get())
 			{
 				Best = FMath::Min(Best, FVector::DistSquared2D(Location, Pawn->GetActorLocation()));
 			}
 		}
-	}
+	});
 	return Best;
 }
 
@@ -164,14 +171,9 @@ APawn* UMT2PlayerSpatialGridSubsystem::FindClosestPlayerPawn(const FVector& Loca
 	const FIntPoint MaxCell = ToCell(Location + FVector(Radius, Radius, 0.0f));
 	APawn* BestPawn = nullptr;
 	float BestDistanceSquared = FMath::Square(Radius);
-	for (const TPair<FIntPoint, TArray<TWeakObjectPtr<APawn>>>& Pair : PlayersByCell)
+	VisitNearbyCells(PlayersByCell, MinCell, MaxCell, [&](const auto& Bucket)
 	{
-		if (Pair.Key.X < MinCell.X || Pair.Key.X > MaxCell.X ||
-			Pair.Key.Y < MinCell.Y || Pair.Key.Y > MaxCell.Y)
-		{
-			continue;
-		}
-		for (const TWeakObjectPtr<APawn>& WeakPawn : Pair.Value)
+		for (const TWeakObjectPtr<APawn>& WeakPawn : Bucket)
 		{
 			APawn* Pawn = WeakPawn.Get();
 			if (!Pawn) continue;
@@ -182,7 +184,7 @@ APawn* UMT2PlayerSpatialGridSubsystem::FindClosestPlayerPawn(const FVector& Loca
 				BestPawn = Pawn;
 			}
 		}
-	}
+	});
 	return BestPawn;
 }
 
