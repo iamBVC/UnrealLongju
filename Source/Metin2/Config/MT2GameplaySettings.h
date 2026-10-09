@@ -99,10 +99,6 @@ public:
 
 	static const UMT2GameplaySettings& Get() { return *GetDefault<UMT2GameplaySettings>(); }
 
-	// Sweeps and overlaps remain enabled without registering player capsules as Chaos bodies.
-	UPROPERTY(EditAnywhere, config, Category = "Movement",
-		meta = (ToolTip = "Enable player capsule physics collision and pushing rigid bodies. Disabled for legacy-style query-only movement. Requires matching client/server settings and respawning players."))
-	bool bPlayerPhysicsInteraction = false;
 	UPROPERTY(EditAnywhere, config, Category = "Networking", meta = (ClampMin = "1", ClampMax = "30", Units = "Hz"))
 	float PlayerStateReplicationRate = 2.f;
 	UPROPERTY(EditAnywhere, config, Category = "Networking", meta = (ClampMin = "1", ClampMax = "30", Units = "Hz"))
