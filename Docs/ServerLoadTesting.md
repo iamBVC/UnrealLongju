@@ -49,3 +49,16 @@ Existing combat/engagement diagnostics can add logging overhead. For comparable 
 Automation coverage is under `Metin2.Server.FakePlayers`. A successful fixture is not a live 100-client test.
 
 Dedicated servers disable character skeletal ticks, clear cosmetic mesh/AnimBP resources and detach hair/weapon socket attachments. Combat still reads imported animation metadata; movement and knockback remain authoritative. PlayerState polling defaults to 2 Hz via `PlayerStateReplicationRate` in Metin2 Gameplay settings. Progression, appearance, vitals, primary stats, skill levels and gameplay-tag changes request immediate replication. The baseline remains a fallback for other subobject updates; PlayerState layout and actor relevancy are unchanged. Equipment uses the owner/observer split described above. Compare client-visible state under latency when changing this rate.
+
+PlayerState uses Unreal's registered-component replication path. Quest dialogs/journal/targets,
+messenger state, guild-detail snapshots and trades have owner-only component conditions, so observer
+connections skip their object replicators and property comparisons entirely. The ASC retains its
+native subobject hook for attributes/abilities; public skill-group state, primary stats and duels
+remain observable. Private property conditions are retained as well. Native components remain
+available locally for their existing owner RPCs and UI consumers.
+
+Bot bag mutations do not force pawn replication because bots have no owning client. Public equipment
+appearance still forces updates independently. Real-player inventory notifications remain immediate;
+simulation, movement rates, combat timing and persistent inventory behavior are unchanged. Compare
+`ServerReplicateActors Time`, PlayerState replication cost and engine work in matching captures;
+test owner quest/trade/messenger/guild flows with real connections before deployment.

@@ -4,6 +4,9 @@
 #include "Engine/World.h"
 #include "Characters/MT2PlayerCharacter.h"
 #include "Items/MT2InventoryComponent.h"
+#include "Player/MT2PlayerState.h"
+#include "AbilitySystemComponent.h"
+#include "Components/ActorComponent.h"
 #include "Config/MT2GameplaySettings.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/RootMotionSource.h"
@@ -19,6 +22,21 @@ bool FMT2ObserverReplicationTest::RunTest(const FString&)
 	if (!TestNotNull(TEXT("World"), World)) return false;
 	ON_SCOPE_EXIT { World->DestroyWorld(false); };
 	auto* Player = World->SpawnActor<AMT2PlayerCharacter>();
+	auto* State = World->SpawnActor<AMT2PlayerState>();
+	TestTrue(TEXT("PlayerState filters components through registered replication"), State->IsUsingRegisteredSubObjectList());
+	TestEqual(TEXT("ASC remains visible to observers"), int32(State->AllowActorComponentToReplicate(State->GetAbilitySystemComponent())), int32(COND_None));
+	TestFalse(TEXT("ASC native subobject replication remains enabled"), State->GetAbilitySystemComponent()->IsUsingRegisteredSubObjectList());
+	int32 PrivateComponents = 0;
+	for (const UActorComponent* Component : State->GetReplicatedComponents())
+	{
+		const FName Name = Component->GetFName();
+		const bool bPrivate = Name == TEXT("QuestComponent") || Name == TEXT("QuestManagerComponent") ||
+			Name == TEXT("MessengerComponent") || Name == TEXT("GuildComponent") || Name == TEXT("TradeComponent");
+		TestEqual(FString::Printf(TEXT("%s component routing"), *Name.ToString()),
+			int32(State->AllowActorComponentToReplicate(Component)), int32(bPrivate ? COND_OwnerOnly : Component->GetReplicationCondition()));
+		if (bPrivate) ++PrivateComponents;
+	}
+	TestEqual(TEXT("All five private components are filtered before observer replication"), PrivateComponents, 5);
 	auto* Inventory = Player->GetInventoryComponent();
 	TArray<FMT2ItemSlot> Worn; Worn.SetNum(32);
 	Worn[0].Vnum = 11209; Worn[0].Count = 1;

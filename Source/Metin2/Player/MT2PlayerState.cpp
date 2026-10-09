@@ -60,6 +60,8 @@ namespace
 
 AMT2PlayerState::AMT2PlayerState()
 {
+	// Component conditions are evaluated before object replicators in the registered-list path.
+	bReplicateUsingRegisteredSubObjectList = true;
 	// Mutations request immediate replication; the baseline is for unchanged state/subobjects.
 	SetNetUpdateFrequency(FMath::Clamp(UMT2GameplaySettings::Get().PlayerStateReplicationRate, 1.f, 30.f));
 
@@ -86,6 +88,27 @@ AMT2PlayerState::AMT2PlayerState()
 UAbilitySystemComponent* AMT2PlayerState::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+void AMT2PlayerState::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	// Enforce before BeginPlay builds component registration, including Blueprint-derived states.
+	bReplicateUsingRegisteredSubObjectList = true;
+}
+
+ELifetimeCondition AMT2PlayerState::AllowActorComponentToReplicate(const UActorComponent* ComponentToReplicate) const
+{
+	if (ComponentToReplicate && ComponentToReplicate->GetIsReplicated() &&
+		(ComponentToReplicate == QuestComponent || ComponentToReplicate == QuestManagerComponent ||
+		 ComponentToReplicate == MessengerComponent || ComponentToReplicate == GuildComponent ||
+		 ComponentToReplicate == TradeComponent))
+	{
+		return COND_OwnerOnly;
+	}
+	// ASC retains its own legacy subobject hook for attributes/abilities. SkillGroup, primary
+	// stats and duels are public; do not gate their entire components to the owning connection.
+	return Super::AllowActorComponentToReplicate(ComponentToReplicate);
 }
 
 void AMT2PlayerState::BeginPlay()

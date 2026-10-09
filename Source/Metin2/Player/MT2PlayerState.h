@@ -73,6 +73,8 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual ELifetimeCondition AllowActorComponentToReplicate(const UActorComponent* ComponentToReplicate) const override;
+	virtual void PostInitializeComponents() override;
 	void InitializeAbilitySystem(AActor* AvatarActor);
 	virtual FString CapturePersistentStateJson_Implementation() const override;
 	virtual bool ApplyPersistentStateJson_Implementation(const FString& PayloadJson) override;

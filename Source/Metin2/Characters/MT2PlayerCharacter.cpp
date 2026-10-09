@@ -2683,8 +2683,11 @@ void AMT2PlayerCharacter::HandleEquipmentChanged()
 void AMT2PlayerCharacter::HandleInventoryChanged()
 {
 	if (!HasAuthority()) return;
-	ForceNetUpdate();
-	if (AMT2PlayerState* State = GetPlayerState<AMT2PlayerState>())
+	AMT2PlayerState* State = GetPlayerState<AMT2PlayerState>();
+	// Bot bags are owner-private and bots have no owning network client. Equipment appearance
+	// still requests updates through HandleEquipmentChanged, independently of bag mutations.
+	if (!State || !State->IsABot()) { ForceNetUpdate(); }
+	if (State)
 	{
 		if (UMT2PersistenceComponent* Persistence = State->GetPersistenceComponent())
 		{
