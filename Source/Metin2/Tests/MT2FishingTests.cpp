@@ -270,6 +270,9 @@ bool FMT2NotificationRoutingTest::RunTest(const FString&)
 	Widget->AddGlobalLine(EMT2Empire::Shinsoo, TEXT("Admin"), TEXT("hello"), true);
 	TestEqual(TEXT("Player/guild/admin chat remains in chat history"), Widget->HistoryBox->GetChildrenCount(), 2);
 	TestEqual(TEXT("Player chat does not enter loot log"), Widget->RewardHistoryBox->GetChildrenCount(), 3);
+	Controller->ClientAdminCommandMessage_Implementation(TEXT("[OK] Command completed\nCommand details"));
+	TestEqual(TEXT("Admin command feedback enters chat"), Widget->HistoryBox->GetChildrenCount(), 4);
+	TestEqual(TEXT("Admin command feedback never enters info log"), Widget->RewardHistoryBox->GetChildrenCount(), 3);
 	for (int32 Index = 0; Index < 20; ++Index) { Controller->AddInfoChatLine(TEXT("Notification")); }
 	TestEqual(TEXT("Notification history remains bounded"), Widget->RewardHistoryBox->GetChildrenCount(), 8);
 	Widget->HistoryVisibleUntil = 0; Widget->RewardVisibleUntil = 10;

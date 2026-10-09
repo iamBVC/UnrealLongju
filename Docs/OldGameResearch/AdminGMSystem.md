@@ -42,5 +42,8 @@ Sources studied:
 - PIE sessions grant admin to everyone, replicating `test_server` behavior.
 - Only admins may execute `/` chat commands (server-side gate in
   `ServerExecuteChatCommand`).
+- Admin-command feedback (help, errors, results, statistics and profiler status) uses the
+  owning client's chat history, through `SendAdminCommandMessage` / `ClientAdminCommandMessage`.
+  Ordinary system/gameplay notifications remain in the independent loot/info history.
 - GM mark: screen-space widget component above the head showing `T_ymirred`
   (stand-in for the gm.mse particle loop until a particle recreation exists).

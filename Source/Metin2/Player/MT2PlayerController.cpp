@@ -948,6 +948,14 @@ void AMT2PlayerController::ClientSystemChatMessage_Implementation(const FString&
 	for (const FString& Line : Lines) AddInfoChatLine(Line);
 }
 
+void AMT2PlayerController::ClientAdminCommandMessage_Implementation(const FString& Message)
+{
+	TArray<FString> Lines;
+	Message.ParseIntoArrayLines(Lines, false);
+	if (Lines.IsEmpty()) Lines.Add(Message);
+	for (const FString& Line : Lines) AddPlayerChatLine(Line);
+}
+
 void AMT2PlayerController::ClientNotifyYangReceived_Implementation(int64 Amount)
 {
 	if (Amount <= 0) return;
@@ -1005,10 +1013,10 @@ void AMT2PlayerController::ClientSetNetworkProfilerEnabled_Implementation(bool b
 {
 #if USE_NETWORK_PROFILER
 	GNetworkProfiler.Exec(GetWorld(), bEnabled ? TEXT("ENABLE") : TEXT("DISABLE"), *GLog);
-	ClientSystemChatMessage_Implementation(FString::Printf(
+	ClientAdminCommandMessage_Implementation(FString::Printf(
 		TEXT("Client network profiler %s."), bEnabled ? TEXT("enabled") : TEXT("disabled")));
 #else
-	ClientSystemChatMessage_Implementation(TEXT("Network profiler is unavailable in this build."));
+	ClientAdminCommandMessage_Implementation(TEXT("Network profiler is unavailable in this build."));
 #endif
 }
 
@@ -1053,6 +1061,11 @@ void AMT2PlayerController::ClientSetFullMapNpcMarkers_Implementation(
 void AMT2PlayerController::SendSystemChatMessage(const FString& Message)
 {
 	if (HasAuthority()) ClientSystemChatMessage(Message);
+}
+
+void AMT2PlayerController::SendAdminCommandMessage(const FString& Message)
+{
+	if (HasAuthority()) ClientAdminCommandMessage(Message);
 }
 
 void AMT2PlayerController::PrepareForServerMaintenance(const FString& Message)

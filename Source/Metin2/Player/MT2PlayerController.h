@@ -114,6 +114,7 @@ public:
 	void PrepareForServerMaintenance(const FString& Message);
 	void DisconnectForServerMaintenance(const FString& Message);
 	void SendSystemChatMessage(const FString& Message);
+	void SendAdminCommandMessage(const FString& Message);
 	void SendFullMapNpcSnapshot();
 	const TArray<FMT2FullMapNpcMarker>& GetFullMapNpcMarkers() const { return FullMapNpcMarkers; }
 	FSimpleMulticastDelegate OnFullMapNpcMarkersChanged;
@@ -188,6 +189,8 @@ protected:
 
 	UFUNCTION(Client, Reliable)
 	void ClientSystemChatMessage(const FString& Message);
+	UFUNCTION(Client, Reliable)
+	void ClientAdminCommandMessage(const FString& Message);
 
 	void HandleAccountSessionRevoked(const FString& SessionOrAccountId, const FString& Reason);
 

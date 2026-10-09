@@ -98,19 +98,19 @@ namespace
 		const int32 RequestedPage = Args.IsValidIndex(1) ? FCString::Atoi(*Args[1]) : 1;
 		if (RequestedPage < 1 || RequestedPage > PageCount)
 		{
-			Controller->SendSystemChatMessage(FString::Printf(
+			Controller->SendAdminCommandMessage(FString::Printf(
 				TEXT("[%s] Invalid page. Choose 1-%d."), Label, PageCount));
 			return;
 		}
 
-		Controller->SendSystemChatMessage(FString::Printf(
+		Controller->SendAdminCommandMessage(FString::Printf(
 			TEXT("[%s] Page %d/%d - %d entries"), Label, RequestedPage, PageCount, Vnums.Num()));
 		const int32 FirstIndex = (RequestedPage - 1) * RegistryListPageSize;
 		const int32 LastIndex = FMath::Min(FirstIndex + RegistryListPageSize, Vnums.Num());
 		for (int32 Index = FirstIndex; Index < LastIndex; ++Index)
 		{
 			const int32 Vnum = Vnums[Index];
-			Controller->SendSystemChatMessage(FString::Printf(
+			Controller->SendAdminCommandMessage(FString::Printf(
 				TEXT("%d - %s"), Vnum, *ResolveName(Vnum)));
 		}
 	}
@@ -179,22 +179,22 @@ void UMT2AdminCommandComponent::CmdStats(const TArray<FString>&)
 	const FMT2PrimaryStats PrimaryBonus = PrimaryComponent->GetBonusStats();
 	const FMT2CombatStats Combat = CombatComponent->GetCalculatedStats();
 	const FMT2CombatStatBonuses CombatBonus = CombatComponent->GetBonuses();
-	Controller->SendSystemChatMessage(FString::Printf(
+	Controller->SendAdminCommandMessage(FString::Printf(
 		TEXT("[Stats] Level %d | EXP %lld/%lld"), State->GetCharacterLevel(), State->GetExperience(),
 		State->GetRequiredExperienceForNextLevel()));
-	Controller->SendSystemChatMessage(FString::Printf(
+	Controller->SendAdminCommandMessage(FString::Printf(
 		TEXT("[Stats] STR %d (+%d) DEX %d (+%d) VIT %d (+%d) INT %d (+%d)"),
 		Primary.Strength, PrimaryBonus.Strength, Primary.Dexterity, PrimaryBonus.Dexterity,
 		Primary.Constitution, PrimaryBonus.Constitution, Primary.Intelligence, PrimaryBonus.Intelligence));
-	Controller->SendSystemChatMessage(FString::Printf(
+	Controller->SendAdminCommandMessage(FString::Printf(
 		TEXT("[Stats] Attack %.0f-%.0f (item %.0f-%.0f) | Defense %.0f (+%.0f) | Magic %.0f/%.0f"),
 		Combat.DamageMin, Combat.DamageMax, CombatBonus.DamageMin, CombatBonus.DamageMax,
 		Combat.Defense, CombatBonus.Defense, Combat.MagicAttack, Combat.MagicDefense));
-	Controller->SendSystemChatMessage(FString::Printf(
+	Controller->SendAdminCommandMessage(FString::Printf(
 		TEXT("[Stats] AttackSpeed %d (+%d) MoveSpeed %d (+%d) Range %.0f | Damage x%.3f"),
 		Combat.AttackSpeed, CombatBonus.AttackSpeed, Combat.MovementSpeed, CombatBonus.MovementSpeed,
 		Combat.AttackRange, Combat.DamageMultiplier));
-	Controller->SendSystemChatMessage(FString::Printf(
+	Controller->SendAdminCommandMessage(FString::Printf(
 		TEXT("[Stats] HP %.0f/%.0f | MP %.0f/%.0f | Stamina %.0f/%.0f"),
 		Player->GetHealthComponent()->GetHealth(), Player->GetHealthComponent()->GetMaxHealth(),
 		Player->GetManaComponent()->GetMana(), Player->GetManaComponent()->GetMaxMana(),
@@ -212,11 +212,11 @@ void UMT2AdminCommandComponent::CmdStats(const TArray<FString>&)
 			ActiveBonuses.Add(FString::Printf(TEXT("%s %+d"), *Name, Value));
 		}
 	}
-	Controller->SendSystemChatMessage(FString::Printf(
+	Controller->SendAdminCommandMessage(FString::Printf(
 		TEXT("[Bonuses] Critical %d%% | Penetrating %d%% | Crit resist %d%% | Pen resist %d%%"),
 		Player->GetItemApplyBonus(15), Player->GetItemApplyBonus(16),
 		Player->GetItemApplyBonus(90), Player->GetItemApplyBonus(91)));
-	Controller->SendSystemChatMessage(ActiveBonuses.IsEmpty()
+	Controller->SendAdminCommandMessage(ActiveBonuses.IsEmpty()
 		? TEXT("[Bonuses] No active item/status bonuses.")
 		: FString::Printf(TEXT("[Bonuses] %s"), *FString::Join(ActiveBonuses, TEXT(" | "))));
 }
@@ -238,13 +238,13 @@ bool UMT2AdminCommandComponent::Execute(const FString& CommandLine)
 		}
 		if (Tokens.Num() < Command.MinTokens)
 		{
-			UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Usage: %s"), Command.Usage);
+			SendResult(false, FString::Printf(TEXT("Usage: %s"), Command.Usage));
 			return false;
 		}
 		(this->*Command.Handler)(Tokens);
 		return true;
 	}
-	UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Unknown command '%s'."), *Tokens[0]);
+	SendResult(false, FString::Printf(TEXT("Unknown command '%s'."), *Tokens[0]));
 	return false;
 }
 
@@ -260,7 +260,7 @@ void UMT2AdminCommandComponent::CmdSpawnMob(const TArray<FString>& Args)
 	const TSubclassOf<AMT2Mob> MobClass = Registry ? Registry->ResolveMobClass(Vnum) : nullptr;
 	if (!Player || !MobClass)
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] /m %d: no mob registered for that VNUM."), Vnum);
+		SendResult(false, FString::Printf(TEXT("/m %d: no mob registered for that VNUM."), Vnum));
 		return;
 	}
 
@@ -287,8 +287,7 @@ void UMT2AdminCommandComponent::CmdGiveItem(const TArray<FString>& Args)
 	const int32 Count = Args.IsValidIndex(2) ? FMath::Max(FCString::Atoi(*Args[2]), 1) : 1;
 	if (!Inventory || !Inventory->AddItemByVnum(Vnum, Count))
 	{
-		UE_LOG(LogMT2AdminCmd, Warning,
-			TEXT("[MT2Chat] /i %d: item not registered for that VNUM, or inventory full."), Vnum);
+		SendResult(false, FString::Printf(TEXT("/i %d: item not registered for that VNUM, or inventory full."), Vnum));
 	}
 }
 
@@ -299,14 +298,13 @@ void UMT2AdminCommandComponent::CmdAddExperience(const TArray<FString>& Args)
 	const int64 Amount = FCString::Atoi64(*Args[1]);
 	if (Amount <= 0 || !State)
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Usage: /xp <positive amount>"));
+		SendResult(false, FString::Printf(TEXT("Usage: /xp <positive amount>")));
 		return;
 	}
 	State->AddExperience(Amount);
-	UE_LOG(LogMT2AdminCmd, Display,
-		TEXT("[MT2Chat] Granted %lld EXP. Level=%d EXP=%lld/%lld"),
+	SendResult(true, FString::Printf(TEXT("Granted %lld EXP. Level=%d EXP=%lld/%lld"),
 		Amount, State->GetCharacterLevel(), State->GetExperience(),
-		State->GetRequiredExperienceForNextLevel());
+		State->GetRequiredExperienceForNextLevel()));
 }
 
 void UMT2AdminCommandComponent::CmdAddMoney(const TArray<FString>& Args)
@@ -316,11 +314,11 @@ void UMT2AdminCommandComponent::CmdAddMoney(const TArray<FString>& Args)
 	const int64 Amount = FCString::Atoi64(*Args[1]);
 	if (Amount <= 0 || !State)
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Usage: /money <positive amount>"));
+		SendResult(false, FString::Printf(TEXT("Usage: /money <positive amount>")));
 		return;
 	}
 	State->AddYang(Amount);
-	UE_LOG(LogMT2AdminCmd, Display, TEXT("[MT2Chat] Granted %lld Yang. Total=%lld"), Amount, State->GetYang());
+	SendResult(true, FString::Printf(TEXT("Granted %lld Yang. Total=%lld"), Amount, State->GetYang()));
 }
 
 void UMT2AdminCommandComponent::CmdApplyEffect(const TArray<FString>& Args)
@@ -349,7 +347,7 @@ void UMT2AdminCommandComponent::CmdSetSkillGroup(const TArray<FString>& Args)
 	const int32 Group = FCString::Atoi(*Args[1]);
 	if (!Skills || Group < 0 || Group > 2)
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Usage: /setskillgroup <0|1|2>"));
+		SendResult(false, FString::Printf(TEXT("Usage: /setskillgroup <0|1|2>")));
 		return;
 	}
 	// GM override: bypasses the level-5/once-only gates (0 clears the choice again).
@@ -358,7 +356,7 @@ void UMT2AdminCommandComponent::CmdSetSkillGroup(const TArray<FString>& Args)
 	{
 		Persistence->MarkDirty();
 	}
-	UE_LOG(LogMT2AdminCmd, Display, TEXT("[MT2Chat] Skill group set to %d."), Group);
+	SendResult(true, FString::Printf(TEXT("Skill group set to %d."), Group));
 }
 
 void UMT2AdminCommandComponent::CmdSetSkill(const TArray<FString>& Args)
@@ -370,12 +368,11 @@ void UMT2AdminCommandComponent::CmdSetSkill(const TArray<FString>& Args)
 	const int32 Level = FCString::Atoi(*Args[2]);
 	if (!Skills || Vnum <= 0 || Level < 0)
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Usage: /setskill <vnum> <level 0-40>"));
+		SendResult(false, FString::Printf(TEXT("Usage: /setskill <vnum> <level 0-40>")));
 		return;
 	}
 	Skills->SetSkillLevel(Vnum, Level);
-	UE_LOG(LogMT2AdminCmd, Display,
-		TEXT("[MT2Chat] Skill %d set to level %d."), Vnum, Skills->GetSkillLevel(Vnum));
+	SendResult(true, FString::Printf(TEXT("Skill %d set to level %d."), Vnum, Skills->GetSkillLevel(Vnum)));
 }
 
 void UMT2AdminCommandComponent::CmdSetRace(const TArray<FString>& Args)
@@ -392,7 +389,7 @@ void UMT2AdminCommandComponent::CmdSetRace(const TArray<FString>& Args)
 		Value == TEXT("sura") ? 2 : Value == TEXT("shaman") ? 3 : INDEX_NONE;
 	if (RaceIndex < 0 || RaceIndex > 3)
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Usage: /race <warrior|assassin|sura|shaman>"));
+		SendResult(false, FString::Printf(TEXT("Usage: /race <warrior|assassin|sura|shaman>")));
 		return;
 	}
 	FMT2CharacterAppearance Appearance = State->GetCharacterAppearance();
@@ -402,7 +399,7 @@ void UMT2AdminCommandComponent::CmdSetRace(const TArray<FString>& Args)
 	}
 	if (!Player->GetInventoryComponent()->UnequipAllItems())
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Race change failed: inventory has no room for all equipped items."));
+		SendResult(false, FString::Printf(TEXT("Race change failed: inventory has no room for all equipped items.")));
 		return;
 	}
 	State->ResetSkillsForRaceChange();
@@ -423,7 +420,7 @@ void UMT2AdminCommandComponent::CmdSetGender(const TArray<FString>& Args)
 		Value == TEXT("male") ? 0 : Value == TEXT("female") ? 1 : INDEX_NONE;
 	if (SexIndex < 0 || SexIndex > 1)
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Usage: /gender <male|female>"));
+		SendResult(false, FString::Printf(TEXT("Usage: /gender <male|female>")));
 		return;
 	}
 	FMT2CharacterAppearance Appearance = State->GetCharacterAppearance();
@@ -444,7 +441,7 @@ void UMT2AdminCommandComponent::CmdSetStyle(const TArray<FString>& Args)
 		Value == TEXT("red") ? 0 : Value == TEXT("blue") ? 1 : INDEX_NONE;
 	if (StyleIndex < 0 || StyleIndex > 1)
 	{
-		UE_LOG(LogMT2AdminCmd, Warning, TEXT("[MT2Chat] Usage: /style <red|blue>"));
+		SendResult(false, FString::Printf(TEXT("Usage: /style <red|blue>")));
 		return;
 	}
 	FMT2CharacterAppearance Appearance = State->GetCharacterAppearance();
@@ -458,7 +455,7 @@ void UMT2AdminCommandComponent::SendResult(bool bSucceeded, const FString& Messa
 	AMT2PlayerController* Controller = Player ? Cast<AMT2PlayerController>(Player->GetController()) : nullptr;
 	if (Controller)
 	{
-		Controller->SendSystemChatMessage(
+		Controller->SendAdminCommandMessage(
 			FString::Printf(TEXT("%s %s"), bSucceeded ? TEXT("[OK]") : TEXT("[ERROR]"), *Message));
 	}
 	UE_LOG(LogMT2AdminCmd, Display, TEXT("[MT2Chat] %s"), *Message);
