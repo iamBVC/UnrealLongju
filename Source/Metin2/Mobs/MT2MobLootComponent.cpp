@@ -461,8 +461,7 @@ void UMT2MobLootComponent::GenerateRewards(
 				Owner ? Owner->GetCharacterName() : FString(), 120.0f);
 		}
 
-		// The old server creates VNUM 1 with its count equal to the Yang amount. A party receives
-		// separate, evenly divided piles so every member gets an equal share.
+		// Keep the existing ownership and equal party shares, but credit Yang without world actors.
 		if (Rewards.Gold > 0)
 		{
 			const int32 RecipientCount = WinningGroup.Recipients.Num();
@@ -473,10 +472,18 @@ void UMT2MobLootComponent::GenerateRewards(
 				AMT2PlayerState* Owner = ClaimDropRecipient(WinningGroup);
 				const int64 Share = BaseShare + (Remainder-- > 0 ? 1 : 0);
 				if (Share <= 0) continue;
-				AMT2WorldItem::SpawnWorldYang(
-					GetWorld(), NextDropLocation(), Share, GetOwner(),
-					AMT2WorldItem::ResolvePlayerIdentity(Owner),
-					Owner ? Owner->GetCharacterName() : FString(), 120.0f);
+				if (IsValid(Owner))
+				{
+					if (!Owner->AddYang(Share) && Owner->GetYang() != MAX_int64)
+					{
+						UE_LOG(LogTemp, Warning, TEXT("Unable to credit %lld Yang to %s from %s."),
+							Share, *GetNameSafe(Owner), *GetNameSafe(GetOwner()));
+					}
+				}
+				else
+				{
+					UE_LOG(LogTemp, Warning, TEXT("Yang reward has no valid recipient for %s."), *GetNameSafe(GetOwner()));
+				}
 			}
 		}
 	}

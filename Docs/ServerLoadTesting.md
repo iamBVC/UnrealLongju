@@ -19,6 +19,8 @@ For admin mob placement, `/m <vnum> [count] [radius_cm]` spreads up to 20 mobs o
 
 ## What this measures
 
+Mob and Metin Yang rewards are credited directly to the selected player's balance. Parties retain the existing equal-share distribution, including integer remainders. Normal item loot still appears on the ground. Direct credits use the standard Yang balance limits, persistence and owner notifications, without spawning currency world actors. Explicit world-currency creation remains available to other gameplay systems.
+
 Remote player movement uses native quantized Unreal snapshots, rounded to centimetres, at `PlayerMovementReplicationRate` (10 Hz by default). Simulated proxies use `PlayerObserverSmoothingTime`; owner movement RPCs, saved moves and reconciliation retain their native path. Active root-motion sources temporarily use `PlayerRootMotionReplicationRate` (30 Hz by default), with forced updates at transitions. These settings live under Metin2 Gameplay > Networking and require matching staged client/server builds. This is not a replacement of player prediction with the legacy mob segment system.
 
 Equipment instances (counts, bonuses, sockets and recovery state) replicate only to their owning client. Observers receive body/weapon template identifiers for visuals, fishing rods and animation selection; hair/style remains in character appearance. Observer `GetEquipment()` is a compatibility view with only those visual slots, not an inspectable inventory. Initial appearance and unequipping are represented by persistent replicated state rather than transient RPCs. Validate observer motion under latency/packet loss, root-motion knockback and late joining before treating a bandwidth reduction as production capacity.
