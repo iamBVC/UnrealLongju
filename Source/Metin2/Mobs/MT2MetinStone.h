@@ -13,6 +13,19 @@
 #include "Mobs/MT2Mob.h"
 #include "MT2MetinStone.generated.h"
 
+class UParticleSystem;
+class UParticleSystemComponent;
+
+USTRUCT(BlueprintType)
+struct FMT2MetinSmokeAttachment
+{
+	GENERATED_BODY()
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly) TSoftObjectPtr<UParticleSystem> Effect;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly) FName Bone;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly) FVector Location = FVector::ZeroVector;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly) FRotator Rotation = FRotator::ZeroRotator;
+};
+
 // A metin stone is a mob_proto row with bType = CHAR_TYPE_STONE. It never fights like a mob (the
 // old char_state.cpp errors outright: "Stone must not use battle state") - instead it sits still
 // and, every 10% of HP it loses, plays its attack motion in place and summons a wave of mobs that
@@ -37,6 +50,13 @@ public:
 
 	void SetSpawnGroups(const TArray<FMT2MetinSpawnGroup>& NewGroups) { SpawnGroups = NewGroups; }
 	void ProcessStoneBehavior();
+	virtual void PostInitializeComponents() override;
+	// Imported .msm smoke slots 0..3 and persistent AttachingData effects.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Metin|Smoke")
+	TArray<FMT2MetinSmokeAttachment> SmokeStages;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Metin|Smoke")
+	TArray<FMT2MetinSmokeAttachment> AmbientSmoke;
+	static int32 GetSmokeStage(float HealthPercent);
 
 protected:
 	virtual void BeginPlay() override;
@@ -63,6 +83,13 @@ private:
 	void SpawnGroupMember(TSubclassOf<AMT2Mob> MobClass, AActor* Attacker);
 	UFUNCTION() void HandleHealthChanged(float OldHealth, float NewHealth);
 	UFUNCTION() void HandleStoneDeath();
+	UFUNCTION() void RefreshSmoke(float OldHealth, float NewHealth);
+	void RefreshSmokeVisuals();
+	void ClearSmoke();
+	UParticleSystemComponent* CreateSmoke(const FMT2MetinSmokeAttachment& Attachment);
+	UPROPERTY(Transient) TArray<TObjectPtr<UParticleSystemComponent>> AmbientSmokeComponents;
+	UPROPERTY(Transient) TObjectPtr<UParticleSystemComponent> StageSmokeComponent;
+	int32 ActiveSmokeStage = INDEX_NONE;
 
 	// Old m_set_pkChrSpawnedBy: breaking the stone kills everything still standing from its waves.
 	TArray<TWeakObjectPtr<AMT2Mob>> SpawnedMobs;

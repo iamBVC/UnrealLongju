@@ -251,7 +251,7 @@ void AMT2Mob::Tick(float DeltaSeconds)
 	// replicated), which is what makes the turn actually show: bOrientRotationToMovement otherwise derives
 	// a simulated proxy's rotation from velocity, and the mob is stopped while attacking. Yaw only - a
 	// character capsule must never pitch/roll toward a target above or below it.
-	if (bKnockdownMotionLocked || !MobAIComponent || MobAIComponent->GetState() != EMT2MobAIState::Attacking)
+	if (IsMetinStone() || bKnockdownMotionLocked || !MobAIComponent || MobAIComponent->GetState() != EMT2MobAIState::Attacking)
 	{
 		return;
 	}
@@ -462,7 +462,7 @@ bool AMT2Mob::PlayMobMotion(EMT2MobMotion Motion)
 	const bool bAttackMotion = Motion == EMT2MobMotion::NormalAttack ||
 		(static_cast<uint8>(Motion) >= static_cast<uint8>(EMT2MobMotion::Special1) &&
 		 static_cast<uint8>(Motion) <= static_cast<uint8>(EMT2MobMotion::Special5));
-	if (bAttackMotion && MobAIComponent)
+	if (bAttackMotion && !IsMetinStone() && MobAIComponent)
 	{
 		if (const AActor* Target = MobAIComponent->GetTargetActor())
 		{
@@ -989,7 +989,7 @@ void AMT2Mob::HandleRevived()
 	DeathAnimMontage.Reset();
 	SetActorEnableCollision(true);
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
-	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	GetCharacterMovement()->SetMovementMode(IsMetinStone() ? MOVE_None : MOVE_Walking);
 	LifecycleComponent->StartRegeneration(GetHealthComponent());
 }
 

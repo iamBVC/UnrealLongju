@@ -69,6 +69,7 @@ void UMT2MobMovementComponent::CompleteExpiredMoveSegment()
 
 void UMT2MobMovementComponent::StartMoveSegment(const FVector& Destination, float AcceptanceRadius)
 {
+	if (const auto* Mob = Cast<AMT2Mob>(CharacterOwner); Mob && Mob->IsMetinStone()) { return; }
 	if (!CharacterOwner || !CharacterOwner->HasAuthority() || !HasValidData() || HasRootMotionSources() || MoveSegment.bExternalMotion ||
 		Destination.ContainsNaN() || GetMaxSpeed() <= UE_SMALL_NUMBER) { return; }
 	const float RetargetDistance = GetDefault<UMT2MobRuntimeSettings>()->MovementRetargetDistance;
@@ -130,6 +131,7 @@ void UMT2MobMovementComponent::StopMovementImmediately()
 
 void UMT2MobMovementComponent::BeginExternalKnockback(const FVector& Direction, float Distance, float Duration)
 {
+	if (const auto* Mob = Cast<AMT2Mob>(CharacterOwner); Mob && Mob->IsMetinStone()) { return; }
 	if (!HasValidData() || !CharacterOwner->HasAuthority() || Direction.ContainsNaN() ||
 		Direction.GetSafeNormal2D().IsNearlyZero() || !FMath::IsFinite(Distance) || Distance <= 0.f ||
 		!FMath::IsFinite(Duration) || Duration < .05f || Duration > 5.f) { return; }
@@ -174,6 +176,7 @@ void UMT2MobMovementComponent::FinishExternalKnockback()
 void UMT2MobMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	if (!HasValidData() || !CharacterOwner) { return; }
+	if (const auto* Mob = Cast<AMT2Mob>(CharacterOwner); Mob && Mob->IsMetinStone()) { return; }
 	if (!MoveSegment.bMoving) { return; }
 	// Normal NPC locomotion does not need the full CharacterMovement tick/prediction pipeline.
 	PhysWalking(DeltaTime, 0);

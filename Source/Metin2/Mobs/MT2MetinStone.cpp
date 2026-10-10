@@ -10,6 +10,9 @@
 #include "Mobs/MT2MetinStone.h"
 
 #include "Components/MT2HealthComponent.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Particles/ParticleSystem.h"
+#include "Particles/ParticleSystemComponent.h"
 #include "Core/MT2VnumRegistrySubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
@@ -23,6 +26,18 @@ AMT2MetinStone::AMT2MetinStone()
 	// them outright). Their entire behavior is the HP-step pulse below.
 	AutoPossessAI = EAutoPossessAI::Disabled;
 	AIControllerClass = nullptr;
+	MobType = EMT2MobType::Stone;
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
+}
+
+void AMT2MetinStone::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = false;
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
 }
 
 void AMT2MetinStone::ConfigureFromDefinition(const FMT2MobDefinition& Definition)
@@ -34,6 +49,11 @@ void AMT2MetinStone::ConfigureFromDefinition(const FMT2MobDefinition& Definition
 void AMT2MetinStone::BeginPlay()
 {
 	Super::BeginPlay();
+	GetCharacterMovement()->DisableMovement();
+	GetCharacterMovement()->SetComponentTickEnabled(false);
+	GetHealthComponent()->OnValueChanged.AddUniqueDynamic(this, &AMT2MetinStone::RefreshSmoke);
+	GetHealthComponent()->OnMaxValueChanged.AddUniqueDynamic(this, &AMT2MetinStone::RefreshSmoke);
+	RefreshSmokeVisuals();
 	if (!HasAuthority())
 	{
 		return;
@@ -103,6 +123,9 @@ void AMT2MetinStone::HandleStoneDeath()
 
 void AMT2MetinStone::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	ClearSmoke();
+	GetHealthComponent()->OnValueChanged.RemoveDynamic(this, &AMT2MetinStone::RefreshSmoke);
+	GetHealthComponent()->OnMaxValueChanged.RemoveDynamic(this, &AMT2MetinStone::RefreshSmoke);
 	GetHealthComponent()->OnValueChanged.RemoveDynamic(
 		this, &AMT2MetinStone::HandleHealthChanged);
 	if (UWorld* World = GetWorld())
@@ -113,6 +136,63 @@ void AMT2MetinStone::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		}
 	}
 	Super::EndPlay(EndPlayReason);
+}
+
+int32 AMT2MetinStone::GetSmokeStage(float HealthPercent)
+{
+	// InstanceBaseEffect: smoke8 -> 3, smoke5/6/7 -> 2, smoke2/3/4 -> 1.
+	return HealthPercent <= 10.f ? 3 : HealthPercent <= 45.f ? 2 : HealthPercent <= 85.f ? 1 : 0;
+}
+
+void AMT2MetinStone::RefreshSmoke(float, float)
+{
+	RefreshSmokeVisuals();
+}
+
+UParticleSystemComponent* AMT2MetinStone::CreateSmoke(const FMT2MetinSmokeAttachment& Attachment)
+{
+	UParticleSystem* Effect = Attachment.Effect.LoadSynchronous();
+	if (!Effect) { return nullptr; }
+	auto* Component = NewObject<UParticleSystemComponent>(this);
+	Component->bAutoActivate = false;
+	Component->bAutoDestroy = false;
+	Component->SetIsReplicated(false);
+	Component->SetupAttachment(GetMesh(), Attachment.Bone);
+	Component->SetRelativeLocationAndRotation(Attachment.Location, Attachment.Rotation);
+	Component->SetTemplate(Effect);
+	Component->RegisterComponent();
+	Component->ActivateSystem();
+	return Component;
+}
+
+void AMT2MetinStone::ClearSmoke()
+{
+	if (StageSmokeComponent) { StageSmokeComponent->DestroyComponent(); StageSmokeComponent = nullptr; }
+	for (UParticleSystemComponent* Component : AmbientSmokeComponents)
+	{
+		if (Component) { Component->DestroyComponent(); }
+	}
+	AmbientSmokeComponents.Reset();
+	ActiveSmokeStage = INDEX_NONE;
+}
+
+void AMT2MetinStone::RefreshSmokeVisuals()
+{
+	if (GetNetMode() == NM_DedicatedServer) { return; }
+	const UMT2HealthComponent* Health = GetHealthComponent();
+	if (!Health || Health->GetMaxHealth() <= 0.f || Health->IsDead()) { ClearSmoke(); return; }
+	if (AmbientSmokeComponents.IsEmpty())
+	{
+		for (const auto& Attachment : AmbientSmoke)
+		{
+			if (auto* Component = CreateSmoke(Attachment)) { AmbientSmokeComponents.Add(Component); }
+		}
+	}
+	const int32 Stage = GetSmokeStage(100.f * Health->GetHealth() / Health->GetMaxHealth());
+	if (Stage == ActiveSmokeStage) { return; }
+	if (StageSmokeComponent) { StageSmokeComponent->DestroyComponent(); StageSmokeComponent = nullptr; }
+	ActiveSmokeStage = Stage;
+	if (SmokeStages.IsValidIndex(Stage)) { StageSmokeComponent = CreateSmoke(SmokeStages[Stage]); }
 }
 
 void AMT2MetinStone::ProcessStoneBehavior()

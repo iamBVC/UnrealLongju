@@ -8,6 +8,10 @@
 */
 
 #include "Importers/MT2MobImporter.h"
+#include "Importers/MT2EffectImporter.h"
+#include "API/MT2ImportTypes.h"
+#include "Internationalization/Regex.h"
+#include "Particles/ParticleSystem.h"
 #include "Config/MT2PathSettings.h"
 #include "MT2AnimBlueprintBuilder.h"
 
@@ -1784,6 +1788,7 @@ bool FMT2MobImporter::Discover(
 		FString SourceDirectory;
 		FString MeshObjectPath;
 		TArray<FMT2MobMaterialOverrideRecord> MaterialOverrides;
+		FString SelectedScriptPath;
 		TArray<FString> CandidateScripts;
 		MobScripts.MultiFind(Definition.ResourceName.ToLower(), CandidateScripts);
 		CandidateScripts.Sort();
@@ -1795,6 +1800,7 @@ bool FMT2MobImporter::Discover(
 			if (!MeshObjectPath.IsEmpty())
 			{
 				MaterialOverrides = MoveTemp(CandidateOverrides);
+				SelectedScriptPath = ScriptPath;
 				break;
 			}
 		}
@@ -1844,6 +1850,7 @@ bool FMT2MobImporter::Discover(
 		FMT2MobImportRecord& Record = OutRecords.AddDefaulted_GetRef();
 		Record.Definition = MoveTemp(Definition);
 		Record.SourceDirectory = SourceDirectory;
+		Record.SourceScriptPath = SelectedScriptPath;
 		Record.SourceRelativeDirectory = SourceDirectory;
 		FPaths::MakePathRelativeTo(Record.SourceRelativeDirectory, *(FPaths::ConvertRelativePathToFull(SourceRoot) / TEXT("")));
 		Record.MeshObjectPath = MeshObjectPath;
@@ -1929,6 +1936,11 @@ bool FMT2MobImporter::Import(
 			{
 				AMT2Mob* Defaults = RefreshedBlueprint->GeneratedClass
 					? Cast<AMT2Mob>(RefreshedBlueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+				if (auto* Stone = Cast<AMT2MetinStone>(Defaults))
+				{
+					FString Error;
+					if (!ConfigureMetinSmoke(Stone, Record.SourceScriptPath, DestinationRoot, Error)) { OutResult.Errors.Add(Error); }
+				}
 				if (USkeletalMeshComponent* MeshComponent = Defaults ? Defaults->GetMesh() : nullptr)
 				{
 					MeshComponent->SetSkeletalMeshAsset(Mesh);
@@ -1952,6 +1964,11 @@ bool FMT2MobImporter::Import(
 			DestinationRoot, Record, Mesh, AnimBlueprint, Motions, PackagesToSave))
 		{
 			OutResult.MobBlueprintsCreated++;
+			if (auto* Stone = Cast<AMT2MetinStone>(Blueprint->GeneratedClass->GetDefaultObject()))
+			{
+				FString Error;
+				if (!ConfigureMetinSmoke(Stone, Record.SourceScriptPath, DestinationRoot, Error)) { OutResult.Errors.Add(Error); }
+			}
 			PackagesToSave.AddUnique(Blueprint->GetOutermost());
 			PackagesToSave.AddUnique(AnimBlueprint->GetOutermost());
 		}
@@ -1981,4 +1998,72 @@ bool FMT2MobImporter::Import(
 		UE_LOG(LogTemp, Warning, TEXT("MT2 shop import: %s"), *Warning);
 	}
 	return OutResult.Errors.IsEmpty();
+}
+
+bool FMT2MobImporter::ConfigureMetinSmoke(AMT2MetinStone* Stone, const FString& ScriptPath,
+	const FString& DestinationRoot, FString& OutError)
+{
+	FString Script;
+	if (!Stone || !FFileHelper::LoadFileToString(Script, *ScriptPath))
+	{
+		OutError = FString::Printf(TEXT("Cannot read Metin race script %s"), *ScriptPath); return false;
+	}
+	auto Quoted = [](const FString& Text, const TCHAR* Key)
+	{
+		FRegexMatcher Matcher(FRegexPattern(FString(Key) + TEXT("\\s+\"([^\"]+)\"")), Text);
+		return Matcher.FindNext() ? Matcher.GetCaptureGroup(1) : FString();
+	};
+	auto Resolve = [&](const FString& Reference, TSoftObjectPtr<UParticleSystem>& Effect)
+	{
+		FString Path = Reference.Replace(TEXT("\\"), TEXT("/"));
+		const int32 Ymir = Path.Find(TEXT("ymir work/"), ESearchCase::IgnoreCase);
+		if (Ymir == INDEX_NONE) { OutError = TEXT("Unsupported Metin effect reference: ") + Reference; return false; }
+		FMT2AssetRecord Record;
+		Record.ContentPath = TEXT("ymir_work/") + Path.Mid(Ymir + 10);
+		FMT2ImportContext Context; Context.DestinationRoot = DestinationRoot;
+		const FString ObjectPath = FMT2EffectImporter::BuildObjectPath(Context, Record);
+		if (!LoadObject<UParticleSystem>(nullptr, *ObjectPath))
+		{
+			OutError = TEXT("Import the referenced Effects particle first: ") + Reference + TEXT(" -> ") + ObjectPath; return false;
+		}
+		Effect = TSoftObjectPtr<UParticleSystem>(FSoftObjectPath(ObjectPath)); return true;
+	};
+	TArray<FMT2MetinSmokeAttachment> Stages, Ambient;
+	FRegexMatcher SmokeList(FRegexPattern(TEXT("List\\s+SmokeFileName\\s*\\{([^}]+)\\}")), Script);
+	if (SmokeList.FindNext())
+	{
+		Stages.SetNum(4);
+		const FName Bone(*Quoted(Script, TEXT("SmokeBoneName")));
+		const FString List = SmokeList.GetCaptureGroup(1);
+		FRegexMatcher Entry(FRegexPattern(TEXT("([0-3])\\s+\"([^\"]+)\"")), List);
+		while (Entry.FindNext())
+		{
+			auto& Stage = Stages[FCString::Atoi(*Entry.GetCaptureGroup(1))];
+			Stage.Bone = Bone;
+			if (!Resolve(Entry.GetCaptureGroup(2), Stage.Effect)) { return false; }
+		}
+	}
+	FRegexMatcher Group(FRegexPattern(TEXT("Group\\s+AttachingData[0-9]+\\s*\\{([^{}]*)\\}")), Script);
+	while (Group.FindNext())
+	{
+		const FString Block = Group.GetCaptureGroup(1);
+		const FString Reference = Quoted(Block, TEXT("EffectScriptName"));
+		if (Reference.IsEmpty()) { continue; }
+		FMT2MetinSmokeAttachment Attachment;
+		Attachment.Bone = FName(*Quoted(Block, TEXT("AttachingBoneName")));
+		if (!Resolve(Reference, Attachment.Effect)) { return false; }
+		auto Vector = [&](const TCHAR* Key)
+		{
+			FRegexMatcher Values(FRegexPattern(FString(Key) + TEXT("\\s+([-+0-9.]+)\\s+([-+0-9.]+)\\s+([-+0-9.]+)")), Block);
+			return Values.FindNext() ? FVector(FCString::Atod(*Values.GetCaptureGroup(1)),
+				FCString::Atod(*Values.GetCaptureGroup(2)), FCString::Atod(*Values.GetCaptureGroup(3))) : FVector::ZeroVector;
+		};
+		const FVector Position = Vector(TEXT("EffectPosition"));
+		Attachment.Location = Position;
+		const FVector Angles = Vector(TEXT("EffectRotation"));
+		Attachment.Rotation = FRotator(Angles.Y, Angles.Z, Angles.X);
+		Ambient.Add(Attachment);
+	}
+	Stone->SmokeStages = MoveTemp(Stages); Stone->AmbientSmoke = MoveTemp(Ambient);
+	return true;
 }

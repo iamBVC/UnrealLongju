@@ -12,6 +12,8 @@
 #include "CoreMinimal.h"
 #include "Mobs/MT2MobTypes.h"
 
+class AMT2MetinStone;
+
 struct FMT2MobMaterialOverrideRecord
 {
 	FString SourceTextureObjectPath;
@@ -22,6 +24,7 @@ struct FMT2MobImportRecord
 {
 	FMT2MobDefinition Definition;
 	FString SourceDirectory;
+	FString SourceScriptPath;
 	FString SourceRelativeDirectory;
 	FString MeshObjectPath;
 	FString BlueprintObjectPath;
@@ -46,6 +49,8 @@ struct FMT2MobImportResult
 class FMT2MobImporter
 {
 public:
+	static bool ConfigureMetinSmoke(AMT2MetinStone* Stone, const FString& ScriptPath,
+		const FString& DestinationRoot, FString& OutError);
 	// bIncludeExisting: also list mobs whose Blueprint already exists (the importer widget's
 	// "Show Imported" checkbox) so they can be re-selected - importing them refreshes their
 	// DataAsset stats from the freshly decoded mob_proto.

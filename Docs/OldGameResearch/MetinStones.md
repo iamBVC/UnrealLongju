@@ -60,6 +60,24 @@ Key mechanics:
 ## UE recreation
 
 - `AMT2MetinStone : AMT2Mob` implements stone behavior. It disables movement, registers with the world simulation scheduler, and checks health changes authoritatively.
+- Stones disable movement on authority and observers, reject movement/shove segments and bypass
+  target-facing rotation, including attack tells. Revival keeps movement disabled. Spawn/editor
+  placement remains supported; combat animations do not steer the actor.
+- Smoke is authored in each race `.msm`: `SmokeBoneName`/`SmokeFileName` define four damaged-health
+  slots; `AttachingData` defines persistent coloured effects for other Metins. The client maps
+  smoke flags to slot 0 above 85% HP, slot 1 at 85..45%, slot 2 at 45..10%, slot 3 at 10% or below.
+  The Unreal smoke selection uses replicated health, with no additional RPCs or replicated emitters.
+  Death removes smoke; revival/relevancy recreation uses current health. Dedicated servers do not
+  create particle components or load their visual templates.
+- Imported Metin Blueprint defaults store `SmokeStages` and `AmbientSmoke`, including bone and
+  authored offsets. Existing Cascade effects retain their own colours and particle settings.
+  The normal mob importer reads this mapping while creating/refreshing Metins. If a referenced
+  particle is absent, import that `.mse` through the Effects importer first; missing references
+  report errors instead of substituting another stone's colour.
+- `-run=MT2ApplyMetinSmoke -nullrhi -unattended` assigns only smoke metadata on existing Metin
+  Blueprints using configured `LegacyDumpRoot`/`ImportDestinationRoot`. Close the editor before
+  running this assignment pass. It does not regenerate meshes, animation tracks or particles;
+  runtime/cooked clients do not need the legacy files.
 - `ProcessStoneBehavior` walks every crossed threshold once using `LastFiredStep`; it can process several thresholds after a large hit. It plays the attack motion as a spawn tell.
 - Imported `MetinSpawnGroups` supply group entries, resolved through the VNUM registry and spawned around the stone.
 - Spawned mobs retain a weak stone link, and available AI targets the stone's attacker. Stone death removes its surviving wave without normal combat rewards; mob death banks half its experience on the stone.
