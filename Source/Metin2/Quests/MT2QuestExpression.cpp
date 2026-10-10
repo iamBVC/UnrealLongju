@@ -10,6 +10,7 @@
 #include "Quests/MT2QuestExpression.h"
 
 #include "Characters/MT2PlayerCharacter.h"
+#include "Dungeons/MT2DungeonSubsystem.h"
 #include "Components/MT2HealthComponent.h"
 #include "Components/MT2ManaComponent.h"
 #include "Components/MT2StatusEffectComponent.h"
@@ -742,11 +743,10 @@ namespace
 			// questlua_pc.cpp also considers a missing current character dead.
 			return FMT2QuestValue(!Health || Health->IsDead() ? 1.0 : 0.0);
 		}
-		// Dungeons are not implemented, so a character is never inside one. Scripts branch on this to
-		// decide whether a warp is leaving an instance; "no" is the correct answer here, not a guess.
 		if (Name == TEXT("pc.in_dungeon"))
 		{
-			return FMT2QuestValue(0.0);
+			const auto* Dungeon = Player ? Player->GetWorld()->GetSubsystem<UMT2DungeonSubsystem>() : nullptr;
+			return FMT2QuestValue(Dungeon && Dungeon->GetPlayerRoom(Context.PlayerState) ? 1.0 : 0.0);
 		}
 		if (Name == TEXT("pc.get_hp") || Name == TEXT("pc.gethp") || Name == TEXT("pc.hp") ||
 			Name == TEXT("pc.get_max_hp") || Name == TEXT("pc.getmaxhp") || Name == TEXT("pc.maxhp"))

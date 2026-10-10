@@ -1,5 +1,7 @@
 # Metin2 automation tests
 
+`MT2DungeonTests.cpp` covers `Metin2.Dungeons`: shared-stage membership, idempotent starts and enemy registration, door state, shared countdowns, completion entitlements, same-world stage advance, empty-only resets, timeout/pawn/room teardown, living-objective despawn failure, invalid spawn rejection and `pc.in_dungeon()` integration. Fixtures do not validate packaged client replication or the complete Devil Tower quest. See [shared dungeon stages](../../../Docs/Dungeons.md) for authoring and outstanding integration work.
+
 All first-party Unreal automation test implementations live in this directory.
 Fishing gameplay and persistence coverage is in `MT2FishingTests.cpp`, compiled
 by the runtime module. See [fishing](../../../Docs/Fishing.md).
