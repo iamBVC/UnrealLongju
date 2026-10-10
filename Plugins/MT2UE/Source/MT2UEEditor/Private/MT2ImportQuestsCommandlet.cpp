@@ -255,8 +255,12 @@ int32 UMT2ImportQuestsCommandlet::Main(const FString& Params)
 	FParse::Value(*Params, TEXT("ClientSource="), ClientSourceRoot);
 
 	FMT2QuestImportResult Result;
+	if (FParse::Param(*Params, TEXT("ReportOnly")))
+	{
+		UE_LOG(LogTemp, Display, TEXT("Report-only conversion: Content packages will not be saved."));
+	}
 	const bool bSucceeded = FMT2QuestImporter::Import(
-		SourceRoot, DestinationRoot, Result, ClientSourceRoot);
+		SourceRoot, DestinationRoot, Result, ClientSourceRoot, !FParse::Param(*Params, TEXT("ReportOnly")));
 
 	for (const FString& Warning : Result.Warnings)
 	{

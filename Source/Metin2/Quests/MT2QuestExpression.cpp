@@ -379,7 +379,8 @@ namespace
 			TEXT("pc.in_dungeon"), TEXT("pc.is_dead"), TEXT("pc.get_player_id"),
 			// questlib.lua helpers (lines 118, 147): thin wrappers over the reads above.
 			TEXT("pc_is_novice"), TEXT("npc_is_same_empire"), TEXT("npc_is_same_job"),
-			TEXT("table_is_in"), TEXT("next_time_is_now"),
+			TEXT("table_is_in"), TEXT("next_time_is_now"), TEXT("table_get_random_item"),
+			TEXT("get_random_vnum_from_table"), TEXT("get_today_count"), TEXT("pc.enough_inventory"),
 			TEXT("count_item_range"), TEXT("remove_item_range"),
 			TEXT("tonumber"), TEXT("math.mod"), TEXT("table.getn"), TEXT("affect.get_apply_on"),
 			TEXT("horse.is_dead"), TEXT("horse.is_ride"), TEXT("npc.get_guild"),
@@ -422,6 +423,73 @@ namespace
 		};
 
 		// ---- player ----
+		if (Name == TEXT("pc.enough_inventory"))
+		{
+			double Vnum = 0;
+			return FMT2QuestValue::Boolean(Inventory && TryNumericValue(Argument(0), Vnum) &&
+				FMath::IsFinite(Vnum) && Vnum >= 1 && Vnum <= MAX_int32 &&
+				Inventory->HasEmptySpaceForItem(static_cast<int32>(Vnum)));
+		}
+		if (Name == TEXT("table_get_random_item"))
+		{
+			const FMT2QuestValue Table = Argument(0);
+			if (!Table.IsTableRef()) { bOutOk = false; return FMT2QuestValue(); }
+			const int32 Length = Table.GetTableLength();
+			return Length > 0 ? Table.GetTableValue(FMT2QuestValue(static_cast<double>(FMath::RandRange(1, Length)))).Scalar()
+				: FMT2QuestValue();
+		}
+		if (Name == TEXT("get_random_vnum_from_table"))
+		{
+			const FMT2QuestValue Table = Argument(0);
+			if (!Table.IsTableRef() || !State) { bOutOk = false; return FMT2QuestValue(); }
+			TArray<TPair<FMT2QuestValue, int32>> Choices;
+			int64 Total = 0;
+			const int32 Length = Table.GetTableLength();
+			for (int32 Index = 1; Index <= Length; ++Index)
+			{
+				const FMT2QuestValue Row = Table.GetTableValue(FMT2QuestValue(static_cast<double>(Index)));
+				double Probability = 0;
+				if (!Row.IsTableRef() || !TryNumericValue(Row.GetTableValue(FMT2QuestValue(2.0)), Probability) ||
+					!FMath::IsFinite(Probability)) { bOutOk = false; return FMT2QuestValue(); }
+				bool bEligible = true;
+				const int32 Fields = Row.GetTableLength();
+				for (int32 Field = 3; Field <= FMath::Min(Fields, 4); ++Field)
+				{
+					double Limit = 0;
+					if (!TryNumericValue(Row.GetTableValue(FMT2QuestValue(static_cast<double>(Field))), Limit) ||
+						!FMath::IsFinite(Limit)) { bOutOk = false; return FMT2QuestValue(); }
+					bEligible &= Field == 3 ? State->GetCharacterLevel() >= Limit : State->GetCharacterLevel() <= Limit;
+				}
+				const FMT2QuestValue Item = Row.GetTableValue(FMT2QuestValue(1.0)).Scalar();
+				// table.insert(temp_table, nil) adds no sequence entry in the original helper.
+				if (!bEligible || Probability < 1 || Item.bIsNil) { continue; }
+				// Equivalent to the Lua numeric-for expansion without allocating one entry per weight.
+				if (Probability > MAX_int32) { bOutOk = false; return FMT2QuestValue(); }
+				const int32 Weight = static_cast<int32>(Probability);
+				Total += Weight;
+				if (Total > MAX_int32) { bOutOk = false; return FMT2QuestValue(); }
+				Choices.Emplace(Item, Weight);
+			}
+			if (Total == 0) { bOutOk = false; return FMT2QuestValue(); }
+			int32 Pick = FMath::RandRange(1, static_cast<int32>(Total));
+			for (const auto& Choice : Choices)
+			{
+				if (Pick <= Choice.Value) { return Choice.Key; }
+				Pick -= Choice.Value;
+			}
+			bOutOk = false; return FMT2QuestValue();
+		}
+		if (Name == TEXT("get_today_count"))
+		{
+			if (!Context.Manager || !Argument(0).bIsText || !Argument(1).bIsText)
+			{
+				bOutOk = false; return FMT2QuestValue();
+			}
+			const FString Prefix = Argument(0).Text + TEXT(".") + Argument(1).Text;
+			const int64 Today = FDateTime::UtcNow().ToUnixTimestamp() / 86400;
+			return FMT2QuestValue(Context.Manager->GetQuestFlag(FName(*(Prefix + TEXT("_today"))), Context.Quest) == Today
+				? Context.Manager->GetQuestFlag(FName(*(Prefix + TEXT("_today_count"))), Context.Quest) : 0);
+		}
 		if (Name == TEXT("pc.get_real_alignment"))
 		{
 			return FMT2QuestValue(State ? State->GetRawAlignment() / 10 : 0);

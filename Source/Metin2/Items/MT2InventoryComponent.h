@@ -171,6 +171,8 @@ public:
 
 	// Item height in inventory cells (item_proto Size, clamped 1-3).
 	int32 GetItemSize(int32 Vnum) const;
+	// Legacy enough_inventory requires empty grid cells, not room in an existing stack.
+	bool HasEmptySpaceForItem(int32 Vnum) const;
 	bool CanTradeItemAtSlot(int32 InventorySlot) const;
 
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")

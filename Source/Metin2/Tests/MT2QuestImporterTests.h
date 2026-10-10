@@ -29,6 +29,37 @@
 #include "Items/MT2InventoryComponent.h"
 #include "Items/MT2ItemTemplate.h"
 #include "UObject/StrongObjectPtr.h"
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2QuestCompactReturnTest, "Metin2.Quests.Importer.CompactReturns",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMT2QuestCompactReturnTest::RunTest(const FString& Parameters)
+{
+	TestEqual(TEXT("Compact return normalized"), NormalizeStatement(TEXT("return({[20060]=50601})[race]")),
+		FString(TEXT("return ({[20060]=50601})[race]")));
+	TestEqual(TEXT("Return-prefixed variable unchanged"), NormalizeStatement(TEXT("return_value = 19")),
+		FString(TEXT("return_value = 19")));
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+	if (!TestNotNull(TEXT("World"), World)) { return false; }
+	ON_SCOPE_EXIT { World->DestroyWorld(false); };
+	AMT2PlayerState* PlayerState = World->SpawnActor<AMT2PlayerState>();
+	UMT2QuestManagerComponent* Manager = PlayerState->GetQuestManagerComponent();
+	FMT2QuestContext Context; Context.Manager = Manager; Context.PlayerState = PlayerState;
+	Manager->ActiveContext = Context;
+	const TArray<FString> Lines = {TEXT("return({"), TEXT("[20060] = 50601,"),
+		TEXT("[20061] = 50602"), TEXT("})[race]"), TEXT("result = probe.ore(20060)"), TEXT("missing = probe.ore(999)")};
+	const TArray<FParsedFunction> Functions = {{TEXT("ore"), {TEXT("race")}, 0, 4}};
+	const TMap<FString, FString> Locale;
+	FMT2QuestImportResult Result;
+	FTranslateState State; State.Locale = &Locale; State.Outer = Manager; State.Result = &Result;
+	State.ScriptName = State.QuestName = TEXT("probe"); State.Functions = &Functions;
+	const auto Nodes = TranslateBlock(Lines, 4, Lines.Num(), State);
+	TestEqual(TEXT("Multiline compact helper translated"), Result.StatementsUnconverted, 0);
+	Manager->PushFrame(Nodes); Manager->RunPendingFrames();
+	TestEqual(TEXT("Indexed return survives function lowering"), Manager->GetScriptVariable(TEXT("result")).Number, 50601.0);
+	TestTrue(TEXT("Missing table key remains nil"), Manager->GetScriptVariable(TEXT("missing")).bIsNil);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2QuestPartyFlagTest, "Metin2.Quests.Importer.PartyFlags",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
@@ -730,9 +761,10 @@ bool FMT2QuestItemMetadataTest::RunTest(const FString& Parameters)
 	UMT2ItemTemplate* Weapon = MakeTemplate(UMT2ItemWeaponTemplate::StaticClass(), 100);
 	Weapon->VnumRange = 9; Weapon->RefinedVnum = 101;
 	Weapon->Limits = {{EMT2ItemLimitType::Strength, 33}, {EMT2ItemLimitType::Level, 35}, {EMT2ItemLimitType::Level, 90}};
-	MakeTemplate(UMT2ItemArmorTemplate::StaticClass(), 200);
+	UMT2ItemTemplate* Armor = MakeTemplate(UMT2ItemArmorTemplate::StaticClass(), 200);
 	UMT2ItemTemplate* Material = MakeTemplate(UMT2ItemMaterialTemplate::StaticClass(), 300);
 	Material->Limits = {{EMT2ItemLimitType::Level, 99}};
+	Material->Flags |= UMT2ItemTemplate::StackableFlag;
 	Registry->Registry->SetEntries({}, MoveTemp(Entries));
 	AMT2PlayerState* PlayerState = World->SpawnActor<AMT2PlayerState>();
 	AMT2PlayerCharacter* Player = World->SpawnActor<AMT2PlayerCharacter>();
@@ -783,6 +815,22 @@ bool FMT2QuestItemMetadataTest::RunTest(const FString& Parameters)
 	TestFalse(TEXT("Assignment emitted runtime nodes"), Nodes.IsEmpty());
 	for (const auto& Node : Nodes) { TestEqual(TEXT("Assignment executes"), Node->Execute(Context), EMT2QuestNodeResult::Continue); }
 	TestEqual(TEXT("Imported energy assignment reads offered weapon"), Context.Manager->GetScriptVariable(TEXT("levelLimit")).Number, 35.0);
+	TestTrue(TEXT("Empty grid space available"), Read(TEXT("pc.enough_inventory('300')")).AsBool());
+	TestFalse(TEXT("Unknown item cannot fit"), Read(TEXT("pc.enough_inventory(99999)")).AsBool());
+	for (FMT2ItemSlot& Slot : Slots) { Slot.Vnum = 300; Slot.Count = 1; }
+	Player->GetInventoryComponent()->RestoreItems(Slots, {});
+	TestFalse(TEXT("Existing stack space is not empty grid space"), Read(TEXT("pc.enough_inventory(300)")).AsBool());
+	Armor->InventorySize = 3;
+	Slots[0] = FMT2ItemSlot(); Slots[1] = FMT2ItemSlot(); Slots[2] = FMT2ItemSlot();
+	Player->GetInventoryComponent()->RestoreItems(Slots, {});
+	TestFalse(TEXT("Horizontal holes do not fit vertical item"), Read(TEXT("pc.enough_inventory(200)")).AsBool());
+	Slots[5] = FMT2ItemSlot(); Slots[10] = FMT2ItemSlot();
+	Player->GetInventoryComponent()->RestoreItems(Slots, {});
+	TestTrue(TEXT("Contiguous vertical cells fit"), Read(TEXT("pc.enough_inventory(200)")).AsBool());
+	for (FMT2ItemSlot& Slot : Slots) { Slot.Vnum = 300; Slot.Count = 1; }
+	Slots[40] = FMT2ItemSlot(); Slots[45] = FMT2ItemSlot(); Slots[50] = FMT2ItemSlot();
+	Player->GetInventoryComponent()->RestoreItems(Slots, {});
+	TestFalse(TEXT("Vertical item cannot cross a page boundary"), Read(TEXT("pc.enough_inventory(200)")).AsBool());
 	return true;
 }
 

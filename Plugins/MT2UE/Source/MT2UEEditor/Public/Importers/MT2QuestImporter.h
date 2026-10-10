@@ -33,11 +33,8 @@ struct FMT2QuestImportResult
 // Converts the old server's Lua .quest scripts into quest Blueprints under /Game/Quests
 // (see Docs/OldGameResearch/QuestSystem.md).
 //
-// The mechanical subset - say/select/if, give/take item, exp/gold, quest flags, set_state - becomes
-// declarative UMT2QuestNode data on the generated Blueprint's class defaults. Anything the translator
-// cannot express (loops, local functions, math.random, string.format, table work) is NOT silently
-// dropped: the original Lua is preserved in the trigger's stub node and listed in the conversion
-// report, so the remaining work is explicit and finished by hand in the Blueprint graph.
+// Supported dialogue, control flow, functions, expressions and gameplay APIs become declarative
+// quest nodes. Unsupported statements retain their original Lua in TODO nodes and the report.
 //
 // Dialog text is resolved through the locale's translate.lua, so generated quests carry real strings
 // instead of gameforge.* keys.
@@ -46,7 +43,8 @@ class FMT2QuestImporter
 public:
 	// QuestSourceRoot: the locale quest folder (contains *.quest and, one level up, translate.lua).
 	// DestinationRoot: content root for the generated assets, normally "/Game" (-> /Game/Quests).
+	// bSavePackages=false is for isolated commandlet audits: assets change in memory but are not saved.
 	static bool Import(
 		const FString& QuestSourceRoot, const FString& DestinationRoot, FMT2QuestImportResult& OutResult,
-		const FString& ClientSourceRoot = FString());
+		const FString& ClientSourceRoot = FString(), bool bSavePackages = true);
 };

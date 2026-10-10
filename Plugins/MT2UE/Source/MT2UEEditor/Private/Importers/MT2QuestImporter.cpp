@@ -75,6 +75,12 @@ namespace
 	FString NormalizeStatement(const FString& Line)
 	{
 		FString Result = StripComment(Line).TrimStartAndEnd();
+		// Lua does not require whitespace between return and punctuation.
+		if (Result.StartsWith(TEXT("return")) && Result.Len() > 6 &&
+			!FChar::IsAlnum(Result[6]) && Result[6] != TEXT('_') && !FChar::IsWhitespace(Result[6]))
+		{
+			Result.InsertAt(6, TEXT(' '));
+		}
 		while (Result.RemoveFromEnd(TEXT(";")))
 		{
 			Result.TrimEndInline();
@@ -1361,7 +1367,7 @@ namespace
 					FString Statement = NormalizeStatement(Lines[LineIndex]);
 					if (Statement.IsEmpty()) { continue; }
 					++StatementCount;
-					if (StatementCount == 1 && Statement.RemoveFromStart(TEXT("return")))
+					if (StatementCount == 1 && Statement.RemoveFromStart(TEXT("return ")))
 					{
 						ReturnExpression = Statement.TrimStartAndEnd();
 					}
@@ -4519,7 +4525,7 @@ namespace
 
 bool FMT2QuestImporter::Import(
 	const FString& QuestSourceRoot, const FString& DestinationRoot, FMT2QuestImportResult& OutResult,
-	const FString& ClientSourceRoot)
+	const FString& ClientSourceRoot, bool bSavePackages)
 {
 	const FString SourceRoot = QuestSourceRoot.TrimStartAndEnd();
 	if (!IFileManager::Get().DirectoryExists(*SourceRoot))
@@ -4890,20 +4896,25 @@ bool FMT2QuestImporter::Import(
 	}
 
 	// Persist the generated Blueprints (same idiom as the item/mob/skill importers).
-	if (!PackagesToSave.IsEmpty())
+	if (bSavePackages && !PackagesToSave.IsEmpty())
 	{
 		UEditorLoadingAndSavingUtils::SavePackages(PackagesToSave, true);
 	}
 
 	// Write the conversion report next to the project so the remaining hand-work is explicit.
-	if (!OutResult.ConversionReport.IsEmpty())
 	{
 		const FString ReportPath =
 			UMT2PathSettings::Path(TEXT("QuestConversionReport"));
 		FString Report = OutResult.BuildSummary() + TEXT("\n\nUnconverted statements:\n");
 		Report += FString::Join(OutResult.ConversionReport, TEXT("\n"));
-		FFileHelper::SaveStringToFile(Report, *ReportPath);
-		OutResult.Warnings.Add(FString::Printf(TEXT("Conversion report written to %s"), *ReportPath));
+		if (FFileHelper::SaveStringToFile(Report, *ReportPath))
+		{
+			OutResult.Warnings.Add(FString::Printf(TEXT("Conversion report written to %s"), *ReportPath));
+		}
+		else
+		{
+			OutResult.Errors.Add(FString::Printf(TEXT("Could not write conversion report to %s"), *ReportPath));
+		}
 	}
 
 	UE_LOG(LogMT2QuestImport, Display, TEXT("%s"), *OutResult.BuildSummary());

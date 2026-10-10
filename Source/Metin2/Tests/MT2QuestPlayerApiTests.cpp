@@ -38,6 +38,53 @@
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2QuestLibraryRewardTest, "Metin2.Quests.PlayerApi.LibraryRewards",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FMT2QuestLibraryRewardTest::RunTest(const FString& Parameters)
+{
+	UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
+	if (!TestNotNull(TEXT("World"), World)) { return false; }
+	ON_SCOPE_EXIT { World->DestroyWorld(false); };
+	AMT2PlayerState* State = World->SpawnActor<AMT2PlayerState>();
+	if (!TestNotNull(TEXT("State"), State)) { return false; }
+	FMT2QuestContext Context; Context.PlayerState = State; Context.Manager = State->GetQuestManagerComponent();
+	auto Eval = [&](const TCHAR* Expression)
+	{
+		bool bOk = false;
+		const auto Value = FMT2QuestExpression::Evaluate(Expression, Context, bOk);
+		TestTrue(FString(TEXT("Evaluates: ")) + Expression, bOk);
+		return Value;
+	};
+	TestEqual(TEXT("Singleton random reward"), Eval(TEXT("table_get_random_item({19})")).Number, 19.0);
+	TestTrue(TEXT("Empty random table returns nil"), Eval(TEXT("table_get_random_item({})")).bIsNil);
+	TestTrue(TEXT("Selected table remains a table"), Eval(TEXT("table_get_random_item({{19,2}})")).IsTableRef());
+	TestEqual(TEXT("Zero-weight rewards excluded"), Eval(TEXT("get_random_vnum_from_table({{10,0},{19,2.9}})")).Number, 19.0);
+	TestEqual(TEXT("Nil reward inserts no entry"), Eval(TEXT("get_random_vnum_from_table({{[2]=999},{19,1}})")).Number, 19.0);
+	const int32 Level = State->GetCharacterLevel();
+	const FString Weighted = FString::Printf(TEXT("get_random_vnum_from_table({{19,2,%d,%d},{20,5,%d},{21,8,0,%d}})"),
+		Level, Level, Level + 1, Level - 1);
+	TestEqual(TEXT("Level limits are inclusive"), Eval(*Weighted).Number, 19.0);
+	bool bOk = true;
+	FMT2QuestExpression::Evaluate(TEXT("get_random_vnum_from_table({{19,0}})"), Context, bOk);
+	TestFalse(TEXT("No eligible weight is an error"), bOk);
+	FMT2QuestExpression::Evaluate(TEXT("get_random_vnum_from_table({{19,2147483647},{20,1}})"), Context, bOk);
+	TestFalse(TEXT("Weight overflow is rejected"), bOk);
+	FMT2QuestExpression::Evaluate(TEXT("table_get_random_item(false)"), Context, bOk);
+	TestFalse(TEXT("Non-table is rejected"), bOk);
+	const int32 Today = static_cast<int32>(FDateTime::UtcNow().ToUnixTimestamp() / 86400);
+	Context.Manager->SetQuestFlag(TEXT("reward.open_today"), Today);
+	Context.Manager->SetQuestFlag(TEXT("reward.open_today_count"), 7);
+	TestEqual(TEXT("Current Unix-day count"), Eval(TEXT("get_today_count('reward','open')")).Number, 7.0);
+	Context.Manager->SetQuestFlag(TEXT("reward.open_today"), Today - 1);
+	TestEqual(TEXT("Expired count is zero"), Eval(TEXT("get_today_count('reward','open')")).Number, 0.0);
+	TestEqual(TEXT("Read does not reset persisted count"), Context.Manager->GetQuestFlag(TEXT("reward.open_today_count")), 7);
+	TestTrue(TEXT("No player cannot fit an item"), Eval(TEXT("pc.enough_inventory(19)")).bIsBoolean);
+	TestFalse(TEXT("No player has no inventory space"), Eval(TEXT("pc.enough_inventory(19)")).AsBool());
+	TestEqual(TEXT("Lua zero remains truthy"), Eval(TEXT("get_today_count('reward','open') or 99")).Number, 0.0);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2QuestResultListTest, "Metin2.Quests.PlayerApi.ResultLists",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 

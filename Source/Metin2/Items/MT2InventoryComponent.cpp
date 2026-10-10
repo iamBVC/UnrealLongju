@@ -103,6 +103,18 @@ int32 UMT2InventoryComponent::GetItemSize(int32 Vnum) const
 	return Template ? FMath::Clamp(Template->InventorySize, 1, 3) : 1;
 }
 
+bool UMT2InventoryComponent::HasEmptySpaceForItem(int32 Vnum) const
+{
+	const UMT2ItemTemplate* Template = ResolveTemplate(Vnum);
+	if (!Template) { return false; }
+	const int32 Size = FMath::Clamp(Template->InventorySize, 1, 3);
+	for (int32 TopSlot = 0; TopSlot < Slots.Num(); ++TopSlot)
+	{
+		if (Slots[TopSlot].IsEmpty() && CanPlaceAt(TopSlot, Size)) { return true; }
+	}
+	return false;
+}
+
 int32 UMT2InventoryComponent::GetWearPosition(int32 Vnum) const
 {
 	if (Cast<UMT2ItemRodTemplate>(ResolveTemplate(Vnum))) { return static_cast<int32>(EMT2ItemWearFlag::Weapon); }
