@@ -1563,6 +1563,25 @@ namespace
 	}
 }
 
+bool FMT2MapTerrainImporter::ReadDungeonRegen(const FString& LocaleRoot, const FString& Filename,
+	const FMT2MapTerrainInfo& Map, TArray<FMT2MobSpawnEntry>& OutEntries, TArray<FString>& OutWarnings)
+{
+	OutEntries.Reset(); OutWarnings.Reset();
+	if (!IFileManager::Get().FileExists(*Filename) ||
+		!IFileManager::Get().FileExists(*(LocaleRoot / UMT2PathSettings::Path(TEXT("Part_group")))))
+	{
+		OutWarnings.Add(TEXT("Dungeon regen or group definitions are missing.")); return false;
+	}
+	TMap<int32, FImportedMobGroup> Groups;
+	TMap<int32, TArray<FImportedMobGroupChoice>> GroupChoices;
+	LoadMobGroups(LocaleRoot / UMT2PathSettings::Path(TEXT("Part_group")), Groups);
+	LoadMobGroupChoices(LocaleRoot / UMT2PathSettings::Path(TEXT("Part_group_group")), GroupChoices);
+	TArray<FMT2MobSpawnExclusion> Exclusions;
+	ParseRegenFile(Filename, Map, Groups, GroupChoices, OutEntries, Exclusions, OutWarnings);
+	if (!Exclusions.IsEmpty()) OutWarnings.Add(TEXT("Dungeon encounter baking does not support exclusion rows."));
+	return OutWarnings.IsEmpty() && !OutEntries.IsEmpty();
+}
+
 FMT2MapTerrainImporter::FMT2MapTerrainImporter()
 	: FMT2ImporterBase(EMT2ImportDomain::MapTerrains, TEXT("MapTerrainImporter"))
 {

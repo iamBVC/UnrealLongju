@@ -13,6 +13,7 @@
 #include "API/MT2ImporterInterface.h"
 
 struct FScopedSlowTask;
+struct FMT2MobSpawnEntry;
 
 class FMT2MapTerrainImporter : public FMT2ImporterBase
 {
@@ -24,4 +25,6 @@ public:
 
 	static bool CreateLandscapeActor(const FMT2ImportContext& Context, const FMT2MapTerrainInfo& Map, const FMT2PreparedMapTerrain& Prepared, FMT2ImportResult& OutResult);
 	static void ImportAndPlaceStaticObjectsForMap(const FMT2ImportContext& Context, const FString& MapName, float WorldSizeX, FMT2ImportResult& OutResult, FScopedSlowTask* Progress = nullptr);
+	static bool ReadDungeonRegen(const FString& LocaleRoot, const FString& Filename, const FMT2MapTerrainInfo& Map,
+		TArray<FMT2MobSpawnEntry>& OutEntries, TArray<FString>& OutWarnings);
 };

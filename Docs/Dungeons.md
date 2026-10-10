@@ -14,7 +14,7 @@ The lifecycle is `Idle → Active → Completed/Failed → Idle`. Players enter/
 
 Killing all tracked objectives completes the encounter and opens its doors. Destroying a living objective instead fails the encounter; despawn cannot bypass progression. Manual completion/failure hooks support later quest-driven objectives. Door collision/visibility and shared status are replicated; decorative door animation is not implemented.
 
-The room owns its encounter deadline, independently of player quest timers. Late arrivals share that deadline instead of restarting it. Timeout fails the encounter and opens doors so occupants can leave. An occupied room never resets. Once empty, a configurable grace timer permits cleanup/reset; an admitted returning player cancels that timer. PlayerState and pawn teardown remove membership, and room teardown removes bindings and timers. Room actors have no per-frame Tick.
+The room owns its encounter deadline, independently of player quest timers. `EncounterSeconds=0` disables the deadline for untimed encounters. Late arrivals share an active deadline instead of restarting it. Timeout fails the encounter and opens doors so occupants can leave. An occupied room never resets. Once empty, a configurable grace timer permits cleanup/reset; an admitted returning player cancels that timer. PlayerState and pawn teardown remove membership, and room teardown removes bindings and timers. Room actors have no per-frame Tick.
 
 `AdvancePlayer` only works after completion, stays within the same world, and joins the configured next room after a collision-checked teleport. Invalid destinations fail without transferring ownership; failed membership transfer restores the source position. It does not migrate actors across server processes.
 
@@ -26,8 +26,18 @@ Player quest flags, inventory, combat loot and EXP remain individual. Completion
 
 `pc.in_dungeon()` now reflects logical room membership instead of always returning false. Other `d.*` quest commands and private-map guards are not automatically translated into working shared-stage behavior.
 
-## First integration target
+## Devil Tower integration
 
-Devil Tower's existing world is `/Game/Maps/Game/devil_tower`. The legacy `deviltower_zone.quest` supplies stage coordinates, elimination-driven transitions and regen filenames, but also creates private maps and checks private-map index ranges. Those semantics require explicit conversion to shared rooms. The core does not rewrite that quest, guess mesh bounds, place room actors into the map, or claim that the complete tower is playable yet.
+The world `/Game/Maps/Game/devil_tower` contains three authored, non-spatial `AMT2DevilTowerRoom` actors for the opening stages. Their bounds come from the actual imported room meshes. Entrances use the legacy warp/`special.devil_tower` coordinates with the verified 76800-cm X mirror. Positions and capsule clearance are baked against triangle collision on the room surface. The shared room mesh has explicit complex-as-simple collision with regenerated physics data; a single convex hull cannot represent the hollow arena.
 
-Next: author verified room bounds/entrances, replace the tower's private-map progression with room transitions, implement its required dungeon commands and room-owned server timers, then run a multi-client packaged test. `Metin2.Dungeons` covers native shared lifecycle and teardown; quest regression tests remain necessary. Client replication, navigation, imported regen integration and complete tower gameplay need packaged validation.
+1. `DevilTower.Floor1`: the 8015 entry stone is room-owned. Ambient first-floor groups retain their normal scheduler. Destroying the stone advances all current room members after six seconds.
+2. `DevilTower.Floor2`: 205 mobs from `deviltower2_regen.txt`, including group membership and forced aggression. Complete elimination advances current members after four seconds.
+3. `DevilTower.Floor3`: 260 mobs from `deviltower3_regen.txt`, including group 1024's 1091 boss. All tracked mobs must die. Progression currently stops here; floor four is not configured.
+
+Admission starts an idle encounter on the next timer tick, after possession/teleport finishes. The opening stages have no failure deadline, matching the legacy quest. Transition timers belong to the room, not the killer, so one participant's disconnect cannot cancel the group's advance. Collision-blocked transfers leave that player in the source room and log a warning. These rooms have no separate door actors: floor changes use same-world teleportation.
+
+On this configured map only, quest dispatch bypasses `deviltower_zone`'s old private-map progression and login guard. Its entrance NPC dialogue outside the tower remains available. Other quests are unaffected. Runtime needs only cooked assets, not the legacy source files. Reimporting the map can restore the ambient entry stone; rerun the configuration commandlet afterwards to avoid duplicate stones.
+
+The editor commandlet `-run=MT2ConfigureDevilTower` loads World Partition actors for inspection. Supplying `-LocaleRoot=<server share/locale/italy>` and `-DungeonRoot=<server share/data/dungeon>` validates the opening rooms, imported VNUM classes, regen inputs and clear floor positions. Add `-Apply` to save only the tower rooms, ambient stone removal and room mesh collision package, or `-Verify` to check the saved room links, transforms, spawns, collision policy and ambient stone removal without saving. Validation happens before persistent writes; reruns update the same room IDs rather than duplicating actors. Spawn positions are deterministically baked inside source regen rectangles and avoid wall caps and occupied capsule space.
+
+Still required: floors 4–9 (real/fake stones, timed seals and keys, blacksmith interactions, map/key puzzles, final boss and exit), their shared quest commands and individual completion rewards. `Metin2.Dungeons` includes the native opening transition and disconnect regression, not a complete tower run. Packaged multi-client replication, navigation, cooking and visual gameplay remain unverified.

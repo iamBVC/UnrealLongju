@@ -11,6 +11,7 @@
 #include "AbilitySystemComponent.h"
 #include "Abilities/MT2CoreAttributeSet.h"
 #include "Dungeons/MT2DungeonRoom.h"
+#include "Dungeons/MT2DevilTowerRoom.h"
 #include "Dungeons/MT2DungeonSubsystem.h"
 #include "Mobs/MT2Mob.h"
 #include "Player/MT2PlayerState.h"
@@ -36,10 +37,10 @@ namespace MT2DungeonFixture
 			World->EndPlay(EEndPlayReason::Quit); Instance->Shutdown();
 			World->DestroyWorld(false); GEngine->DestroyWorldContext(World); GWorld = OriginalWorld;
 		}
-		AMT2DungeonRoom* Room(FName Id, FVector Location = FVector::ZeroVector)
+		AMT2DungeonRoom* Room(FName Id, FVector Location = FVector::ZeroVector, TSubclassOf<AMT2DungeonRoom> Class = AMT2DungeonRoom::StaticClass())
 		{
 			const FTransform Transform(Location);
-			auto* Result = World->SpawnActorDeferred<AMT2DungeonRoom>(AMT2DungeonRoom::StaticClass(), Transform);
+			auto* Result = World->SpawnActorDeferred<AMT2DungeonRoom>(Class, Transform);
 			Result->RoomId = Id; Result->FinishSpawning(Transform); return Result;
 		}
 		AMT2PlayerState* Player(const FString& Id, FVector Location = FVector::ZeroVector, bool bCharacter = false)
@@ -184,6 +185,39 @@ bool FMT2DungeonQuestAndValidationTest::RunTest(const FString&)
 	TestFalse(TEXT("Physical occupancy prevents reset even without admission"), Room->ResetWhenEmpty());
 	Context.Player->SetActorLocation(FVector(-5000,0,0));
 	TestTrue(TEXT("Failed room can reset after physical exit"), Room->ResetWhenEmpty());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMT2DevilTowerOpeningTest, "Metin2.Dungeons.DevilTowerOpening",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FMT2DevilTowerOpeningTest::RunTest(const FString&)
+{
+	MT2DungeonFixture::FRig Rig;
+	auto* First = Cast<AMT2DevilTowerRoom>(Rig.Room(TEXT("DevilTower.Floor1"), FVector::ZeroVector, AMT2DevilTowerRoom::StaticClass()));
+	auto* Second = Cast<AMT2DevilTowerRoom>(Rig.Room(TEXT("DevilTower.Floor2"), FVector(5000,0,0), AMT2DevilTowerRoom::StaticClass()));
+	auto* Third = Cast<AMT2DevilTowerRoom>(Rig.Room(TEXT("DevilTower.Floor3"), FVector(10000,0,0), AMT2DevilTowerRoom::StaticClass()));
+	First->NextRoom = Second; Second->NextRoom = Third;
+	First->TransitionSeconds = .1f; Second->TransitionSeconds = .1f;
+	auto* A = Rig.Player(TEXT("A")); auto* B = Rig.Player(TEXT("B"));
+	TestTrue(TEXT("Tower entry admits player"), First->JoinPlayer(A)); First->JoinPlayer(B);
+	Rig.TimerTick(.01f);
+	TestTrue(TEXT("Tower automatically starts on admission"), First->GetPhase() == EMT2DungeonRoomPhase::Active);
+	TestEqual(TEXT("Opening legacy stages have no failure deadline"), First->GetSecondsRemaining(), 0.0);
+	auto* Stone = Rig.Mob(); First->RegisterEnemy(Stone); Stone->GetHealthComponent()->SetHealth(0.f);
+	A->GetPawn()->Destroy(); // The killer's logout must not cancel a shared transition.
+	Rig.TimerTick(.1f); Rig.TimerTick(.11f); Rig.TimerTick(.01f);
+	TestEqual(TEXT("Room-owned transition survives one participant disconnect"), Rig.World->GetSubsystem<UMT2DungeonSubsystem>()->GetPlayerRoom(B), static_cast<AMT2DungeonRoom*>(Second));
+	TestTrue(TEXT("Next floor starts one shared encounter"), Second->GetPhase() == EMT2DungeonRoomPhase::Active);
+	auto* Soldier = Rig.Mob(FVector(5000,0,0)); auto* Boss = Rig.Mob(FVector(5100,0,0));
+	Second->RegisterEnemy(Soldier); Second->RegisterEnemy(Boss);
+	Soldier->GetHealthComponent()->SetHealth(0.f);
+	TestTrue(TEXT("Partial elimination cannot advance"), Second->GetPhase() == EMT2DungeonRoomPhase::Active);
+	Boss->GetHealthComponent()->SetHealth(0.f);
+	Rig.TimerTick(.1f); Rig.TimerTick(.11f); Rig.TimerTick(.01f);
+	TestEqual(TEXT("Complete elimination advances to third floor"), Rig.World->GetSubsystem<UMT2DungeonSubsystem>()->GetPlayerRoom(B), static_cast<AMT2DungeonRoom*>(Third));
+	TestTrue(TEXT("Third floor starts"), Third->GetPhase() == EMT2DungeonRoomPhase::Active);
+	Third->CompleteEncounter(); Rig.TimerTick(5.f);
+	TestEqual(TEXT("Unconfigured later stages cannot silently teleport players"), Rig.World->GetSubsystem<UMT2DungeonSubsystem>()->GetPlayerRoom(B), static_cast<AMT2DungeonRoom*>(Third));
 	return true;
 }
 #endif

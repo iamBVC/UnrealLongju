@@ -17,6 +17,8 @@ struct METIN2_API FMT2DungeonSpawn
 	GENERATED_BODY()
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 Vnum = 0;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite) FTransform LocalTransform;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) bool bForceAggressive = false;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite) int32 GroupId = 0;
 };
 
 UCLASS(Blueprintable)
@@ -33,10 +35,11 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Dungeon") TObjectPtr<UArrowComponent> Entrance;
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category="Dungeon") TObjectPtr<AMT2DungeonRoom> NextRoom;
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, ReplicatedUsing=ApplyDoors, Category="Dungeon") TArray<TObjectPtr<AActor>> Doors;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Dungeon", meta=(ClampMin="0.1")) float EncounterSeconds = 300.f;
+	// Zero disables timeout for legacy stages that have no deadline.
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Dungeon", meta=(ClampMin="0.0")) float EncounterSeconds = 300.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Dungeon", meta=(ClampMin="0.1")) float EmptyResetSeconds = 30.f;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Dungeon") TArray<FMT2DungeonSpawn> Spawns;
-	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Dungeon") bool JoinPlayer(AMT2PlayerState* Player);
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Dungeon") virtual bool JoinPlayer(AMT2PlayerState* Player);
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Dungeon") void LeavePlayer(AMT2PlayerState* Player);
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Dungeon") bool StartEncounter();
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category="Dungeon") bool RegisterEnemy(AMT2Mob* Mob);
@@ -55,6 +58,9 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category="Dungeon") void EncounterStarted();
 	UFUNCTION(BlueprintImplementableEvent, Category="Dungeon") void EncounterCompleted();
 	UFUNCTION(BlueprintImplementableEvent, Category="Dungeon") void EncounterFailed();
+protected:
+	virtual void OnEncounterCompleted() {}
+	TArray<TWeakObjectPtr<AMT2PlayerState>> GetMembers() const { return Members.Array(); }
 private:
 	UFUNCTION() void OnOverlap(UPrimitiveComponent* Component, AActor* Other, UPrimitiveComponent* OtherComponent, int32 BodyIndex, bool bFromSweep, const FHitResult& Hit);
 	UFUNCTION() void OnEndOverlap(UPrimitiveComponent* Component, AActor* Other, UPrimitiveComponent* OtherComponent, int32 BodyIndex);

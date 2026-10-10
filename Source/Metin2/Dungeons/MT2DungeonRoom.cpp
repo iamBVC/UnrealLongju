@@ -8,6 +8,7 @@
 #include "Engine/GameInstance.h"
 #include "GameFramework/GameStateBase.h"
 #include "Mobs/MT2Mob.h"
+#include "Mobs/MT2MobAIComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Persistence/MT2PersistenceComponent.h"
 #include "Player/MT2PlayerState.h"
@@ -128,16 +129,17 @@ void AMT2DungeonRoom::OnPawnEndPlay(AActor* Actor, EEndPlayReason::Type)
 bool AMT2DungeonRoom::StartEncounter()
 {
 	if (!HasAuthority() || !bRegistered || bResetting || Phase != EMT2DungeonRoomPhase::Idle || Members.IsEmpty() ||
-		!FMath::IsFinite(EncounterSeconds) || EncounterSeconds <= 0.f) return false;
+		!FMath::IsFinite(EncounterSeconds) || EncounterSeconds < 0.f) return false;
 	RunSerial = RunSerial == MAX_int32 ? 1 : RunSerial + 1;
 	EligiblePlayers.Reset(); ClaimedPlayers.Reset();
 	for (auto Member : Members) { const FString Id = PlayerIdentity(Member.Get()); if (!Id.IsEmpty()) EligiblePlayers.Add(Id); }
-	SetPhase(EMT2DungeonRoomPhase::Active); Deadline = GetWorld()->GetTimeSeconds() + EncounterSeconds;
+	SetPhase(EMT2DungeonRoomPhase::Active); Deadline = EncounterSeconds > 0.f ? GetWorld()->GetTimeSeconds() + EncounterSeconds : 0.0;
 	const int32 Epoch = RunSerial;
-	GetWorld()->GetTimerManager().SetTimer(EncounterTimer, FTimerDelegate::CreateWeakLambda(this, [this, Epoch]()
+	if (EncounterSeconds > 0.f) GetWorld()->GetTimerManager().SetTimer(EncounterTimer, FTimerDelegate::CreateWeakLambda(this, [this, Epoch]()
 		{ if (RunSerial == Epoch) FailEncounter(); }), EncounterSeconds, false);
 	bSpawning = true;
 	auto* GI = GetGameInstance(); auto* Vnums = GI ? GI->GetSubsystem<UMT2VnumRegistrySubsystem>() : nullptr;
+	TMap<int32, TArray<AMT2Mob*>> Groups;
 	for (const auto& Spawn : Spawns)
 	{
 		const auto MobClass = Vnums ? Vnums->ResolveMobClass(Spawn.Vnum) : TSubclassOf<AMT2Mob>();
@@ -150,7 +152,10 @@ bool AMT2DungeonRoom::StartEncounter()
 			bSpawning = false; UE_LOG(LogMT2Dungeon, Error, TEXT("Room %s failed encounter spawn vnum=%d."), *RoomId.ToString(), Spawn.Vnum);
 			ClearEnemies(true); FailEncounter(); return false;
 		}
+		if (Spawn.bForceAggressive) Mob->GetMobAIComponent()->SetForceAggressive(true);
+		if (Spawn.GroupId > 0) Groups.FindOrAdd(Spawn.GroupId).Add(Mob);
 	}
+	for (const auto& Pair : Groups) for (AMT2Mob* Mob : Pair.Value) Mob->SetSpawnGroupMembers(Pair.Value);
 	bSpawning = false; EncounterStarted(); return Phase == EMT2DungeonRoomPhase::Active;
 }
 bool AMT2DungeonRoom::RegisterEnemy(AMT2Mob* Mob)
@@ -203,7 +208,7 @@ void AMT2DungeonRoom::CompleteEncounter()
 {
 	if (!HasAuthority() || !bRegistered || Phase != EMT2DungeonRoomPhase::Active) return;
 	GetWorld()->GetTimerManager().ClearTimer(EncounterTimer); Deadline = 0.0;
-	SetPhase(EMT2DungeonRoomPhase::Completed); EncounterCompleted(); ScheduleEmptyReset();
+	SetPhase(EMT2DungeonRoomPhase::Completed); OnEncounterCompleted(); EncounterCompleted(); ScheduleEmptyReset();
 }
 void AMT2DungeonRoom::FailEncounter()
 {
@@ -255,7 +260,16 @@ bool AMT2DungeonRoom::AdvancePlayer(AMT2PlayerState* Player)
 	const FVector Location = NextRoom->Entrance->GetComponentLocation();
 	if (!IsValid(Pawn) || !NextRoom->ContainsLocation(Location)) return false;
 	const FVector OldLocation = Pawn->GetActorLocation(); const FRotator OldRotation = Pawn->GetActorRotation();
-	if (!Pawn->TeleportTo(Location, NextRoom->Entrance->GetComponentRotation(), false, false)) return false;
+	bool bTeleported = false;
+	for (int32 Attempt = 0; Attempt < 25 && !bTeleported; ++Attempt)
+	{
+		// Several members can advance together. Avoid stacking every capsule on the entrance.
+		const FVector Offset(100.f * (Attempt % 5 - 2), 100.f * (Attempt / 5 - 2), 0);
+		const FVector Candidate = Attempt == 0 ? Location : Location + Offset;
+		if (NextRoom->ContainsLocation(Candidate))
+			bTeleported = Pawn->TeleportTo(Candidate, NextRoom->Entrance->GetComponentRotation(), false, false);
+	}
+	if (!bTeleported) return false;
 	LeavePlayer(Player);
 	if (NextRoom->JoinPlayer(Player)) return true;
 	Pawn->TeleportTo(OldLocation, OldRotation, false, true); JoinPlayer(Player); return false;
@@ -264,5 +278,5 @@ double AMT2DungeonRoom::GetSecondsRemaining() const
 {
 	const AGameStateBase* State = GetWorld() ? GetWorld()->GetGameState() : nullptr;
 	const double Now = State ? State->GetServerWorldTimeSeconds() : GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
-	return Phase == EMT2DungeonRoomPhase::Active ? FMath::Max(Deadline - Now, 0.0) : 0.0;
+	return Phase == EMT2DungeonRoomPhase::Active && Deadline > 0.0 ? FMath::Max(Deadline - Now, 0.0) : 0.0;
 }

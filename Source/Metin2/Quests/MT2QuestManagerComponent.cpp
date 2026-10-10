@@ -10,6 +10,8 @@
 #include "Quests/MT2QuestManagerComponent.h"
 
 #include "Characters/MT2PlayerCharacter.h"
+#include "Dungeons/MT2DungeonSubsystem.h"
+#include "Dungeons/MT2DevilTowerRoom.h"
 #include "Items/MT2InventoryComponent.h"
 #include "EngineUtils.h"
 #include "Mobs/MT2Mob.h"
@@ -658,6 +660,10 @@ bool UMT2QuestManagerComponent::DispatchEventInternal(
 	Context.EventVnum = Vnum;
 	Context.EventItemSlot = ItemSlot;
 	Context.bPreservePIESpawn = bPreservePIESpawnDuringDispatch;
+	const auto* Dungeon = State->GetWorld()->GetSubsystem<UMT2DungeonSubsystem>();
+	const bool bNativeTower = Dungeon && Cast<AMT2DevilTowerRoom>(Dungeon->FindRoom(TEXT("DevilTower.Floor1")));
+	if (bNativeTower && Context.Player && (Event == EMT2QuestEvent::Login || Event == EMT2QuestEvent::Enter))
+		State->GetWorld()->GetSubsystem<UMT2DungeonSubsystem>()->ReconcilePlayer(State);
 	if (HasPendingConversation())
 	{
 		// Broadcasts currently replace the suspended run. End it explicitly so its
@@ -687,6 +693,9 @@ bool UMT2QuestManagerComponent::DispatchEventInternal(
 		{
 			continue;
 		}
+		// This map's shared rooms own progression. Do not run private-map timers or the old
+		// login guard that would eject everybody above floor one. Entrance dialogue outside stays intact.
+		if (bNativeTower && Quest->GetQuestId() == TEXT("deviltower_zone")) continue;
 		Context.Quest = Quest;
 		if (Event == EMT2QuestEvent::Enter)
 		{
