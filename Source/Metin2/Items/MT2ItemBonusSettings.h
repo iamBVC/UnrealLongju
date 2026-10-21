@@ -164,6 +164,10 @@ public:
 	UPROPERTY(EditAnywhere, Config, BlueprintReadOnly, Category = "Rules", meta = (EditFixedSize))
 	TArray<int32> ChangeNormalValueLevelWeights = {0, 10, 40, 35, 15};
 
+	/** Enchant Item (b): relative weights for attribute value levels one through five. */
+	UPROPERTY(EditAnywhere, Config, BlueprintReadOnly, Category = "Rules|Level Chest Reroll", meta = (EditFixedSize))
+	TArray<int32> LevelChestRerollValueLevelWeights = {0, 10, 50, 39, 1};
+
 	UPROPERTY(EditAnywhere, Config, BlueprintReadOnly, Category = "Rules", meta = (EditFixedSize))
 	TArray<int32> RareValueLevelWeights = {0, 0, 0, 0, 100};
 

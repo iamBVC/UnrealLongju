@@ -30,7 +30,7 @@ EMT2ItemBonusApplyResult UMT2ItemUseChangeAttributeTemplate::ApplyToEquipment(
 	while (MT2ItemBonusUtils::CountBonuses(StagedTarget, EMT2ItemBonusKind::Normal) < NormalCount)
 	{
 		if (!MT2ItemBonusUtils::AddRandomBonus(StagedTarget, Settings.NormalBonuses,
-			Settings.ChangeNormalValueLevelWeights, TargetType, EMT2ItemBonusKind::Normal, &TargetTemplate))
+			GetValueLevelWeights(Settings), TargetType, EMT2ItemBonusKind::Normal, &TargetTemplate))
 		{
 			break;
 		}
@@ -42,5 +42,11 @@ EMT2ItemBonusApplyResult UMT2ItemUseChangeAttributeTemplate::ApplyToEquipment(
 	}
 
 	return EMT2ItemBonusApplyResult::Success;
+}
+
+const TArray<int32>& UMT2ItemUseChangeAttributeTemplate::GetValueLevelWeights(
+	const UMT2ItemBonusSettings& Settings) const
+{
+	return Settings.ChangeNormalValueLevelWeights;
 }
 

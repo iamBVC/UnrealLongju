@@ -121,7 +121,7 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemWeaponArrowTemplate | Weapon | WEAPON_ARROW | 6 | Placeholder; behavior TODO |
 | UMT2ItemWeaponMountSpearTemplate | Weapon | WEAPON_MOUNT_SPEAR | 7 | Placeholder; behavior TODO |
 
-## Beginner bonus-item overrides
+## Content-specific bonus-item overrides
 
 These are specific classes for content variants, not additional legacy subtype ordinals.
 
@@ -129,6 +129,7 @@ These are specific classes for content variants, not additional legacy subtype o
 | --- | --- | --- | --- |
 | UMT2ItemBeginnerBonusAdditionTemplate | UMT2ItemUseAddAttributeTemplate | 71152, 76024 | Weapon/body-only; all target level requirements must be within the configured cap (default 40). Ordinary addition chance/transaction inherited. Shared addon slot audit remains pending. |
 | UMT2ItemBeginnerBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 71151, 76023 | Same target restriction; ordinary reroll/count/rare preservation inherited. Shared reroll cooldown and addon audits remain pending. |
+| UMT2ItemLevelChestBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 76014 (Enchant Item (b)) | Own configurable 0/10/50/39/1 value-level policy; ordinary equipment eligibility/count/rare handling inherited, no beginner cap. Shared cooldown and addon audits remain pending. |
 
 ## Legacy parser edge cases
 

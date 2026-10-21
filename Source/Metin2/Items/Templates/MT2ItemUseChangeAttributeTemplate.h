@@ -16,5 +16,9 @@ public:
 	virtual EMT2ItemBonusApplyResult ApplyToEquipment(FMT2ItemSlot& StagedTarget,
 		const UMT2ItemTemplate& TargetTemplate, const UMT2ItemBonusSettings& Settings) const override;
 	virtual bool IsBonusRandomizer() const override { return true; }
+
+protected:
+	/** Concrete variants select value probabilities without duplicating the reroll transaction. */
+	virtual const TArray<int32>& GetValueLevelWeights(const UMT2ItemBonusSettings& Settings) const;
 };
 

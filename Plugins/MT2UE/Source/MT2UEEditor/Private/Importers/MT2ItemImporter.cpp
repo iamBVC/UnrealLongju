@@ -50,6 +50,7 @@
 #include "Items/Templates/MT2ItemUseAddRareBonusTemplate.h"
 #include "Items/Templates/MT2ItemBeginnerBonusAdditionTemplate.h"
 #include "Items/Templates/MT2ItemBeginnerBonusRerollTemplate.h"
+#include "Items/Templates/MT2ItemLevelChestBonusRerollTemplate.h"
 #include "Items/Templates/MT2ItemUseChangeRareBonusesTemplate.h"
 #include "Items/Templates/MT2ItemUseRecipeTemplate.h"
 #include "Items/Templates/MT2ItemUseCreateStoneTemplate.h"
@@ -1022,10 +1023,12 @@ namespace
 		return ResolveMT2ItemTemplateClass(ItemType, LegacySubtype);
 	}
 
-	UClass* ResolveBeginnerBonusParentClass(const FMT2ItemDefinition& Definition)
+	UClass* ResolveContentBonusParentClass(const FMT2ItemDefinition& Definition)
 	{
 		if (Definition.ItemType != EMT2ItemType::Use) return nullptr;
 		// Source IDs are decoded only during import; gameplay dispatches through the class.
+		if (Definition.SubType.Use == EMT2UseSubType::ChangeAttribute && Definition.Vnum == 76014)
+			return UMT2ItemLevelChestBonusRerollTemplate::StaticClass();
 		if (Definition.SubType.Use == EMT2UseSubType::AddAttribute &&
 			(Definition.Vnum == 71152 || Definition.Vnum == 76024))
 			return UMT2ItemBeginnerBonusAdditionTemplate::StaticClass();
@@ -1151,9 +1154,9 @@ namespace
 			return nullptr;
 		}
 
-		UClass* BeginnerBonusBehaviorClass = ResolveBeginnerBonusParentClass(Definition);
-		UClass* ParentClass = BeginnerBonusBehaviorClass
-			? BeginnerBonusBehaviorClass
+		UClass* ContentBonusBehaviorClass = ResolveContentBonusParentClass(Definition);
+		UClass* ParentClass = ContentBonusBehaviorClass
+			? ContentBonusBehaviorClass
 			: Definition.Vnum >= 50051 && Definition.Vnum <= 50053
 			? UMT2HorseBookItemTemplate::StaticClass()
 			: Definition.Vnum >= 50054 && Definition.Vnum <= 50059

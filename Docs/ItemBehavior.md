@@ -76,7 +76,21 @@ item IDs. To refresh only their four Blueprints with existing source/destination
 `UnrealEditor-Cmd.exe UnrealLongju.uproject -run=MT2ConfigureItemBehaviors -BeginnerBonusesOnly -unattended -NullRHI`.
 `-Preview` discovers and validates the selected records without saving.
 
-This is a bounded parity pass, not completion of every bonus item: reroll cooldowns/distributions,
+Enchant Item (b), 76014, uses `UMT2ItemLevelChestBonusRerollTemplate`. It is a level-chest
+variant, not a beginner-only item: it accepts the ordinary reroll equipment families without
+the beginner level cap. Its value-level weights are 0/10/50/39/1, matching the legacy special
+case, instead of the ordinary 0/10/40/35/15 distribution. Configure these under Game →
+MT2 Item Bonuses → Rules → Level Chest Reroll. Weights address value levels one through five
+and are capped by each bonus definition's supported level for the equipment family.
+
+The concrete class chooses its probability policy; the ordinary reroll class preserves the
+normal attribute count and rare attributes, while Inventory owns validation, consumption and
+notifications. Existing proto anti-flags retain this item's trade restrictions. No new runtime
+binding state, item-ID dispatch, save format or RPC is introduced. To refresh only this asset,
+use `-run=MT2ImportItems -OnlyVnum=76014` with the existing configured import paths.
+
+This is a bounded parity pass, not completion of every bonus item: shared reroll cooldowns,
+other special distributions,
 rare-region rules and zero-value addon slot accounting still
 require the checks in OWN-01 of the implementation tracker.
 
