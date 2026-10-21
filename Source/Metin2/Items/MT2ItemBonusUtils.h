@@ -17,6 +17,13 @@ struct FMT2ItemSlot;
 
 namespace MT2ItemBonusUtils
 {
+	/** Type selection is independent of the separate attribute value-level distribution. */
+	enum class ETypeSelection : uint8
+	{
+		Weighted,
+		Uniform
+	};
+
 	METIN2_API EMT2ItemBonusTarget ResolveTarget(const UMT2ItemTemplate* Template);
 	METIN2_API bool IsBeginnerBonusTarget(const UMT2ItemTemplate& Template, int32 MaximumRequiredLevel);
 	METIN2_API int32 RollWeightedIndex(const TArray<int32>& Weights);
@@ -26,6 +33,7 @@ namespace MT2ItemBonusUtils
 	METIN2_API bool AddRandomBonus(
 		FMT2ItemSlot& Item, const TArray<FMT2ItemBonusDefinition>& Definitions,
 		const TArray<int32>& LevelWeights, EMT2ItemBonusTarget Target, EMT2ItemBonusKind Kind,
-		const UMT2ItemTemplate* TargetTemplate = nullptr);
+		const UMT2ItemTemplate* TargetTemplate = nullptr,
+		ETypeSelection TypeSelection = ETypeSelection::Weighted);
 	METIN2_API void AddDamageAddon(FMT2ItemSlot& Item, const FMT2DamageAddonFormula& Formula);
 }

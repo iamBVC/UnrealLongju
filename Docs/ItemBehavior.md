@@ -63,6 +63,17 @@ applies or another normal attribute; rare attributes retain their independent du
 Normal and rare value-level weight arrays are ordered: repeated entries, including zeroes,
 must use Unreal config's `.` array-add syntax after an explicit clear, not unique-add `+`.
 
+Rare addition 71051 and reroll 71052 use their dedicated `UseAddRareBonus` and
+`UseChangeRareBonuses` templates. Both choose uniformly among eligible rare types, matching
+legacy `CItem::AddRareAttribute`; `SelectionWeight` affects normal types only. A zero rare
+definition weight does not disable that definition: exclude an equipment family with its
+eligibility flags or maximum-level map instead. Rare types cannot repeat another rare type,
+but may match normal/prototype applies. Value levels remain independently configurable in
+`RareValueLevelWeights` (level five by default), capped by each equipment-family maximum.
+Invalid pools/distributions reject without consumption; an incomplete reroll restores the
+original attributes. Successful use consumes one item. Regional availability is a separate
+pending parity check, not inferred from selection behavior.
+
 Beginner addition items 71152/76024 use `UMT2ItemBeginnerBonusAdditionTemplate`; beginner
 reroll items 71151/76023 use `UMT2ItemBeginnerBonusRerollTemplate`. Each has a dedicated
 header/implementation and inherits its ordinary addition/reroll policy. They accept only

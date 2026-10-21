@@ -98,7 +98,7 @@ bool MT2ItemBonusUtils::HasBonusType(
 bool MT2ItemBonusUtils::AddRandomBonus(
 	FMT2ItemSlot& Item, const TArray<FMT2ItemBonusDefinition>& Definitions,
 	const TArray<int32>& LevelWeights, EMT2ItemBonusTarget Target, EMT2ItemBonusKind Kind,
-	const UMT2ItemTemplate* TargetTemplate)
+	const UMT2ItemTemplate* TargetTemplate, ETypeSelection TypeSelection)
 {
 	TArray<const FMT2ItemBonusDefinition*> Available;
 	TArray<int32> DefinitionWeights;
@@ -112,7 +112,8 @@ bool MT2ItemBonusUtils::AddRandomBonus(
 			{
 				return Apply.Type == Definition.ApplyType;
 			});
-		if (Definition.ApplyType == EMT2ItemBonusType::None || Definition.SelectionWeight <= 0 ||
+		if (Definition.ApplyType == EMT2ItemBonusType::None ||
+			(TypeSelection == ETypeSelection::Weighted && Definition.SelectionWeight <= 0) ||
 			!MaximumLevel || *MaximumLevel <= 0 ||
 			(Definition.EligibleItemFlags & static_cast<int32>(Target)) == 0 ||
 			bIntrinsicNormalBonus ||
@@ -121,7 +122,8 @@ bool MT2ItemBonusUtils::AddRandomBonus(
 			continue;
 		}
 		Available.Add(&Definition);
-		DefinitionWeights.Add(Definition.SelectionWeight);
+		// Legacy rare attributes sample eligible types uniformly; dwProb is a normal-only policy.
+		DefinitionWeights.Add(TypeSelection == ETypeSelection::Uniform ? 1 : Definition.SelectionWeight);
 	}
 	const int32 DefinitionIndex = RollWeightedIndex(DefinitionWeights);
 	if (!Available.IsValidIndex(DefinitionIndex))

@@ -25,7 +25,8 @@ EMT2ItemBonusApplyResult UMT2ItemUseAddRareBonusTemplate::ApplyToEquipment(
 	}
 
 	return MT2ItemBonusUtils::AddRandomBonus(StagedTarget, Settings.RareBonuses,
-		Settings.RareValueLevelWeights, TargetType, EMT2ItemBonusKind::Rare)
+		Settings.RareValueLevelWeights, TargetType, EMT2ItemBonusKind::Rare, nullptr,
+		MT2ItemBonusUtils::ETypeSelection::Uniform)
 		? EMT2ItemBonusApplyResult::Success
 		: EMT2ItemBonusApplyResult::Invalid;
 }

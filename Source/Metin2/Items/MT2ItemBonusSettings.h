@@ -51,6 +51,7 @@ struct METIN2_API FMT2ItemBonusDefinition
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bonus")
 	EMT2ItemBonusValueFormat ValueFormat = EMT2ItemBonusValueFormat::Flat;
 
+	/** Normal bonus type probability only. Rare types are selected uniformly among eligible definitions. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Bonus", meta = (ClampMin = "0"))
 	int32 SelectionWeight = 1;
 

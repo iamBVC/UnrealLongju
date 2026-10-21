@@ -131,6 +131,14 @@ These are specific classes for content variants, not additional legacy subtype o
 | UMT2ItemBeginnerBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 71151, 76023 | Same target restriction; ordinary reroll/count/rare preservation inherited. Shared reroll cooldown and addon audits remain pending. |
 | UMT2ItemLevelChestBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 76014 (Enchant Item (b)) | Own configurable 0/10/50/39/1 value-level policy; ordinary equipment eligibility/count/rare handling inherited, no beginner cap. Shared cooldown and addon audits remain pending. |
 
+## Rare bonus consumables
+
+Rare consumables `UMT2ItemUseAddRareBonusTemplate` (71051) and
+`UMT2ItemUseChangeRareBonusesTemplate` (71052) own uniform eligible-type selection;
+normal `SelectionWeight` does not affect them. Shared staging, value-level settings and
+Inventory commits remain reused. Their regional eligibility and broader integration audits
+remain pending under OWN-01E2/F.
+
 ## Legacy parser edge cases
 
 - ITEM_UNIQUE accepts ordinals 0–10 from its parser table, including placeholder aliases UNIQUE_4 through UNIQUE_9 and USE_SPECIAL. They remain distinct variants; undocumented behavior is not inferred.

@@ -32,7 +32,8 @@ EMT2ItemBonusApplyResult UMT2ItemUseChangeRareBonusesTemplate::ApplyToEquipment(
 	for (int32 Index = 0; Index < RareCount; ++Index)
 	{
 		if (!MT2ItemBonusUtils::AddRandomBonus(StagedTarget, Settings.RareBonuses,
-			Settings.RareValueLevelWeights, TargetType, EMT2ItemBonusKind::Rare))
+			Settings.RareValueLevelWeights, TargetType, EMT2ItemBonusKind::Rare, nullptr,
+			MT2ItemBonusUtils::ETypeSelection::Uniform))
 		{
 			break;
 		}

@@ -12,7 +12,7 @@
 #include "Items/Templates/MT2ItemBonusConsumableTemplate.h"
 #include "MT2ItemUseChangeRareBonusesTemplate.generated.h"
 
-/** Rerolls every rare attribute while preserving the current number of rare slots. */
+/** Uniformly rerolls eligible rare types, preserving their count and all normal attributes. */
 UCLASS(Blueprintable)
 class METIN2_API UMT2ItemUseChangeRareBonusesTemplate : public UMT2ItemBonusConsumableTemplate
 {

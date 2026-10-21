@@ -12,7 +12,7 @@
 #include "Items/Templates/MT2ItemBonusConsumableTemplate.h"
 #include "MT2ItemUseAddRareBonusTemplate.generated.h"
 
-/** Applies one configured rare attribute to compatible equipment. */
+/** Applies one uniformly selected eligible rare type; value levels use the rare settings. */
 UCLASS(Blueprintable)
 class METIN2_API UMT2ItemUseAddRareBonusTemplate : public UMT2ItemBonusConsumableTemplate
 {
