@@ -63,8 +63,21 @@ applies or another normal attribute; rare attributes retain their independent du
 Normal and rare value-level weight arrays are ordered: repeated entries, including zeroes,
 must use Unreal config's `.` array-add syntax after an explicit clear, not unique-add `+`.
 
-This is a bounded parity pass, not completion of every bonus item: low-level special variants,
-reroll cooldowns/distributions, rare-region rules and zero-value addon slot accounting still
+Beginner addition items 71152/76024 use `UMT2ItemBeginnerBonusAdditionTemplate`; beginner
+reroll items 71151/76023 use `UMT2ItemBeginnerBonusRerollTemplate`. Each has a dedicated
+header/implementation and inherits its ordinary addition/reroll policy. They accept only
+weapons or body armor. Every level requirement on the target must be at or below
+`BeginnerBonusMaximumRequiredLevel` (40 by default), editable under Game → MT2 Item Bonuses →
+Rules → Beginner Bonus Items. This checks the equipment requirement, not the player's level;
+equipment without a level requirement is eligible. Rejected use preserves both items.
+
+The importer decodes these source IDs into native classes; gameplay does not check numeric
+item IDs. To refresh only their four Blueprints with existing source/destination settings, run
+`UnrealEditor-Cmd.exe UnrealLongju.uproject -run=MT2ConfigureItemBehaviors -BeginnerBonusesOnly -unattended -NullRHI`.
+`-Preview` discovers and validates the selected records without saving.
+
+This is a bounded parity pass, not completion of every bonus item: reroll cooldowns/distributions,
+rare-region rules and zero-value addon slot accounting still
 require the checks in OWN-01 of the implementation tracker.
 
 ## Instance sockets and equipment amplification

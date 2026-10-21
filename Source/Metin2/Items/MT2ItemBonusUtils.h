@@ -18,6 +18,7 @@ struct FMT2ItemSlot;
 namespace MT2ItemBonusUtils
 {
 	METIN2_API EMT2ItemBonusTarget ResolveTarget(const UMT2ItemTemplate* Template);
+	METIN2_API bool IsBeginnerBonusTarget(const UMT2ItemTemplate& Template, int32 MaximumRequiredLevel);
 	METIN2_API int32 RollWeightedIndex(const TArray<int32>& Weights);
 	METIN2_API int32 CountBonuses(const FMT2ItemSlot& Item, EMT2ItemBonusKind Kind);
 	METIN2_API bool HasBonusType(

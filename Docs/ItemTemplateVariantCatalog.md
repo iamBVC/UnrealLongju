@@ -99,8 +99,8 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemUseBucketTemplate | Use | USE_BUCKET | 15 | Placeholder; behavior TODO |
 | UMT2ItemUsePotionContinueTemplate | Use | USE_POTION_CONTINUE | 16 | Placeholder; behavior TODO |
 | UMT2ItemUseCleanSocketTemplate | Use | USE_CLEAN_SOCKET | 17 | Placeholder; behavior TODO |
-| UMT2ItemUseChangeAttributeTemplate | Use | USE_CHANGE_ATTRIBUTE | 18 | Placeholder; behavior TODO |
-| UMT2ItemUseAddAttributeTemplate | Use | USE_ADD_ATTRIBUTE | 19 | Class-owned addition policy; standard item 71085 tested. Per-slot chances, prototype-apply exclusion and failure consumption implemented. Special low-level variants and zero-value addon slot accounting remain pending (OWN-01). |
+| UMT2ItemUseChangeAttributeTemplate | Use | USE_CHANGE_ATTRIBUTE | 18 | Class-owned normal reroll; beginner items use the specialized override below. Shared cooldowns, special distributions and addon slot parity remain pending (OWN-01). |
+| UMT2ItemUseAddAttributeTemplate | Use | USE_ADD_ATTRIBUTE | 19 | Class-owned addition policy; standard item 71085 tested. Per-slot chances, prototype-apply exclusion and failure consumption implemented. Beginner variants use the specialized override below; zero-value addon slot accounting remains pending (OWN-01). |
 | UMT2ItemUseAddAccessorySocketTemplate | Use | USE_ADD_ACCESSORY_SOCKET | 20 | Placeholder; behavior TODO |
 | UMT2ItemUsePutIntoAccessorySocketTemplate | Use | USE_PUT_INTO_ACCESSORY_SOCKET | 21 | Placeholder; behavior TODO |
 | UMT2ItemUseAddAttribute2Template | Use | USE_ADD_ATTRIBUTE2 | 22 | Class-owned fifth-attribute policy; item 70024 tested. Requires four normal attributes by default; configured fifth-slot chance and consume-on-failure implemented. Zero-value addon slot accounting remains pending (OWN-01). |
@@ -120,6 +120,15 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemWeaponFanTemplate | Weapon | WEAPON_FAN | 5 | Placeholder; behavior TODO |
 | UMT2ItemWeaponArrowTemplate | Weapon | WEAPON_ARROW | 6 | Placeholder; behavior TODO |
 | UMT2ItemWeaponMountSpearTemplate | Weapon | WEAPON_MOUNT_SPEAR | 7 | Placeholder; behavior TODO |
+
+## Beginner bonus-item overrides
+
+These are specific classes for content variants, not additional legacy subtype ordinals.
+
+| Native class | Parent | Imported items | Current policy / remaining work |
+| --- | --- | --- | --- |
+| UMT2ItemBeginnerBonusAdditionTemplate | UMT2ItemUseAddAttributeTemplate | 71152, 76024 | Weapon/body-only; all target level requirements must be within the configured cap (default 40). Ordinary addition chance/transaction inherited. Shared addon slot audit remains pending. |
+| UMT2ItemBeginnerBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 71151, 76023 | Same target restriction; ordinary reroll/count/rare preservation inherited. Shared reroll cooldown and addon audits remain pending. |
 
 ## Legacy parser edge cases
 

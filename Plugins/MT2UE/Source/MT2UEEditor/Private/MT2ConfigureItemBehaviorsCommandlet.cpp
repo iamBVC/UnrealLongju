@@ -27,14 +27,25 @@ int32 UMT2ConfigureItemBehaviorsCommandlet::Main(const FString& Params)
 		return 1;
 	}
 	for (const auto& Warning : Warnings) UE_LOG(LogTemp, Display, TEXT("%s"), *Warning);
-	Records.RemoveAll([](const FMT2ItemImportRecord& Record)
+	const bool bBeginnerBonusesOnly = FParse::Param(*Params, TEXT("BeginnerBonusesOnly"));
+	Records.RemoveAll([bBeginnerBonusesOnly](const FMT2ItemImportRecord& Record)
 	{
+		if (bBeginnerBonusesOnly)
+		{
+			const int32 Vnum = Record.Definition.Vnum;
+			return Vnum != 71151 && Vnum != 71152 && Vnum != 76023 && Vnum != 76024;
+		}
 		if (Record.Definition.ItemType == EMT2ItemType::Blend || Record.Definition.ItemType == EMT2ItemType::Fish ||
 			Record.Definition.ItemType == EMT2ItemType::Campfire) return false;
 		if (Record.Definition.ItemType != EMT2ItemType::Use) return true;
 		const auto Type = Record.Definition.SubType.Use;
 		return Type != EMT2UseSubType::AbilityUp && Type != EMT2UseSubType::PotionContinue && Type != EMT2UseSubType::Clear;
 	});
+	if (bBeginnerBonusesOnly && Records.Num() != 4)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Expected all four beginner bonus-item definitions; refusing a partial refresh."));
+		return 1;
+	}
 	if (Records.IsEmpty())
 	{
 		UE_LOG(LogTemp, Error, TEXT("No item behavior definitions matched the source proto."));

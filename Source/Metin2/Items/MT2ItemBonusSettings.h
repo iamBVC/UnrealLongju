@@ -142,6 +142,10 @@ public:
 	UPROPERTY(EditAnywhere, Config, BlueprintReadOnly, Category = "Rules|Normal Bonus Addition", meta = (ShowOnlyInnerProperties))
 	FMT2NormalBonusAdditionChances NormalBonusAdditionChances;
 
+	/** Equipment requirement, not the level of the player using the beginner consumable. */
+	UPROPERTY(EditAnywhere, Config, BlueprintReadOnly, Category = "Rules|Beginner Bonus Items", meta = (ClampMin = "0"))
+	int32 BeginnerBonusMaximumRequiredLevel = 40;
+
 	UPROPERTY(EditAnywhere, Config, BlueprintReadOnly, Category = "Rules", meta = (ClampMin = "1", ClampMax = "5"))
 	int32 NormalBonusAddLimit = 4;
 

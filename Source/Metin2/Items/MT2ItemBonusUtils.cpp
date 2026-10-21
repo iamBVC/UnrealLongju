@@ -39,6 +39,20 @@ EMT2ItemBonusTarget MT2ItemBonusUtils::ResolveTarget(const UMT2ItemTemplate* Tem
 	}
 }
 
+bool MT2ItemBonusUtils::IsBeginnerBonusTarget(const UMT2ItemTemplate& Template, int32 MaximumRequiredLevel)
+{
+	const EMT2ItemBonusTarget Target = ResolveTarget(&Template);
+	if (Target != EMT2ItemBonusTarget::Weapon && Target != EMT2ItemBonusTarget::Body)
+	{
+		return false;
+	}
+	// Check every level requirement: another limit must not hide a later, higher one.
+	return !Template.Limits.ContainsByPredicate([MaximumRequiredLevel](const FMT2ItemLimit& Limit)
+	{
+		return Limit.Type == EMT2ItemLimitType::Level && Limit.Value > FMath::Max(MaximumRequiredLevel, 0);
+	});
+}
+
 int32 MT2ItemBonusUtils::RollWeightedIndex(const TArray<int32>& Weights)
 {
 	int32 Total = 0;
