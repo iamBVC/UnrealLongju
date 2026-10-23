@@ -168,10 +168,18 @@ void MT2ItemBonusUtils::AddDamageAddon(FMT2ItemSlot& Item, const FMT2DamageAddon
 	const int32 Average = FMath::RoundToInt(Formula.AverageDamageSkillMultiplier * Skill) +
 		(FMath::Abs(Skill) <= Formula.SkillDamageThreshold ? FMath::Abs(Noise) : 0) +
 		FMath::RandRange(ExtraRange.X, ExtraRange.Y);
-	FMT2ItemBonus& AverageBonus = Item.EditBonuses().AddDefaulted_GetRef();
-	AverageBonus.Type = Formula.AverageDamageApplyType;
-	AverageBonus.Value = Average;
-	FMT2ItemBonus& SkillBonus = Item.EditBonuses().AddDefaulted_GetRef();
-	SkillBonus.Type = Formula.SkillDamageApplyType;
-	SkillBonus.Value = Skill;
+	// Legacy AddAttribute omits zero values. Keeping a typed zero here would leave an
+	// uncounted entry behind when rerolls fill the remaining normal attribute slots.
+	if (Average != 0)
+	{
+		FMT2ItemBonus& AverageBonus = Item.EditBonuses().AddDefaulted_GetRef();
+		AverageBonus.Type = Formula.AverageDamageApplyType;
+		AverageBonus.Value = Average;
+	}
+	if (Skill != 0)
+	{
+		FMT2ItemBonus& SkillBonus = Item.EditBonuses().AddDefaulted_GetRef();
+		SkillBonus.Type = Formula.SkillDamageApplyType;
+		SkillBonus.Value = Skill;
+	}
 }

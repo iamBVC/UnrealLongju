@@ -131,6 +131,14 @@ These are specific classes for content variants, not additional legacy subtype o
 | UMT2ItemBeginnerBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 71151, 76023 | Same target restriction; ordinary reroll/count/rare preservation inherited. Shared reroll cooldown and addon audits remain pending. |
 | UMT2ItemLevelChestBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 76014 (Enchant Item (b)) | Own configurable 0/10/50/39/1 value-level policy; ordinary equipment eligibility/count/rare handling inherited, no beginner cap. Shared cooldown and addon audits remain pending. |
 
+## Damage-addon generation
+
+Addon equipment creation and normal bonus rerolls reuse the shared damage-addon generator.
+It appends only nonzero average/skill-damage values, retaining signed nonzero results;
+rerolls fill remaining normal slots through the owning reroll template's configured pool.
+This avoids hidden zero entries inflating the stored attribute array. Existing typed-zero
+record handling and the remaining formula/count audit stay pending under OWN-01D2.
+
 ## Rare bonus consumables
 
 Rare consumables `UMT2ItemUseAddRareBonusTemplate` (71051) and

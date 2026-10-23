@@ -105,6 +105,15 @@ other special distributions,
 rare-region rules and zero-value addon slot accounting still
 require the checks in OWN-01 of the implementation tracker.
 
+Damage-addon generation stores only nonzero average/skill-damage results, matching the
+legacy `ApplyAddonTo` → `AddAttribute` path. This applies to new addon equipment and normal
+rerolls. A zero result does not allocate a bonus entry; the reroller fills remaining normal
+slots from its configured pool while preserving rare attributes. Negative nonzero values
+are retained. If the available pool cannot complete the reroll, the transaction rejects and
+restores the original item without consumption. Existing typed-zero records, one-slot addon
+rerolls and exact signed formula quantization still require OWN-01D2 verification; this
+change does not migrate saved items or change the configurable damage formula.
+
 ## Instance sockets and equipment amplification
 
 Common instance data contains count, expiry, presentation state and one typed family payload.
