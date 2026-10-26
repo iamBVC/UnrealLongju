@@ -99,11 +99,11 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemUseBucketTemplate | Use | USE_BUCKET | 15 | Placeholder; behavior TODO |
 | UMT2ItemUsePotionContinueTemplate | Use | USE_POTION_CONTINUE | 16 | Placeholder; behavior TODO |
 | UMT2ItemUseCleanSocketTemplate | Use | USE_CLEAN_SOCKET | 17 | Placeholder; behavior TODO |
-| UMT2ItemUseChangeAttributeTemplate | Use | USE_CHANGE_ATTRIBUTE | 18 | Class-owned normal reroll; beginner items use the specialized override below. Shared cooldowns, special distributions and addon slot parity remain pending (OWN-01). |
-| UMT2ItemUseAddAttributeTemplate | Use | USE_ADD_ATTRIBUTE | 19 | Class-owned addition policy; standard item 71085 tested. Per-slot chances, prototype-apply exclusion and failure consumption implemented. Beginner variants use the specialized override below; zero-value addon slot accounting remains pending (OWN-01). |
+| UMT2ItemUseChangeAttributeTemplate | Use | USE_CHANGE_ATTRIBUTE | 18 | Class-owned normal reroll; beginner items use the specialized override below. Typed-zero slots preserved; one-slot addon items regenerate the nonzero pair. Shared cooldowns, other distributions and broader integration remain pending (OWN-01). |
+| UMT2ItemUseAddAttributeTemplate | Use | USE_ADD_ATTRIBUTE | 19 | Class-owned addition policy; standard item 71085 tested. Per-slot chances, prototype-apply exclusion and failure consumption implemented. Typed-zero attributes occupy slots and exclude duplicate types. Beginner variants use the specialized override below; broader integration remains pending (OWN-01). |
 | UMT2ItemUseAddAccessorySocketTemplate | Use | USE_ADD_ACCESSORY_SOCKET | 20 | Placeholder; behavior TODO |
 | UMT2ItemUsePutIntoAccessorySocketTemplate | Use | USE_PUT_INTO_ACCESSORY_SOCKET | 21 | Placeholder; behavior TODO |
-| UMT2ItemUseAddAttribute2Template | Use | USE_ADD_ATTRIBUTE2 | 22 | Class-owned fifth-attribute policy; item 70024 tested. Requires four normal attributes by default; configured fifth-slot chance and consume-on-failure implemented. Zero-value addon slot accounting remains pending (OWN-01). |
+| UMT2ItemUseAddAttribute2Template | Use | USE_ADD_ATTRIBUTE2 | 22 | Class-owned fifth-attribute policy; item 70024 tested. Requires four normal attributes by default, including typed-zero slots; configured fifth-slot chance and consume-on-failure implemented. Broader integration remains pending (OWN-01). |
 | UMT2ItemUseRecipeTemplate | Use | USE_RECIPE | 23 | Atomic legacy transaction using typed ingredient, bottle and result references; failed rolls consume ingredients and bottle, recipe item remains. |
 | UMT2ItemUseChangeAttribute2Template | Use | USE_CHANGE_ATTRIBUTE2 | 24 | Placeholder; behavior TODO |
 | UMT2ItemUseBindTemplate | Use | USE_BIND | 25 | Placeholder; behavior TODO |
@@ -137,8 +137,9 @@ Addon equipment creation and normal bonus rerolls reuse the shared damage-addon 
 It appends only nonzero average/skill-damage values, retaining signed nonzero results;
 rerolls fill remaining normal slots through the owning reroll template's configured pool.
 Skill rolls use the legacy add-0.5-then-truncate rule before clamping, including negative
-values; average damage derives from that quantized result. Existing typed-zero record
-handling and the remaining slot/count audit stay pending under OWN-01D2.
+values; average damage derives from that quantized result. A one-slot addon reroll can expand
+to two nonzero addon entries. Existing typed-zero bonuses retain occupancy and duplicate
+exclusion, and survive player JSON and family-state serialization without contributing stats.
 
 ## Rare bonus consumables
 

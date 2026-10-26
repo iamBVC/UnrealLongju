@@ -23,11 +23,14 @@ EMT2ItemBonusApplyResult UMT2ItemUseChangeAttributeTemplate::ApplyToEquipment(
 	});
 
 	const UMT2ItemEquipmentTemplate* EquipmentTarget = Cast<UMT2ItemEquipmentTemplate>(&TargetTemplate);
-	if (EquipmentTarget && EquipmentTarget->BonusAddonType == Settings.DamageAddonType && NormalCount >= 2)
+	if (EquipmentTarget && EquipmentTarget->BonusAddonType == Settings.DamageAddonType)
 	{
 		MT2ItemBonusUtils::AddDamageAddon(StagedTarget, Settings.DamageAddonFormula);
 	}
-	while (MT2ItemBonusUtils::CountBonuses(StagedTarget, EMT2ItemBonusKind::Normal) < NormalCount)
+	// Legacy regenerates the addon first; its nonzero pair can expand a one-slot item.
+	const int32 RequiredCount = FMath::Max(NormalCount,
+		MT2ItemBonusUtils::CountBonuses(StagedTarget, EMT2ItemBonusKind::Normal));
+	while (MT2ItemBonusUtils::CountBonuses(StagedTarget, EMT2ItemBonusKind::Normal) < RequiredCount)
 	{
 		if (!MT2ItemBonusUtils::AddRandomBonus(StagedTarget, Settings.NormalBonuses,
 			GetValueLevelWeights(Settings), TargetType, EMT2ItemBonusKind::Normal, &TargetTemplate))
@@ -35,7 +38,7 @@ EMT2ItemBonusApplyResult UMT2ItemUseChangeAttributeTemplate::ApplyToEquipment(
 			break;
 		}
 	}
-	if (MT2ItemBonusUtils::CountBonuses(StagedTarget, EMT2ItemBonusKind::Normal) != NormalCount)
+	if (MT2ItemBonusUtils::CountBonuses(StagedTarget, EMT2ItemBonusKind::Normal) != RequiredCount)
 	{
 		StagedTarget.EditBonuses() = OriginalBonuses;
 		return EMT2ItemBonusApplyResult::Invalid;

@@ -1137,7 +1137,8 @@ FString AMT2PlayerState::CapturePersistentStateJson_Implementation() const
 					int32 RareIndex = 0;
 					for (const FMT2ItemBonus& Bonus : Items[SlotIndex].GetBonuses())
 					{
-						if (!Bonus.IsValid()) continue;
+						// Typed zero bonuses still occupy legacy slots and must survive saves.
+						if (Bonus.Type == EMT2ItemBonusType::None) continue;
 						const bool bRare = Bonus.Kind == EMT2ItemBonusKind::Rare;
 						int32& BonusIndex = bRare ? RareIndex : NormalIndex;
 						const int32 Limit = bRare ? 2 : 5;
@@ -1608,7 +1609,7 @@ bool AMT2PlayerState::ApplyPersistentStateJson_Implementation(const FString& Pay
 				Bonus.Type = static_cast<EMT2ItemBonusType>(FMath::Clamp(
 					ReadInteger(*FString::Printf(TEXT("bonus_type_%d"), BonusIndex)), 0, 91));
 				Bonus.Value = ReadInteger(*FString::Printf(TEXT("bonus_value_%d"), BonusIndex));
-				if (Bonus.IsValid()) Slot.EditBonuses().Add(Bonus);
+				if (Bonus.Type != EMT2ItemBonusType::None) Slot.EditBonuses().Add(Bonus);
 			}
 			for (int32 BonusIndex = 0; BonusIndex < 2; ++BonusIndex)
 			{
@@ -1617,7 +1618,7 @@ bool AMT2PlayerState::ApplyPersistentStateJson_Implementation(const FString& Pay
 					ReadInteger(*FString::Printf(TEXT("rare_bonus_type_%d"), BonusIndex)), 0, 91));
 				Bonus.Value = ReadInteger(*FString::Printf(TEXT("rare_bonus_value_%d"), BonusIndex));
 				Bonus.Kind = EMT2ItemBonusKind::Rare;
-				if (Bonus.IsValid()) Slot.EditBonuses().Add(Bonus);
+				if (Bonus.Type != EMT2ItemBonusType::None) Slot.EditBonuses().Add(Bonus);
 			}
 			if (Container == 0 && PendingInventorySlots.IsValidIndex(SlotIndex)) PendingInventorySlots[SlotIndex] = Slot;
 			else if (Container == 1 && PendingEquipmentSlots.IsValidIndex(SlotIndex)) PendingEquipmentSlots[SlotIndex] = Slot;

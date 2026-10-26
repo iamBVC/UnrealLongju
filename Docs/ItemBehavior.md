@@ -101,20 +101,23 @@ binding state, item-ID dispatch, save format or RPC is introduced. To refresh on
 use `-run=MT2ImportItems -OnlyVnum=76014` with the existing configured import paths.
 
 This is a bounded parity pass, not completion of every bonus item: shared reroll cooldowns,
-other special distributions,
-rare-region rules and zero-value addon slot accounting still
+other special distributions and rare-region rules still
 require the checks in OWN-01 of the implementation tracker.
 
 Damage-addon generation stores only nonzero average/skill-damage results, matching the
 legacy `ApplyAddonTo` → `AddAttribute` path. This applies to new addon equipment and normal
-rerolls. A zero result does not allocate a bonus entry; the reroller fills remaining normal
-slots from its configured pool while preserving rare attributes. Negative nonzero values
+rerolls. A zero result does not allocate a generated bonus entry; the reroller fills remaining
+normal slots from its configured pool while preserving rare attributes. On addon equipment,
+even a single existing normal slot regenerates the addon; two nonzero results can expand it
+to two normal slots, matching legacy behavior. Negative nonzero values
 are retained. If the available pool cannot complete the reroll, the transaction rejects and
 restores the original item without consumption. Skill damage adds 0.5 to the Gaussian roll,
 truncates toward zero, then clamps to the configured bounds, matching legacy signed
 quantization. Average damage uses that quantized skill value. All formula parameters remain
-configurable. Existing typed-zero records and one-slot addon rerolls still require OWN-01D2
-verification; no saved-item migration is performed.
+configurable. Existing bonuses with a non-None type occupy a slot and exclude duplicate
+types even when their value is zero. They contribute no stats, but their type/value/kind
+survive family-state serialization and player JSON save/load. No saved-item migration is
+performed, and previously lost records cannot be reconstructed.
 
 ## Instance sockets and equipment amplification
 

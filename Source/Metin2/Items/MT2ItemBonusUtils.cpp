@@ -81,7 +81,8 @@ int32 MT2ItemBonusUtils::CountBonuses(const FMT2ItemSlot& Item, EMT2ItemBonusKin
 	int32 Count = 0;
 	for (const FMT2ItemBonus& Bonus : Item.GetBonuses())
 	{
-		Count += Bonus.IsValid() && Bonus.Kind == Kind ? 1 : 0;
+		// Legacy slot occupancy depends on the type, even when its value is zero.
+		Count += Bonus.Type != EMT2ItemBonusType::None && Bonus.Kind == Kind ? 1 : 0;
 	}
 	return Count;
 }
@@ -91,7 +92,7 @@ bool MT2ItemBonusUtils::HasBonusType(
 {
 	return Bonuses.ContainsByPredicate([Type, Kind](const FMT2ItemBonus& Bonus)
 	{
-		return Bonus.IsValid() && Bonus.GetTypeId() == Type && Bonus.Kind == Kind;
+		return Bonus.Type != EMT2ItemBonusType::None && Bonus.GetTypeId() == Type && Bonus.Kind == Kind;
 	});
 }
 
@@ -169,8 +170,7 @@ void MT2ItemBonusUtils::AddDamageAddon(FMT2ItemSlot& Item, const FMT2DamageAddon
 	const int32 Average = FMath::RoundToInt(Formula.AverageDamageSkillMultiplier * Skill) +
 		(FMath::Abs(Skill) <= Formula.SkillDamageThreshold ? FMath::Abs(Noise) : 0) +
 		FMath::RandRange(ExtraRange.X, ExtraRange.Y);
-	// Legacy AddAttribute omits zero values. Keeping a typed zero here would leave an
-	// uncounted entry behind when rerolls fill the remaining normal attribute slots.
+	// Legacy AddAttribute omits zero values; zero rolls must not reserve generated slots.
 	if (Average != 0)
 	{
 		FMT2ItemBonus& AverageBonus = Item.EditBonuses().AddDefaulted_GetRef();
