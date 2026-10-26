@@ -110,9 +110,11 @@ legacy `ApplyAddonTo` → `AddAttribute` path. This applies to new addon equipme
 rerolls. A zero result does not allocate a bonus entry; the reroller fills remaining normal
 slots from its configured pool while preserving rare attributes. Negative nonzero values
 are retained. If the available pool cannot complete the reroll, the transaction rejects and
-restores the original item without consumption. Existing typed-zero records, one-slot addon
-rerolls and exact signed formula quantization still require OWN-01D2 verification; this
-change does not migrate saved items or change the configurable damage formula.
+restores the original item without consumption. Skill damage adds 0.5 to the Gaussian roll,
+truncates toward zero, then clamps to the configured bounds, matching legacy signed
+quantization. Average damage uses that quantized skill value. All formula parameters remain
+configurable. Existing typed-zero records and one-slot addon rerolls still require OWN-01D2
+verification; no saved-item migration is performed.
 
 ## Instance sockets and equipment amplification
 

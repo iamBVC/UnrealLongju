@@ -157,8 +157,9 @@ void MT2ItemBonusUtils::AddDamageAddon(FMT2ItemSlot& Item, const FMT2DamageAddon
 	const float U2 = FMath::FRand();
 	const float Gaussian = FMath::Sqrt(-2.0f * FMath::Loge(U1)) *
 		FMath::Cos(2.0f * UE_PI * U2);
+	// Legacy casts after adding 0.5: negative rolls truncate toward zero, not round.
 	const int32 Skill = FMath::Clamp(
-		FMath::RoundToInt(Formula.SkillDamageMean + Gaussian * Formula.SkillDamageDeviation),
+		FMath::TruncToInt(Formula.SkillDamageMean + Gaussian * Formula.SkillDamageDeviation + 0.5f),
 		Formula.SkillDamageMin, Formula.SkillDamageMax);
 	const int32 Noise = FMath::RandRange(
 		Formula.AverageDamageNoiseRange.X, Formula.AverageDamageNoiseRange.Y) +

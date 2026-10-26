@@ -136,8 +136,9 @@ These are specific classes for content variants, not additional legacy subtype o
 Addon equipment creation and normal bonus rerolls reuse the shared damage-addon generator.
 It appends only nonzero average/skill-damage values, retaining signed nonzero results;
 rerolls fill remaining normal slots through the owning reroll template's configured pool.
-This avoids hidden zero entries inflating the stored attribute array. Existing typed-zero
-record handling and the remaining formula/count audit stay pending under OWN-01D2.
+Skill rolls use the legacy add-0.5-then-truncate rule before clamping, including negative
+values; average damage derives from that quantized result. Existing typed-zero record
+handling and the remaining slot/count audit stay pending under OWN-01D2.
 
 ## Rare bonus consumables
 
