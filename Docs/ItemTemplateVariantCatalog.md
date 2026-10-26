@@ -92,7 +92,7 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemUseAffectTemplate | Use | USE_AFFECT | 8 | Placeholder; behavior TODO |
 | UMT2ItemUseCreateStoneTemplate | Use | USE_CREATE_STONE | 9 | Uniformly selects one imported stone variant through typed template references; legacy VNUM-range offsets are explicit; source is consumed only when result delivery succeeds. |
 | UMT2ItemUseSpecialTemplate | Use | USE_SPECIAL | 10 | Placeholder; behavior TODO |
-| UMT2ItemUsePotionNoDelayTemplate | Use | USE_POTION_NODELAY | 11 | Placeholder; behavior TODO |
+| UMT2ItemUsePotionNoDelayTemplate | Use | USE_POTION_NODELAY | 11 | Class-owned instant recovery: flat Potion Effect Bonus, independent percent recovery, ordered integer truncation and full-resource rejection. Percent fields live here; 28 imported assets use this parent. Arena/bottle/dungeon/war integration remains OWN-02S. |
 | UMT2ItemUseClearTemplate | Use | USE_CLEAR | 12 | Placeholder; behavior TODO |
 | UMT2ItemUseInvisibilityTemplate | Use | USE_INVISIBILITY | 13 | Placeholder; behavior TODO |
 | UMT2ItemUseDetachmentTemplate | Use | USE_DETACHMENT | 14 | Placeholder; behavior TODO |

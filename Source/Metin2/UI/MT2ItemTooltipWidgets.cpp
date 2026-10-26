@@ -10,6 +10,7 @@
 #include "UI/MT2ItemTooltipWidgets.h"
 #include "Items/Templates/MT2ItemArmorTemplate.h"
 #include "Items/Templates/MT2ItemUseTemplate.h"
+#include "Items/Templates/MT2ItemUsePotionNoDelayTemplate.h"
 #include "Items/Templates/MT2ItemWeaponTemplate.h"
 
 
@@ -88,10 +89,10 @@ void UMT2UseItemTooltipWidget::BuildTypeSpecific(
 	case EMT2UseSubType::PotionNoDelay: // USE_POTION_NODELAY: instant restore
 		if (Use->HealthRecovery > 0) AddLine(FString::Printf(TEXT("Restores %d HP"), Use->HealthRecovery), PositiveColor);
 		if (Use->ManaRecovery > 0) AddLine(FString::Printf(TEXT("Restores %d MP"), Use->ManaRecovery), PositiveColor);
-		if (Use->UseSubType == EMT2UseSubType::PotionNoDelay)
+		if (const auto* InstantPotion = Cast<UMT2ItemUsePotionNoDelayTemplate>(Use))
 		{
-			if (Use->HealthRecoveryPercent > 0) AddLine(FString::Printf(TEXT("Restores %d%% of Max HP"), Use->HealthRecoveryPercent), PositiveColor);
-			if (Use->ManaRecoveryPercent > 0) AddLine(FString::Printf(TEXT("Restores %d%% of Max MP"), Use->ManaRecoveryPercent), PositiveColor);
+			if (InstantPotion->HealthRecoveryPercent > 0) AddLine(FString::Printf(TEXT("Restores %d%% of Max HP"), InstantPotion->HealthRecoveryPercent), PositiveColor);
+			if (InstantPotion->ManaRecoveryPercent > 0) AddLine(FString::Printf(TEXT("Restores %d%% of Max MP"), InstantPotion->ManaRecoveryPercent), PositiveColor);
 		}
 		break;
 

@@ -28,8 +28,16 @@ int32 UMT2ConfigureItemBehaviorsCommandlet::Main(const FString& Params)
 	}
 	for (const auto& Warning : Warnings) UE_LOG(LogTemp, Display, TEXT("%s"), *Warning);
 	const bool bBeginnerBonusesOnly = FParse::Param(*Params, TEXT("BeginnerBonusesOnly"));
-	Records.RemoveAll([bBeginnerBonusesOnly](const FMT2ItemImportRecord& Record)
+	const bool bInstantPotionsOnly = FParse::Param(*Params, TEXT("InstantPotionsOnly"));
+	if (bBeginnerBonusesOnly && bInstantPotionsOnly)
 	{
+		UE_LOG(LogTemp, Error, TEXT("Choose only one item behavior filter."));
+		return 1;
+	}
+	Records.RemoveAll([bBeginnerBonusesOnly, bInstantPotionsOnly](const FMT2ItemImportRecord& Record)
+	{
+		if (bInstantPotionsOnly)
+			return Record.Definition.ItemType != EMT2ItemType::Use || Record.Definition.SubType.Use != EMT2UseSubType::PotionNoDelay;
 		if (bBeginnerBonusesOnly)
 		{
 			const int32 Vnum = Record.Definition.Vnum;

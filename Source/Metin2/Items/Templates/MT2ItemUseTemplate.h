@@ -28,12 +28,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Recovery")
 	int32 ManaRecovery = 0;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Recovery")
-	int32 HealthRecoveryPercent = 0;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Recovery")
-	int32 ManaRecoveryPercent = 0;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Buff")
 	EMT2ItemBonusType GrantedBonus = EMT2ItemBonusType::None;
 

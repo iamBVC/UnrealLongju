@@ -119,6 +119,25 @@ types even when their value is zero. They contribute no stats, but their type/va
 survive family-state serialization and player JSON save/load. No saved-item migration is
 performed, and previously lost records cannot be reconstructed.
 
+## Instant recovery potions
+
+`UMT2ItemUsePotionNoDelayTemplate` owns instant recovery and the HP/MP percentage fields.
+All 28 imported instant potions use this dedicated parent. Inventory retains quest interception,
+authority/trade/death validation and source consumption; the class returns Consume only when
+an applicable resource is below maximum. Full resources or no applicable recovery reject
+without consuming an item. Queued and continuing potions retain their separate existing paths.
+
+The legacy operation order is flat HP, flat MP, percent HP, percent MP. Flat amounts scale by
+Potion Effect Bonus without the queued-potion cap; percentages do not receive that bonus.
+Each amount truncates to an integer before application and caps at maximum resource. Recovery
+values remain editable on item assets. Existing tooltip lines read the dedicated class fields.
+
+To refresh only this family from configured legacy data, run the editor commandlet
+`-run=MT2ConfigureItemBehaviors -InstantPotionsOnly`; this reimports definitions, so preserve
+intentional authored overrides before running it. It cannot be combined with the beginner
+bonus-only filter. Arena quotas, seed/moon-bottle timing and dungeon/war potion reporting
+remain explicit dependencies under OWN-02S; core recovery does not imply those systems exist.
+
 ## Instance sockets and equipment amplification
 
 Common instance data contains count, expiry, presentation state and one typed family payload.

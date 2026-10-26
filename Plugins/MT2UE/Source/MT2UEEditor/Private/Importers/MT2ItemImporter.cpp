@@ -55,6 +55,7 @@
 #include "Items/Templates/MT2ItemUseRecipeTemplate.h"
 #include "Items/Templates/MT2ItemUseCreateStoneTemplate.h"
 #include "Items/Templates/MT2ItemUseTemplate.h"
+#include "Items/Templates/MT2ItemUsePotionNoDelayTemplate.h"
 #include "Items/Templates/MT2ItemWeaponTemplate.h"
 #include "Items/MT2ItemTemplateResolver.h"
 #include "Items/Use/MT2GrandMasterTrainingItemTemplate.h"
@@ -1351,15 +1352,16 @@ namespace
 				}
 				Use->HealthRecovery = Definition.Values.IsValidIndex(0) ? Definition.Values[0] : 0;
 				Use->ManaRecovery = Definition.Values.IsValidIndex(1) ? Definition.Values[1] : 0;
-				Use->HealthRecoveryPercent = Definition.Values.IsValidIndex(3) ? Definition.Values[3] : 0;
-				Use->ManaRecoveryPercent = Definition.Values.IsValidIndex(4) ? Definition.Values[4] : 0;
+				if (auto* InstantPotion = Cast<UMT2ItemUsePotionNoDelayTemplate>(Use))
+				{
+					InstantPotion->HealthRecoveryPercent = Definition.Values.IsValidIndex(3) ? Definition.Values[3] : 0;
+					InstantPotion->ManaRecoveryPercent = Definition.Values.IsValidIndex(4) ? Definition.Values[4] : 0;
+				}
 				if (UMT2ItemUseBaitTemplate* Bait = Cast<UMT2ItemUseBaitTemplate>(Use))
 				{
 					Bait->BaitPower = Definition.Values.IsValidIndex(0) ? Definition.Values[0] : 0;
 					Use->HealthRecovery = 0;
 					Use->ManaRecovery = 0;
-					Use->HealthRecoveryPercent = 0;
-					Use->ManaRecoveryPercent = 0;
 				}
 				if (Use->UseSubType == EMT2UseSubType::PotionContinue)
 				{

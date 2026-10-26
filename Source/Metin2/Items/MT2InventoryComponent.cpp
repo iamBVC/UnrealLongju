@@ -854,30 +854,6 @@ bool UMT2InventoryComponent::UseItem(int32 InventorySlot)
 			Cast<UMT2ItemAutoRecoveryTemplate>(UseTemplate);
 		return AutoRecovery && ToggleAutoRecoveryItem(InventorySlot, *AutoRecovery);
 	}
-	case EMT2UseSubType::PotionNoDelay: // USE_POTION_NODELAY: instant flat (VALUE0/1) + percent-of-max (VALUE3/4) HP/SP restore.
-	{
-		if (UMT2HealthComponent* Health = Character->GetHealthComponent())
-		{
-			const float Recovery = UseTemplate->HealthRecovery +
-				Health->GetMaxHealth() * UseTemplate->HealthRecoveryPercent / 100.0f;
-			if (Recovery > 0.0f && Health->GetHealth() < Health->GetMaxHealth())
-			{
-				Health->SetCurrentValue(FMath::Min(Health->GetHealth() + Recovery, Health->GetMaxHealth()));
-				bUsed = true;
-			}
-		}
-		if (UMT2ManaComponent* Mana = Character->GetManaComponent())
-		{
-			const float Recovery = UseTemplate->ManaRecovery +
-				Mana->GetMaxMana() * UseTemplate->ManaRecoveryPercent / 100.0f;
-			if (Recovery > 0.0f && Mana->GetMana() < Mana->GetMaxMana())
-			{
-				Mana->SetCurrentValue(FMath::Min(Mana->GetMana() + Recovery, Mana->GetMaxMana()));
-				bUsed = true;
-			}
-		}
-		break;
-	}
 	default:
 		return false;
 	}
