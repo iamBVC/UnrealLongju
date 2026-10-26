@@ -119,13 +119,38 @@ types even when their value is zero. They contribute no stats, but their type/va
 survive family-state serialization and player JSON save/load. No saved-item migration is
 performed, and previously lost records cannot be reconstructed.
 
+## Queued recovery potions and shared recovery data
+
+`UMT2ItemRecoveryTemplate` owns the flat HP/MP quantities shared by queued, instant and
+continuing potions. Unrelated use-item classes do not expose recovery fields. All 50 imported
+recovery-family assets use the appropriate dedicated subclass and retain their authored defaults.
+
+`UMT2ItemUsePotionTemplate` owns queued-potion policy. A requested resource is eligible only
+when its current value plus pending recovery is below maximum. Once eligible, the potion adds
+its full integer-scaled quantity, even if the pool then exceeds the current deficit. Repeated
+drinks merge into one effect per resource. The multiplier is `100 + Potion Effect Bonus`, capped
+by `QueuedPotionMaximumEffectPercent` in Project Settings (default 200%). The class does not
+heal instantly or add timers; the existing status-effect processor drains the shared pool at
+the configured rates and removes it when spent, full or cleared on death.
+
+Combined HP/MP potions preflight both resources, then publish MP followed by HP. If either gate
+rejects, neither pool changes and no item is consumed. This deliberately avoids legacy's partial
+MP update when a later HP gate rejects. Empty/invalid quantities and dead characters reject.
+Inventory retains quest interception, authority/trade validation and one-item consumption.
+
+`-run=MT2ConfigureItemBehaviors -RecoveryPotionsOnly` refreshes this family while preserving
+existing ground-mesh references. Other source-authored definitions are reimported; preserve
+intentional overrides before running it. Its filter is exclusive with instant/beginner-only modes.
+Continuous-potion policy ownership, arena/dungeon/war hooks and exact affect-event cadence
+remain separate tracked tasks; the current effect tick settings are unchanged.
+
 ## Instant recovery potions
 
 `UMT2ItemUsePotionNoDelayTemplate` owns instant recovery and the HP/MP percentage fields.
 All 28 imported instant potions use this dedicated parent. Inventory retains quest interception,
 authority/trade/death validation and source consumption; the class returns Consume only when
 an applicable resource is below maximum. Full resources or no applicable recovery reject
-without consuming an item. Queued and continuing potions retain their separate existing paths.
+without consuming an item. Queued and continuing potions retain separate recovery policies.
 
 The legacy operation order is flat HP, flat MP, percent HP, percent MP. Flat amounts scale by
 Potion Effect Bonus without the queued-potion cap; percentages do not receive that bonus.

@@ -417,6 +417,10 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Status Effects", meta = (ClampMin = "1", ClampMax = "100"))
 	int32 ManaRecoveryPercentPerSecond = 3;
 
+	/** Maximum total multiplier for queued potions: 200 means at most twice their flat quantity. */
+	UPROPERTY(EditAnywhere, config, Category = "Status Effects|Recovery Potions", meta = (ClampMin = "1"))
+	int32 QueuedPotionMaximumEffectPercent = 200;
+
 	UPROPERTY(EditAnywhere, config, Category = "Guild", meta = (ClampMin = "1"))
 	int32 GuildMaximumMembers = 20;
 

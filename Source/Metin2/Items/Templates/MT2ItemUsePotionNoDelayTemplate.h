@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Items/Templates/MT2ItemUseTemplate.h"
+#include "Items/Templates/MT2ItemRecoveryTemplate.h"
 #include "MT2ItemUsePotionNoDelayTemplate.generated.h"
 
 /**
@@ -10,7 +10,7 @@
  * require their system-owned services; this class currently implements core resource recovery.
  */
 UCLASS(Blueprintable)
-class METIN2_API UMT2ItemUsePotionNoDelayTemplate : public UMT2ItemUseTemplate
+class METIN2_API UMT2ItemUsePotionNoDelayTemplate : public UMT2ItemRecoveryTemplate
 {
 	GENERATED_BODY()
 

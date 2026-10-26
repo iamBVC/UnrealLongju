@@ -55,6 +55,7 @@
 #include "Items/Templates/MT2ItemUseRecipeTemplate.h"
 #include "Items/Templates/MT2ItemUseCreateStoneTemplate.h"
 #include "Items/Templates/MT2ItemUseTemplate.h"
+#include "Items/Templates/MT2ItemRecoveryTemplate.h"
 #include "Items/Templates/MT2ItemUsePotionNoDelayTemplate.h"
 #include "Items/Templates/MT2ItemWeaponTemplate.h"
 #include "Items/MT2ItemTemplateResolver.h"
@@ -1350,8 +1351,11 @@ namespace
 				{
 					CreateStone->StoneResults.Reset();
 				}
-				Use->HealthRecovery = Definition.Values.IsValidIndex(0) ? Definition.Values[0] : 0;
-				Use->ManaRecovery = Definition.Values.IsValidIndex(1) ? Definition.Values[1] : 0;
+				if (auto* Recovery = Cast<UMT2ItemRecoveryTemplate>(Use))
+				{
+					Recovery->HealthRecovery = Definition.Values.IsValidIndex(0) ? Definition.Values[0] : 0;
+					Recovery->ManaRecovery = Definition.Values.IsValidIndex(1) ? Definition.Values[1] : 0;
+				}
 				if (auto* InstantPotion = Cast<UMT2ItemUsePotionNoDelayTemplate>(Use))
 				{
 					InstantPotion->HealthRecoveryPercent = Definition.Values.IsValidIndex(3) ? Definition.Values[3] : 0;
@@ -1360,8 +1364,6 @@ namespace
 				if (UMT2ItemUseBaitTemplate* Bait = Cast<UMT2ItemUseBaitTemplate>(Use))
 				{
 					Bait->BaitPower = Definition.Values.IsValidIndex(0) ? Definition.Values[0] : 0;
-					Use->HealthRecovery = 0;
-					Use->ManaRecovery = 0;
 				}
 				if (Use->UseSubType == EMT2UseSubType::PotionContinue)
 				{

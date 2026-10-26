@@ -39,6 +39,7 @@
 #include "Items/MT2Item.h"
 #include "Items/MT2InventoryLayout.h"
 #include "Items/MT2ItemTemplate.h"
+#include "Items/Templates/MT2ItemRecoveryTemplate.h"
 #include "Items/MT2ItemUtils.h"
 #include "Items/State/MT2PolymorphItemState.h"
 #include "Items/Use/MT2ItemActionTemplate.h"
@@ -715,65 +716,20 @@ bool UMT2InventoryComponent::UseItem(int32 InventorySlot)
 		break;
 	case EMT2UseSubType::PotionContinue:
 	{
+		const auto* Recovery = Cast<UMT2ItemRecoveryTemplate>(UseTemplate);
 		auto* Effects = Character->GetStatusEffectComponent();
-		if (!Effects || UseTemplate->BuffDurationSeconds <= 0 ||
-			(UseTemplate->HealthRecovery <= 0 && UseTemplate->ManaRecovery <= 0)) return false;
-		const bool bHealth = UseTemplate->HealthRecovery > 0;
+		if (!Recovery || !Effects || UseTemplate->BuffDurationSeconds <= 0 ||
+			(Recovery->HealthRecovery <= 0 && Recovery->ManaRecovery <= 0)) return false;
+		const bool bHealth = Recovery->HealthRecovery > 0;
 		FMT2StatusEffect Effect;
 		Effect.Kind = bHealth ? EMT2StatusEffectKind::ContinuousHealthRecovery : EMT2StatusEffectKind::ContinuousManaRecovery;
 		Effect.Type = FMT2AffectIdentifier::FromBuiltin(bHealth ? EMT2BuiltinAffect::HealthRecoveryContinue : EMT2BuiltinAffect::ManaRecoveryContinue);
 		Effect.SourceItemVnum = ItemVnum;
-		Effect.ApplyValue = bHealth ? UseTemplate->HealthRecovery : UseTemplate->ManaRecovery;
+		Effect.ApplyValue = bHealth ? Recovery->HealthRecovery : Recovery->ManaRecovery;
 		Effect.RemainingSeconds = UseTemplate->BuffDurationSeconds;
 		Effect.bRemoveOnDeath = true;
 		Effect.Icon = UseTemplate->Icon;
 		bUsed = Effects->AddEffect(Effect, true);
-		break;
-	}
-	case EMT2UseSubType::Potion: // USE_POTION: add VALUE0 HP / VALUE1 SP into a single over-time recovery pool per resource.
-	{
-		UMT2StatusEffectComponent* StatusEffects = Character->GetStatusEffectComponent();
-		if (!StatusEffects)
-		{
-			return false;
-		}
-		// One shared pool per resource: a drink adds to whatever is still pending, capped so the target
-		// (current + pool) never exceeds the maximum, and the pool drains at a constant rate regardless
-		// of how many potions are queued. Taking damage lowers current, so the reachable target follows
-		// it down automatically. Rejected (no consume) once current+pending already reaches the max.
-		const auto QueueRecovery = [&](EMT2StatusEffectKind Kind, FMT2AffectIdentifier AffectType, int32 Amount, float Current, float Max)
-		{
-			if (Amount <= 0)
-			{
-				return;
-			}
-			const int32 Headroom = FMath::Max(0, FMath::FloorToInt(Max - Current));
-			const int32 Existing = StatusEffects->GetEffectValueByType(AffectType);
-			const int32 NewPool = FMath::Min(Existing + Amount, Headroom);
-			if (NewPool <= Existing)
-			{
-				return; // already full or nothing more to gain
-			}
-			FMT2StatusEffect Effect;
-			Effect.Kind = Kind;
-			Effect.Type = AffectType;
-			Effect.SourceItemVnum = ItemVnum;
-			Effect.ApplyValue = NewPool;    // total HP/SP still to recover
-			Effect.RemainingSeconds = -1;   // pool-terminated, not on a timer
-			Effect.bRemoveOnDeath = true;
-			Effect.Icon = UseTemplate->Icon;
-			bUsed |= StatusEffects->AddEffect(Effect, /*bOverride*/ true); // override = merge the pool
-		};
-		if (UMT2HealthComponent* Health = Character->GetHealthComponent())
-		{
-			QueueRecovery(EMT2StatusEffectKind::HealthRecovery, FMT2AffectIdentifier::FromBuiltin(EMT2BuiltinAffect::HealthRecovery),
-				UseTemplate->HealthRecovery, Health->GetHealth(), Health->GetMaxHealth());
-		}
-		if (UMT2ManaComponent* Mana = Character->GetManaComponent())
-		{
-			QueueRecovery(EMT2StatusEffectKind::ManaRecovery, FMT2AffectIdentifier::FromBuiltin(EMT2BuiltinAffect::ManaRecovery),
-				UseTemplate->ManaRecovery, Mana->GetMana(), Mana->GetMaxMana());
-		}
 		break;
 	}
 	case EMT2UseSubType::AbilityUp: // USE_ABILITY_UP: VALUE0=apply type, VALUE1=duration(s), VALUE2=magnitude(%). Non-stacking.

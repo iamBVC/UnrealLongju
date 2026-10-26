@@ -22,12 +22,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use")
 	EMT2UseSubType UseSubType = EMT2UseSubType::Potion;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Recovery")
-	int32 HealthRecovery = 0;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Recovery")
-	int32 ManaRecovery = 0;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Buff")
 	EMT2ItemBonusType GrantedBonus = EMT2ItemBonusType::None;
 

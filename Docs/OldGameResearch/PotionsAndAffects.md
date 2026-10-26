@@ -59,11 +59,13 @@ this project instead **denies re-use while the same buff is active** (design cho
   - `HealthRecovery` / `ManaRecovery` — a **single shared pool per resource** (one effect, id
     `MT2AffectId::HealthRecovery`/`ManaRecovery`), stored in `ApplyValue`, drained at a constant ~3%/s of
     max HP (matching 9%/3s) and ~3%/s of max SP; ends when the pool empties. A drink *merges* into the
-    existing pool (`UseItem` reads it via `GetEffectValueByType` and re-adds with `bOverride`), capped so
-    the target `current + pool` never exceeds the max — so extra potions raise the target toward 100%
-    without ever exceeding it and without speeding up the regen. Damage lowers `current`, so the pool
-    heals toward a correspondingly lower target (the damage is subtracted from the goal). Denied (no
-    consume) once `current + pending` already reaches the max.
+    existing pool through `UMT2ItemUsePotionTemplate`, using the full integer-scaled quantity rather
+    than clipping to the deficit. The Potion Effect Bonus multiplier is capped by Project Settings
+    (default 200%). Eligibility checks `current + pending < maximum` before addition, so the resulting
+    pool can exceed the deficit. The existing effect processor discards remaining recovery when full.
+    Combined-resource items preflight both gates to prevent legacy's partial MP update on a later HP
+    rejection. Exact event cadence/rounding and contextual arena/dungeon/war rules remain tracked
+    separately; this ownership change retains the project's existing configured per-second rates.
   - `AttackSpeed` / `MovementSpeed` — carry `ApplyType` 7/8 + `ApplyValue` %, so the existing
     equipment/affect stat recompute applies them; `DeniesReapplyWhileActive` blocks re-use while active.
 - `USE_POTION` (0) applies the over-time recovery effect; `USE_POTION_NODELAY` (11)

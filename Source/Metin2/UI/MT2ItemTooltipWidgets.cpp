@@ -10,6 +10,7 @@
 #include "UI/MT2ItemTooltipWidgets.h"
 #include "Items/Templates/MT2ItemArmorTemplate.h"
 #include "Items/Templates/MT2ItemUseTemplate.h"
+#include "Items/Templates/MT2ItemRecoveryTemplate.h"
 #include "Items/Templates/MT2ItemUsePotionNoDelayTemplate.h"
 #include "Items/Templates/MT2ItemWeaponTemplate.h"
 
@@ -78,17 +79,20 @@ void UMT2UseItemTooltipWidget::BuildTypeSpecific(
 		AddApplies(Template);
 		return;
 	}
+	const auto* Recovery = Cast<UMT2ItemRecoveryTemplate>(Use);
 	switch (Use->UseSubType)
 	{
 	case EMT2UseSubType::PotionContinue:
-		if (Use->HealthRecovery > 0) AddLine(FString::Printf(TEXT("Recovers %d HP per second"), Use->HealthRecovery), PositiveColor);
-		else if (Use->ManaRecovery > 0) AddLine(FString::Printf(TEXT("Recovers %d MP per second"), Use->ManaRecovery), PositiveColor);
+		if (!Recovery) break;
+		if (Recovery->HealthRecovery > 0) AddLine(FString::Printf(TEXT("Recovers %d HP per second"), Recovery->HealthRecovery), PositiveColor);
+		else if (Recovery->ManaRecovery > 0) AddLine(FString::Printf(TEXT("Recovers %d MP per second"), Recovery->ManaRecovery), PositiveColor);
 		if (Use->BuffDurationSeconds > 0) AddLine(FString::Printf(TEXT("Duration: %d sec"), Use->BuffDurationSeconds), NormalColor);
 		break;
 	case EMT2UseSubType::Potion:  // USE_POTION: over-time restore
 	case EMT2UseSubType::PotionNoDelay: // USE_POTION_NODELAY: instant restore
-		if (Use->HealthRecovery > 0) AddLine(FString::Printf(TEXT("Restores %d HP"), Use->HealthRecovery), PositiveColor);
-		if (Use->ManaRecovery > 0) AddLine(FString::Printf(TEXT("Restores %d MP"), Use->ManaRecovery), PositiveColor);
+		if (!Recovery) break;
+		if (Recovery->HealthRecovery > 0) AddLine(FString::Printf(TEXT("Restores %d HP"), Recovery->HealthRecovery), PositiveColor);
+		if (Recovery->ManaRecovery > 0) AddLine(FString::Printf(TEXT("Restores %d MP"), Recovery->ManaRecovery), PositiveColor);
 		if (const auto* InstantPotion = Cast<UMT2ItemUsePotionNoDelayTemplate>(Use))
 		{
 			if (InstantPotion->HealthRecoveryPercent > 0) AddLine(FString::Printf(TEXT("Restores %d%% of Max HP"), InstantPotion->HealthRecoveryPercent), PositiveColor);

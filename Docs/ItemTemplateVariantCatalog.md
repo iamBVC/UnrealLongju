@@ -81,7 +81,7 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemUniqueLegacySubtype8Template | Unique | UNIQUE_8 | 8 | Placeholder; behavior TODO |
 | UMT2ItemUniqueLegacySubtype9Template | Unique | UNIQUE_9 | 9 | Placeholder; behavior TODO |
 | UMT2ItemUniqueSpecialUseTemplate | Unique | USE_SPECIAL accepted in ITEM_UNIQUE table | 10 | Placeholder; behavior TODO |
-| UMT2ItemUsePotionTemplate | Use | USE_POTION | 0 | Placeholder; behavior TODO |
+| UMT2ItemUsePotionTemplate | Use | USE_POTION | 0 | Owns queued recovery eligibility, full pool addition, configurable capped Potion Effect Bonus, integer scaling, pool merging and consumption decision. Shared flat fields are recovery-family-owned. Effect scheduling and contextual arena/dungeon/war hooks remain separate systems. |
 | UMT2ItemUseTalismanTemplate | Use | USE_TALISMAN | 1 | Placeholder; behavior TODO |
 | UMT2ItemUseTuningTemplate | Use | USE_TUNING | 2 | Placeholder; behavior TODO |
 | UMT2ItemUseMoveTemplate | Use | USE_MOVE | 3 | Placeholder; behavior TODO |
@@ -130,6 +130,12 @@ These are specific classes for content variants, not additional legacy subtype o
 | UMT2ItemBeginnerBonusAdditionTemplate | UMT2ItemUseAddAttributeTemplate | 71152, 76024 | Weapon/body-only; all target level requirements must be within the configured cap (default 40). Ordinary addition chance/transaction inherited. Shared addon slot audit remains pending. |
 | UMT2ItemBeginnerBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 71151, 76023 | Same target restriction; ordinary reroll/count/rare preservation inherited. Shared reroll cooldown and addon audits remain pending. |
 | UMT2ItemLevelChestBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 76014 (Enchant Item (b)) | Own configurable 0/10/50/39/1 value-level policy; ordinary equipment eligibility/count/rare handling inherited, no beginner cap. Shared cooldown and addon audits remain pending. |
+
+## Recovery data family
+
+Recovery-only common data lives in abstract `UMT2ItemRecoveryTemplate`, with a dedicated
+header/implementation. Queued, instant and continuing potion classes inherit its flat quantities;
+unrelated use classes do not. Legacy type/subtype coverage remains 110 pairs.
 
 ## Damage-addon generation
 
