@@ -12,6 +12,7 @@
 #include "Items/Templates/MT2ItemUseTemplate.h"
 #include "Items/Templates/MT2ItemRecoveryTemplate.h"
 #include "Items/Templates/MT2ItemUsePotionNoDelayTemplate.h"
+#include "Items/Templates/MT2ItemUsePotionContinueTemplate.h"
 #include "Items/Templates/MT2ItemWeaponTemplate.h"
 
 
@@ -86,7 +87,9 @@ void UMT2UseItemTooltipWidget::BuildTypeSpecific(
 		if (!Recovery) break;
 		if (Recovery->HealthRecovery > 0) AddLine(FString::Printf(TEXT("Recovers %d HP per second"), Recovery->HealthRecovery), PositiveColor);
 		else if (Recovery->ManaRecovery > 0) AddLine(FString::Printf(TEXT("Recovers %d MP per second"), Recovery->ManaRecovery), PositiveColor);
-		if (Use->BuffDurationSeconds > 0) AddLine(FString::Printf(TEXT("Duration: %d sec"), Use->BuffDurationSeconds), NormalColor);
+		if (const auto* ContinuedPotion = Cast<UMT2ItemUsePotionContinueTemplate>(Use))
+			if (ContinuedPotion->RecoveryDurationSeconds > 0)
+				AddLine(FString::Printf(TEXT("Duration: %d sec"), ContinuedPotion->RecoveryDurationSeconds), NormalColor);
 		break;
 	case EMT2UseSubType::Potion:  // USE_POTION: over-time restore
 	case EMT2UseSubType::PotionNoDelay: // USE_POTION_NODELAY: instant restore

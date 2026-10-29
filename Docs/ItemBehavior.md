@@ -141,8 +141,29 @@ Inventory retains quest interception, authority/trade validation and one-item co
 `-run=MT2ConfigureItemBehaviors -RecoveryPotionsOnly` refreshes this family while preserving
 existing ground-mesh references. Other source-authored definitions are reimported; preserve
 intentional overrides before running it. Its filter is exclusive with instant/beginner-only modes.
-Continuous-potion policy ownership, arena/dungeon/war hooks and exact affect-event cadence
-remain separate tracked tasks; the current effect tick settings are unchanged.
+Arena/dungeon/war hooks and exact affect-event cadence remain separate tracked tasks;
+the current effect tick settings are unchanged.
+
+## Continuous recovery potions
+
+`UMT2ItemUsePotionContinueTemplate` owns fixed-per-second recovery. It chooses HP when
+`HealthRecovery` is positive, otherwise MP, and uses `RecoveryDurationSeconds` from legacy
+VALUE2. Potion Effect Bonus does not scale this variant. Using another potion for the same
+resource replaces its rate and refreshes its duration; HP and MP effects can coexist.
+
+Full resources still allow use and consume one item. Recovery caps at maximum without ending
+early, so later damage or MP use can benefit during the remaining duration. The existing
+status-effect system ticks and expires the effect; death removes it. Invalid quantities,
+nonpositive duration, missing/uninitialized resources, dead characters and mismatched inventory
+owners reject. Inventory retains quest interception, authority checks and consumption.
+
+The dedicated recovery duration is editable on the item. Versioned loading transfers legacy
+buff-duration defaults into this field, including inherited, zero and negative child overrides.
+The legacy value remains hidden compatibility data so child defaults can deserialize correctly;
+gameplay and the tooltip read only the dedicated field. Reimport updates the hidden compatibility
+default too, so older children can still load. Unrelated buff fields are hidden on this class.
+The currently imported 50 recovery assets contain queued and instant variants; continuous
+potions require a corresponding source definition or an authored Blueprint of this class.
 
 ## Instant recovery potions
 

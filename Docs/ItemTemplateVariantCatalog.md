@@ -97,7 +97,7 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemUseInvisibilityTemplate | Use | USE_INVISIBILITY | 13 | Placeholder; behavior TODO |
 | UMT2ItemUseDetachmentTemplate | Use | USE_DETACHMENT | 14 | Placeholder; behavior TODO |
 | UMT2ItemUseBucketTemplate | Use | USE_BUCKET | 15 | Placeholder; behavior TODO |
-| UMT2ItemUsePotionContinueTemplate | Use | USE_POTION_CONTINUE | 16 | Placeholder; behavior TODO |
+| UMT2ItemUsePotionContinueTemplate | Use | USE_POTION_CONTINUE | 16 | Class-owned fixed HP/MP recovery and duration; HP priority, same-resource refresh, full-resource consumption, expiry/death. Importer writes dedicated recovery duration. Dungeon/war hooks and shared cadence audit remain OWN-02S/D. |
 | UMT2ItemUseCleanSocketTemplate | Use | USE_CLEAN_SOCKET | 17 | Placeholder; behavior TODO |
 | UMT2ItemUseChangeAttributeTemplate | Use | USE_CHANGE_ATTRIBUTE | 18 | Class-owned normal reroll; beginner items use the specialized override below. Typed-zero slots preserved; one-slot addon items regenerate the nonzero pair. Shared cooldowns, other distributions and broader integration remain pending (OWN-01). |
 | UMT2ItemUseAddAttributeTemplate | Use | USE_ADD_ATTRIBUTE | 19 | Class-owned addition policy; standard item 71085 tested. Per-slot chances, prototype-apply exclusion and failure consumption implemented. Typed-zero attributes occupy slots and exclude duplicate types. Beginner variants use the specialized override below; broader integration remains pending (OWN-01). |

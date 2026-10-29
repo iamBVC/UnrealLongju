@@ -57,6 +57,7 @@
 #include "Items/Templates/MT2ItemUseTemplate.h"
 #include "Items/Templates/MT2ItemRecoveryTemplate.h"
 #include "Items/Templates/MT2ItemUsePotionNoDelayTemplate.h"
+#include "Items/Templates/MT2ItemUsePotionContinueTemplate.h"
 #include "Items/Templates/MT2ItemWeaponTemplate.h"
 #include "Items/MT2ItemTemplateResolver.h"
 #include "Items/Use/MT2GrandMasterTrainingItemTemplate.h"
@@ -1365,9 +1366,11 @@ namespace
 				{
 					Bait->BaitPower = Definition.Values.IsValidIndex(0) ? Definition.Values[0] : 0;
 				}
-				if (Use->UseSubType == EMT2UseSubType::PotionContinue)
+				if (auto* ContinuedPotion = Cast<UMT2ItemUsePotionContinueTemplate>(Use))
 				{
-					Use->BuffDurationSeconds = Definition.Values.IsValidIndex(2) ? Definition.Values[2] : 0;
+					ContinuedPotion->RecoveryDurationSeconds = Definition.Values.IsValidIndex(2) ? Definition.Values[2] : 0;
+					// Old child CDO delta archives still inherit this hidden compatibility default.
+					Use->BuffDurationSeconds = ContinuedPotion->RecoveryDurationSeconds;
 				}
 				else if (Definition.SubType.ToLegacy() == 7)
 				{

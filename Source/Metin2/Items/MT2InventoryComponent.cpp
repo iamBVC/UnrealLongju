@@ -39,7 +39,6 @@
 #include "Items/MT2Item.h"
 #include "Items/MT2InventoryLayout.h"
 #include "Items/MT2ItemTemplate.h"
-#include "Items/Templates/MT2ItemRecoveryTemplate.h"
 #include "Items/MT2ItemUtils.h"
 #include "Items/State/MT2PolymorphItemState.h"
 #include "Items/Use/MT2ItemActionTemplate.h"
@@ -714,24 +713,6 @@ bool UMT2InventoryComponent::UseItem(int32 InventorySlot)
 		Character->GetStatusEffectComponent()->RemoveBadEffects();
 		bUsed = true;
 		break;
-	case EMT2UseSubType::PotionContinue:
-	{
-		const auto* Recovery = Cast<UMT2ItemRecoveryTemplate>(UseTemplate);
-		auto* Effects = Character->GetStatusEffectComponent();
-		if (!Recovery || !Effects || UseTemplate->BuffDurationSeconds <= 0 ||
-			(Recovery->HealthRecovery <= 0 && Recovery->ManaRecovery <= 0)) return false;
-		const bool bHealth = Recovery->HealthRecovery > 0;
-		FMT2StatusEffect Effect;
-		Effect.Kind = bHealth ? EMT2StatusEffectKind::ContinuousHealthRecovery : EMT2StatusEffectKind::ContinuousManaRecovery;
-		Effect.Type = FMT2AffectIdentifier::FromBuiltin(bHealth ? EMT2BuiltinAffect::HealthRecoveryContinue : EMT2BuiltinAffect::ManaRecoveryContinue);
-		Effect.SourceItemVnum = ItemVnum;
-		Effect.ApplyValue = bHealth ? Recovery->HealthRecovery : Recovery->ManaRecovery;
-		Effect.RemainingSeconds = UseTemplate->BuffDurationSeconds;
-		Effect.bRemoveOnDeath = true;
-		Effect.Icon = UseTemplate->Icon;
-		bUsed = Effects->AddEffect(Effect, true);
-		break;
-	}
 	case EMT2UseSubType::AbilityUp: // USE_ABILITY_UP: VALUE0=apply type, VALUE1=duration(s), VALUE2=magnitude(%). Non-stacking.
 	{
 		UMT2StatusEffectComponent* StatusEffects = Character->GetStatusEffectComponent();
