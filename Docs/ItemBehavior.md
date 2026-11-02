@@ -131,7 +131,11 @@ its full integer-scaled quantity, even if the pool then exceeds the current defi
 drinks merge into one effect per resource. The multiplier is `100 + Potion Effect Bonus`, capped
 by `QueuedPotionMaximumEffectPercent` in Project Settings (default 200%). The class does not
 heal instantly or add timers; the existing status-effect processor drains the shared pool at
-the configured rates and removes it when spent, full or cleared on death.
+the configured rates once per second and removes it when spent, full or cleared on death. Each
+pass uses legacy integer arithmetic: `min(pool, floor(maximum resource) * rate / 100)`. The
+Project Settings defaults are 7% HP and 7% MP; set HP to 9% for YMIR rules. If integer division
+produces a zero-point chunk, that pass does not heal or reduce the pool. Config-loaded rates are
+bounded to the Project Settings range of 1–100% at runtime.
 
 Combined HP/MP potions preflight both resources, then publish MP followed by HP. If either gate
 rejects, neither pool changes and no item is consumed. This deliberately avoids legacy's partial
@@ -141,8 +145,8 @@ Inventory retains quest interception, authority/trade validation and one-item co
 `-run=MT2ConfigureItemBehaviors -RecoveryPotionsOnly` refreshes this family while preserving
 existing ground-mesh references. Other source-authored definitions are reimported; preserve
 intentional overrides before running it. Its filter is exclusive with instant/beginner-only modes.
-Arena/dungeon/war hooks and exact affect-event cadence remain separate tracked tasks;
-the current effect tick settings are unchanged.
+contextual arena/dungeon/war hooks remain tracked under OWN-02S. The shared one-second cadence
+and integer drain rounding are implemented under OWN-02D.
 
 ## Continuous recovery potions
 

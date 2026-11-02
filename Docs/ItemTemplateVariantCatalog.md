@@ -81,7 +81,7 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemUniqueLegacySubtype8Template | Unique | UNIQUE_8 | 8 | Placeholder; behavior TODO |
 | UMT2ItemUniqueLegacySubtype9Template | Unique | UNIQUE_9 | 9 | Placeholder; behavior TODO |
 | UMT2ItemUniqueSpecialUseTemplate | Unique | USE_SPECIAL accepted in ITEM_UNIQUE table | 10 | Placeholder; behavior TODO |
-| UMT2ItemUsePotionTemplate | Use | USE_POTION | 0 | Owns queued recovery eligibility, full pool addition, configurable capped Potion Effect Bonus, integer scaling, pool merging and consumption decision. Shared flat fields are recovery-family-owned. Effect scheduling and contextual arena/dungeon/war hooks remain separate systems. |
+| UMT2ItemUsePotionTemplate | Use | USE_POTION | 0 | Owns queued recovery eligibility, full pool addition, configurable capped Potion Effect Bonus, integer scaling, pool merging and consumption decision. Shared flat fields are recovery-family-owned. The shared one-second processor drains integer chunks from whole-point maxima; defaults are 7% HP/MP, with 9% HP for YMIR. Config-loaded rates are bounded to 1–100%. Contextual arena/dungeon/war hooks remain OWN-02S. |
 | UMT2ItemUseTalismanTemplate | Use | USE_TALISMAN | 1 | Placeholder; behavior TODO |
 | UMT2ItemUseTuningTemplate | Use | USE_TUNING | 2 | Placeholder; behavior TODO |
 | UMT2ItemUseMoveTemplate | Use | USE_MOVE | 3 | Placeholder; behavior TODO |
@@ -97,7 +97,7 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemUseInvisibilityTemplate | Use | USE_INVISIBILITY | 13 | Placeholder; behavior TODO |
 | UMT2ItemUseDetachmentTemplate | Use | USE_DETACHMENT | 14 | Placeholder; behavior TODO |
 | UMT2ItemUseBucketTemplate | Use | USE_BUCKET | 15 | Placeholder; behavior TODO |
-| UMT2ItemUsePotionContinueTemplate | Use | USE_POTION_CONTINUE | 16 | Class-owned fixed HP/MP recovery and duration; HP priority, same-resource refresh, full-resource consumption, expiry/death. Importer writes dedicated recovery duration. Dungeon/war hooks and shared cadence audit remain OWN-02S/D. |
+| UMT2ItemUsePotionContinueTemplate | Use | USE_POTION_CONTINUE | 16 | Class-owned fixed HP/MP recovery and duration; HP priority, same-resource refresh, full-resource consumption, expiry/death. Importer writes dedicated recovery duration. The shared one-second effect processor cadence is covered by OWN-02D; contextual dungeon/war hooks remain OWN-02S. |
 | UMT2ItemUseCleanSocketTemplate | Use | USE_CLEAN_SOCKET | 17 | Placeholder; behavior TODO |
 | UMT2ItemUseChangeAttributeTemplate | Use | USE_CHANGE_ATTRIBUTE | 18 | Class-owned normal reroll; beginner items use the specialized override below. Typed-zero slots preserved; one-slot addon items regenerate the nonzero pair. Shared cooldowns, other distributions and broader integration remain pending (OWN-01). |
 | UMT2ItemUseAddAttributeTemplate | Use | USE_ADD_ATTRIBUTE | 19 | Class-owned addition policy; standard item 71085 tested. Per-slot chances, prototype-apply exclusion and failure consumption implemented. Typed-zero attributes occupy slots and exclude duplicate types. Beginner variants use the specialized override below; broader integration remains pending (OWN-01). |
@@ -135,7 +135,9 @@ These are specific classes for content variants, not additional legacy subtype o
 
 Recovery-only common data lives in abstract `UMT2ItemRecoveryTemplate`, with a dedicated
 header/implementation. Queued, instant and continuing potion classes inherit its flat quantities;
-unrelated use classes do not. Legacy type/subtype coverage remains 110 pairs.
+unrelated use classes do not. Queued pools use the shared one-second status-effect processor and
+integer max-resource drain; standard settings are 7% HP/MP and YMIR HP is configured at 9%.
+Legacy type/subtype coverage remains 110 pairs.
 
 ## Damage-addon generation
 

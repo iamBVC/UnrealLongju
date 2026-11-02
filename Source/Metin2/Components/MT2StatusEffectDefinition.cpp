@@ -17,23 +17,34 @@
 
 namespace
 {
-	// Per-second drain of the recovery pool, as a % of the resource maximum. The old game drained the
-	// pool every 3s (HP 9%, SP 7%); this component ticks every 1s, so a third of those keeps the same
-	// overall rate. A minimum of 1 guarantees the pool always empties, so the effect can never get stuck.
-	// Heals from a pool held in Effect.ApplyValue; returns true when the effect is finished. Shared by
-	// the HP and SP recovery classes since only the resource getters/setters differ.
+	// The legacy affect pass applies an integer percentage of the integer maximum once per second.
+	// Keep the pool as the source of truth and deduct the requested chunk even when the resource setter
+	// clamps the actual heal at maximum. Shared by HP and MP recovery; returns true when the effect ends.
 	template <typename FGetCurrent, typename FGetMax, typename FSetCurrent>
 	bool DrainRecoveryPool(FMT2StatusEffect& Effect, int32 PercentPerSecond,
 		FGetCurrent&& GetCurrent, FGetMax&& GetMax, FSetCurrent&& SetCurrent)
 	{
 		const float Current = GetCurrent();
 		const float Max = GetMax();
-		if (Effect.ApplyValue <= 0 || Current >= Max)
+		if (Effect.ApplyValue <= 0 || !FMath::IsFinite(Current) || !FMath::IsFinite(Max) || Current >= Max)
 		{
 			return true; // pool spent or resource full -> done
 		}
-		const int32 Chunk = FMath::Max(1, FMath::Min(Effect.ApplyValue, FMath::FloorToInt(Max * PercentPerSecond / 100.0f)));
-		SetCurrent(FMath::Min(Current + Chunk, Max));
+
+		// Character maxima are legacy integer stats. Bound before conversion so malformed/extreme
+		// project values cannot overflow the conversion. Clamp config-loaded rates to the same range
+		// exposed by Project Settings, then use 64-bit math for maximum * percentage.
+		const double BoundedMaximum = FMath::Clamp(static_cast<double>(Max), 0.0, static_cast<double>(MAX_int32));
+		const int32 MaximumPoints = static_cast<int32>(BoundedMaximum);
+		const int32 BoundedPercent = FMath::Clamp(PercentPerSecond, 1, 100);
+		const int64 LegacyChunk = static_cast<int64>(MaximumPoints) * BoundedPercent / 100;
+		const int64 Chunk = FMath::Min<int64>(Effect.ApplyValue, LegacyChunk);
+		if (Chunk <= 0)
+		{
+			return false; // legacy integer division can produce a zero-point pass
+		}
+
+		SetCurrent(FMath::Min(Current + static_cast<float>(Chunk), Max));
 		Effect.ApplyValue -= Chunk;
 		return Effect.ApplyValue <= 0;
 	}

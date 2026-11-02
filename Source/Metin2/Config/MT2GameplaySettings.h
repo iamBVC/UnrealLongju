@@ -411,11 +411,13 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Quests", meta = (ClampMin = "0.0", Units = "cm"))
 	float QuestArrivalRadius = 500.0f;
 
+	/** Percent of maximum HP recovered per one-second queued-recovery pass. Set to 9 for YMIR rules. */
 	UPROPERTY(EditAnywhere, config, Category = "Status Effects", meta = (ClampMin = "1", ClampMax = "100"))
-	int32 HealthRecoveryPercentPerSecond = 3;
+	int32 HealthRecoveryPercentPerSecond = 7;
 
+	/** Percent of maximum MP recovered per one-second queued-recovery pass. Legacy standard rules use 7. */
 	UPROPERTY(EditAnywhere, config, Category = "Status Effects", meta = (ClampMin = "1", ClampMax = "100"))
-	int32 ManaRecoveryPercentPerSecond = 3;
+	int32 ManaRecoveryPercentPerSecond = 7;
 
 	/** Maximum total multiplier for queued potions: 200 means at most twice their flat quantity. */
 	UPROPERTY(EditAnywhere, config, Category = "Status Effects|Recovery Potions", meta = (ClampMin = "1"))
