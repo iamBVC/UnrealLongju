@@ -25,6 +25,7 @@ class UStaticMesh;
 class UTexture2D;
 class AMT2PlayerCharacter;
 class UMT2InventoryComponent;
+struct FMT2StatusEffect;
 
 enum class EMT2ItemUseExecution : uint8
 {
@@ -66,6 +67,10 @@ public:
 	// own right-click behavior without changing the inheritance of existing imported Blueprints.
 	virtual EMT2ItemUseExecution ExecuteUse(AMT2PlayerCharacter& Character,
 		UMT2InventoryComponent& Inventory, int32 InventorySlot) const { return EMT2ItemUseExecution::Rejected; }
+
+	// The effect system resolves an item's source before restoring a saved affect. Its template
+	// can normalize item-specific metadata without changing the saved magnitude or remaining time.
+	virtual void NormalizeRestoredEffect(FMT2StatusEffect& Effect) const {}
 
 	// Quest scripts occasionally inspect immutable proto values. Specialized templates expose only
 	// values that have a named meaning; the base item deliberately owns no generic Value0..5 array.

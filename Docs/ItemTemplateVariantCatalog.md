@@ -88,12 +88,12 @@ The classes below establish import and authoring identity; their individual head
 | UMT2ItemUseTreasureBoxTemplate | Use | USE_TREASURE_BOX | 4 | Placeholder; behavior TODO |
 | UMT2ItemUseMoneybagTemplate | Use | USE_MONEYBAG | 5 | Placeholder; behavior TODO |
 | UMT2ItemUseBaitTemplate | Use | USE_BAIT | 6 | Implemented as a native item action; imports Value0 into subtype-owned BaitPower, requires an equipped rod and no active fishing attempt, replaces rod bait, and consumes one bait. |
-| UMT2ItemUseAbilityUpTemplate | Use | USE_ABILITY_UP | 7 | Placeholder; behavior TODO |
-| UMT2ItemUseAffectTemplate | Use | USE_AFFECT | 8 | Placeholder; behavior TODO |
+| UMT2ItemUseAbilityUpTemplate | Use | USE_ABILITY_UP | 7 | Owns bonus, duration and application. Nine standard applies refresh by identity and clear on death; legacy speed flags preserved. Item-origin saved effects normalize through the template without resetting magnitude/time. Contextual dungeon/war hooks remain OWN-02S. |
+| UMT2ItemUseAffectTemplate | Use | USE_AFFECT | 8 | Owns affect identity, bonus and duration. Duplicate identity/apply rejects; distinct applies coexist. Legacy death exemptions retained. PC-bang eligibility remains SYS-04; restricted items reject pending the service. |
 | UMT2ItemUseCreateStoneTemplate | Use | USE_CREATE_STONE | 9 | Uniformly selects one imported stone variant through typed template references; legacy VNUM-range offsets are explicit; source is consumed only when result delivery succeeds. |
 | UMT2ItemUseSpecialTemplate | Use | USE_SPECIAL | 10 | Placeholder; behavior TODO |
 | UMT2ItemUsePotionNoDelayTemplate | Use | USE_POTION_NODELAY | 11 | Class-owned instant recovery: flat Potion Effect Bonus, independent percent recovery, ordered integer truncation and full-resource rejection. Percent fields live here; 28 imported assets use this parent. Arena/bottle/dungeon/war integration remains OWN-02S. |
-| UMT2ItemUseClearTemplate | Use | USE_CLEAR | 12 | Placeholder; behavior TODO |
+| UMT2ItemUseClearTemplate | Use | USE_CLEAR | 12 | Class-owned cleanse consumes once even with no harmful affects. Shared component removes poison/fire/stun/slow and configured Tusok, preserving buffs. Imported cleanse and real inventory consumption verified. |
 | UMT2ItemUseInvisibilityTemplate | Use | USE_INVISIBILITY | 13 | Placeholder; behavior TODO |
 | UMT2ItemUseDetachmentTemplate | Use | USE_DETACHMENT | 14 | Placeholder; behavior TODO |
 | UMT2ItemUseBucketTemplate | Use | USE_BUCKET | 15 | Placeholder; behavior TODO |
@@ -130,6 +130,7 @@ These are specific classes for content variants, not additional legacy subtype o
 | UMT2ItemBeginnerBonusAdditionTemplate | UMT2ItemUseAddAttributeTemplate | 71152, 76024 | Weapon/body-only; all target level requirements must be within the configured cap (default 40). Ordinary addition chance/transaction inherited. Shared addon slot audit remains pending. |
 | UMT2ItemBeginnerBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 71151, 76023 | Same target restriction; ordinary reroll/count/rare preservation inherited. Shared reroll cooldown and addon audits remain pending. |
 | UMT2ItemLevelChestBonusRerollTemplate | UMT2ItemUseChangeAttributeTemplate | 76014 (Enchant Item (b)) | Own configurable 0/10/50/39/1 value-level policy; ordinary equipment eligibility/count/rare handling inherited, no beginner cap. Shared cooldown and addon audits remain pending. |
+| UMT2ItemUseDewTemplate | UMT2ItemUseAbilityUpTemplate | Ability-up items in legacy 50801–50820 (six imported) | Europe-free affect identity, rejects duplicate apply, permits different bonuses, survives death and also supports magic resistance. Variant decoding stays in the importer. |
 
 ## Recovery data family
 

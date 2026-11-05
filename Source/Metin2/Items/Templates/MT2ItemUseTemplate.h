@@ -22,17 +22,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use")
 	EMT2UseSubType UseSubType = EMT2UseSubType::Potion;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Buff")
+	// Load-only compatibility defaults for old Blueprint child delta archives. Authoring and
+	// gameplay use the dedicated subtype fields; keep these defaults when a parent migrates.
+	UPROPERTY()
 	EMT2ItemBonusType GrantedBonus = EMT2ItemBonusType::None;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Buff")
+	UPROPERTY()
 	int32 GrantedBonusValue = 0;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Buff")
+	UPROPERTY()
 	int32 BuffDurationSeconds = 0;
 
-	// USE_AFFECT Value0. Multiple data-driven consumables may grant the same apply type under
-	// different affect IDs, so keep the identity separate from the bonus enum.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Use|Buff")
+	UPROPERTY()
 	FMT2AffectIdentifier AffectType;
 };

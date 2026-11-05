@@ -8,6 +8,9 @@
 */
 
 #include "Importers/MT2ItemImporter.h"
+#include "Items/Templates/MT2ItemUseAbilityUpTemplate.h"
+#include "Items/Templates/MT2ItemUseAffectTemplate.h"
+#include "Items/Templates/MT2ItemUseDewTemplate.h"
 #include "Items/Templates/MT2ItemArmorTemplate.h"
 #include "Items/Templates/MT2ItemAutoRecoveryTemplate.h"
 #include "Items/Templates/MT2ItemAutoUseTemplate.h"
@@ -1029,6 +1032,8 @@ namespace
 	UClass* ResolveContentBonusParentClass(const FMT2ItemDefinition& Definition)
 	{
 		if (Definition.ItemType != EMT2ItemType::Use) return nullptr;
+		if (Definition.SubType.Use == EMT2UseSubType::AbilityUp && Definition.Vnum > 50800 && Definition.Vnum <= 50820)
+			return UMT2ItemUseDewTemplate::StaticClass();
 		// Source IDs are decoded only during import; gameplay dispatches through the class.
 		if (Definition.SubType.Use == EMT2UseSubType::ChangeAttribute && Definition.Vnum == 76014)
 			return UMT2ItemLevelChestBonusRerollTemplate::StaticClass();
@@ -1372,7 +1377,7 @@ namespace
 					// Old child CDO delta archives still inherit this hidden compatibility default.
 					Use->BuffDurationSeconds = ContinuedPotion->RecoveryDurationSeconds;
 				}
-				else if (Definition.SubType.ToLegacy() == 7)
+				else if (auto* Ability = Cast<UMT2ItemUseAbilityUpTemplate>(Use))
 				{
 					Use->GrantedBonus = static_cast<EMT2ItemBonusType>(
 						Definition.Values.IsValidIndex(0) ? Definition.Values[0] : 0);
@@ -1380,8 +1385,11 @@ namespace
 						Definition.Values.IsValidIndex(1) ? Definition.Values[1] : 0;
 					Use->GrantedBonusValue =
 						Definition.Values.IsValidIndex(2) ? Definition.Values[2] : 0;
+					Ability->BonusType = Use->GrantedBonus;
+					Ability->BonusAmount = Use->GrantedBonusValue;
+					Ability->DurationSeconds = Use->BuffDurationSeconds;
 				}
-				else if (Definition.SubType.ToLegacy() == 8)
+				else if (auto* Affect = Cast<UMT2ItemUseAffectTemplate>(Use))
 				{
 					// USE_AFFECT: Value0=affect id, Value1=EApplyTypes, Value2=magnitude,
 					// Value3=duration. This covers the premium rings/gloves/medals generically.
@@ -1392,6 +1400,12 @@ namespace
 						Definition.Values.IsValidIndex(2) ? Definition.Values[2] : 0;
 					Use->BuffDurationSeconds =
 						Definition.Values.IsValidIndex(3) ? Definition.Values[3] : 0;
+					if (Definition.Vnum > 50800 && Definition.Vnum <= 50820)
+						Use->AffectType = FMT2AffectIdentifier::FromBuiltin(EMT2BuiltinAffect::ExperienceBonusEuropeFree);
+					Affect->EffectIdentity = Use->AffectType;
+					Affect->BonusType = Use->GrantedBonus;
+					Affect->BonusAmount = Use->GrantedBonusValue;
+					Affect->DurationSeconds = Use->BuffDurationSeconds;
 				}
 			}
 			if (UMT2ItemAutoRecoveryTemplate* AutoRecovery =

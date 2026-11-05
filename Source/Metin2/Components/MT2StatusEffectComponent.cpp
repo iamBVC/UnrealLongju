@@ -13,6 +13,8 @@
 #include "Config/MT2GameplaySettings.h"
 #include "Components/MT2ManaComponent.h"
 #include "Components/MT2StatusEffectDefinition.h"
+#include "Items/MT2ItemUtils.h"
+#include "Items/MT2ItemTemplate.h"
 #include "Engine/World.h"
 #include "Net/UnrealNetwork.h"
 
@@ -241,6 +243,12 @@ void UMT2StatusEffectComponent::RestoreEffects(const TArray<FMT2StatusEffect>& S
 	}
 	Effects = SavedEffects;
 	Effects.RemoveAll([](const FMT2StatusEffect& Effect) { return Effect.RemainingSeconds == 0; });
+	for (FMT2StatusEffect& Effect : Effects)
+	{
+		if (Effect.SourceItemVnum <= 0) continue;
+		if (const auto* Item = MT2ItemUtils::ResolveTemplate(this, Effect.SourceItemVnum))
+			Item->NormalizeRestoredEffect(Effect);
+	}
 	StartProcessTimerIfNeeded();
 	OnStatusEffectsChanged.Broadcast();
 }

@@ -10,6 +10,8 @@
 #include "UI/MT2ItemTooltipWidgets.h"
 #include "Items/Templates/MT2ItemArmorTemplate.h"
 #include "Items/Templates/MT2ItemUseTemplate.h"
+#include "Items/Templates/MT2ItemUseAbilityUpTemplate.h"
+#include "Items/Templates/MT2ItemUseAffectTemplate.h"
 #include "Items/Templates/MT2ItemRecoveryTemplate.h"
 #include "Items/Templates/MT2ItemUsePotionNoDelayTemplate.h"
 #include "Items/Templates/MT2ItemUsePotionContinueTemplate.h"
@@ -104,9 +106,15 @@ void UMT2UseItemTooltipWidget::BuildTypeSpecific(
 		break;
 
 	case EMT2UseSubType::AbilityUp: // USE_ABILITY_UP: timed stat buff (VALUE0=apply, VALUE1=duration s, VALUE2=magnitude)
+	case EMT2UseSubType::Affect:
 	{
-		AddLine(FormatApply(static_cast<int32>(Use->GrantedBonus), Use->GrantedBonusValue), PositiveColor);
-		const int32 Duration = Use->BuffDurationSeconds;
+		const auto* Ability = Cast<UMT2ItemUseAbilityUpTemplate>(Use);
+		const auto* Affect = Cast<UMT2ItemUseAffectTemplate>(Use);
+		if (!Ability && !Affect) break;
+		const auto Bonus = Ability ? Ability->BonusType : Affect->BonusType;
+		const int32 Amount = Ability ? Ability->BonusAmount : Affect->BonusAmount;
+		AddLine(FormatApply(static_cast<int32>(Bonus), Amount), PositiveColor);
+		const int32 Duration = Ability ? Ability->DurationSeconds : Affect->DurationSeconds;
 		if (Duration > 0)
 		{
 			const int32 Minutes = Duration / 60;

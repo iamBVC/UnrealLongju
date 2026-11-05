@@ -148,6 +148,38 @@ intentional overrides before running it. Its filter is exclusive with instant/be
 contextual arena/dungeon/war hooks remain tracked under OWN-02S. The shared one-second cadence
 and integer drain rounding are implemented under OWN-02D.
 
+## Timed ability, affect and cleanse items
+
+`UMT2ItemUseAbilityUpTemplate` owns its bonus selector, amount, duration and use policy.
+Ordinary ability potions support movement speed, attack speed, STR, DEX, VIT, INT, casting
+speed, attack grade and defense grade. Reuse refreshes the matching effect, and death removes it.
+Speed effects carry the corresponding legacy potion flag. The effect component owns timers
+and replication; Inventory consumes exactly one item after an accepted use.
+When item-origin effects are restored, their owning template normalizes recognized identity
+and death-policy metadata while preserving saved magnitude and remaining duration.
+
+`UMT2ItemUseDewTemplate` specializes ability potions with the legacy Europe-free affect
+identity. It also supports magic resistance, rejects an already-active identity/bonus pair,
+allows different bonuses to coexist, and preserves its effects through death.
+
+`UMT2ItemUseAffectTemplate` owns its authored affect identity, bonus and duration. A duplicate
+identity/bonus pair rejects without consumption. Other bonuses can coexist under the same
+identity. Death removes ordinary affects and preserves block-chat and 500-series identities,
+matching the legacy rule. PC-bang restricted affects reject pending the eligibility service.
+
+`UMT2ItemUseClearTemplate` asks the shared effect component to remove poison, fire, stun,
+slow and configured skill debuffs. Helpful affects remain. It consumes once even when no
+bad effect is active, as in the original server.
+
+The importer creates these dedicated parents and decodes dew variants at import time.
+`-run=MT2ConfigureItemBehaviors -TimedConsumablesOnly` upgrades existing imported parents
+without reimporting proto defaults. It backs up original packages and checks every existing
+serialized property before saving. `BackupRoot=` selects a backup directory. Dedicated fields
+have versioned load migration; hidden generic fields retain defaults needed by older child
+Blueprint delta archives. Gameplay and tooltips use the dedicated fields.
+
+Contextual dungeon/war potion accounting and PC-bang eligibility remain tracked system work.
+
 ## Continuous recovery potions
 
 `UMT2ItemUsePotionContinueTemplate` owns fixed-per-second recovery. It chooses HP when
