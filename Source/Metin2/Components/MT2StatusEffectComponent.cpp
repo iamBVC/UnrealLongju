@@ -242,7 +242,8 @@ void UMT2StatusEffectComponent::RestoreEffects(const TArray<FMT2StatusEffect>& S
 		return;
 	}
 	Effects = SavedEffects;
-	Effects.RemoveAll([](const FMT2StatusEffect& Effect) { return Effect.RemainingSeconds == 0; });
+	Effects.RemoveAll([](const FMT2StatusEffect& Effect)
+		{ return Effect.RemainingSeconds == 0 || !UMT2StatusEffectDefinition::Get(Effect.Kind)->CanRestoreFromSave(); });
 	for (FMT2StatusEffect& Effect : Effects)
 	{
 		if (Effect.SourceItemVnum <= 0) continue;

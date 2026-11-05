@@ -251,6 +251,9 @@ private:
 	bool CanPlaceAt(
 		int32 TopSlot, int32 Size, int32 IgnoreSlotA = INDEX_NONE, int32 IgnoreSlotB = INDEX_NONE) const;
 	bool ToggleAutoRecoveryItem(int32 InventorySlot, const UMT2ItemAutoRecoveryTemplate& Template);
+	friend class UMT2ItemAutoRecoveryTemplate;
+	friend class FMT2AutoRecoveryLifecycleTest;
+	bool bProcessingAutoRecovery = false;
 	void ProcessAutoRecoveryItems();
 	void RefreshAutoRecoveryEffect(const UMT2ItemAutoRecoveryTemplate& Template, int32 RemainingAmount);
 	void StartAutoRecoveryTimerIfNeeded();

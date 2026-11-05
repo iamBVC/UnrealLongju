@@ -53,6 +53,9 @@ public:
 	// refreshed (potions don't stack). StatBonus/skill buffs return false and use override semantics.
 	virtual bool DeniesReapplyWhileActive() const { return false; }
 
+	// Some visible effects are derived from another authoritative system and must be rebuilt.
+	virtual bool CanRestoreFromSave() const { return true; }
+
 	// Called once when the effect is added (after it is in the list). Override for side effects.
 	virtual void OnApplied(AMT2CharacterBase* Target, FMT2StatusEffect& Effect) const {}
 
@@ -131,6 +134,7 @@ class METIN2_API UMT2StatusEffect_AutoHealthRecovery : public UMT2StatusEffectDe
 {
 	GENERATED_BODY()
 public:
+	virtual bool CanRestoreFromSave() const override { return false; }
 	virtual FText GetDisplayName() const override;
 	virtual FText GetDescription(const FMT2StatusEffect& Effect) const override;
 	virtual FText GetMagnitudeLabel(const FMT2StatusEffect& Effect) const override;
@@ -141,6 +145,7 @@ class METIN2_API UMT2StatusEffect_AutoManaRecovery : public UMT2StatusEffectDefi
 {
 	GENERATED_BODY()
 public:
+	virtual bool CanRestoreFromSave() const override { return false; }
 	virtual FText GetDisplayName() const override;
 	virtual FText GetDescription(const FMT2StatusEffect& Effect) const override;
 	virtual FText GetMagnitudeLabel(const FMT2StatusEffect& Effect) const override;

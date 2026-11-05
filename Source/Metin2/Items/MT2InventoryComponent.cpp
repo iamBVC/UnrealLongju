@@ -207,6 +207,11 @@ void UMT2InventoryComponent::RestoreItems(
 	const TArray<FMT2ItemSlot>& InSlots, const TArray<FMT2ItemSlot>& InEquipment)
 {
 	if (!GetOwner() || !GetOwner()->HasAuthority()) return;
+	if (GetWorld()) GetWorld()->GetTimerManager().ClearTimer(AutoRecoveryTimer);
+	TArray<FMT2ItemSlot> PreviousActiveReservoirs;
+	for (const auto& Item : Slots)
+		if (!Item.IsEmpty() && Item.GetAutoRecoveryState().bActive) PreviousActiveReservoirs.Add(Item);
+	for (const auto& Item : PreviousActiveReservoirs) StopAutoRecoveryEffectForSlot(Item);
 	Slots.SetNum(SlotCount);
 	Equipment.SetNum(EquipmentCount);
 	for (int32 Index = 0; Index < Slots.Num(); ++Index)
@@ -234,6 +239,22 @@ void UMT2InventoryComponent::RestoreItems(
 		}
 	}
 	AccessoryWearUpdatedAt = GetWorld() ? GetWorld()->GetTimeSeconds() : 0;
+	bool bHealthActive = false, bManaActive = false;
+	for (auto* Container : {&Slots, &Equipment})
+		for (auto& Item : *Container)
+		{
+			if (Item.IsEmpty() || !Item.GetAutoRecoveryState().bActive) continue;
+			const auto* Recovery = Cast<UMT2ItemAutoRecoveryTemplate>(ResolveTemplate(Item.Vnum));
+			auto& State = Item.EditAutoRecoveryState();
+			if (!Recovery || Container == &Equipment || Item.Count != 1 || State.MaximumAmount <= 0 ||
+				State.RemainingAmount <= 0 || State.RemainingAmount > State.MaximumAmount ||
+				(Recovery->Resource != EMT2AutoRecoveryResource::Health && Recovery->Resource != EMT2AutoRecoveryResource::Mana))
+			{ State.bActive = false; continue; }
+			bool& AlreadyActive = Recovery->Resource == EMT2AutoRecoveryResource::Health ? bHealthActive : bManaActive;
+			if (AlreadyActive) State.bActive = false;
+			else AlreadyActive = true;
+		}
+	StartAutoRecoveryTimerIfNeeded();
 	ScheduleAccessoryWear();
 	// Saves written before wearable-mask mapping was corrected stored shields in slot 8
 	// (UNIQUE2). Repair that one unambiguous legacy placement while loading the character.
@@ -706,15 +727,8 @@ bool UMT2InventoryComponent::UseItem(int32 InventorySlot)
 		Effect.Icon = UseTemplate->Icon;
 		bUsed = StatusEffects->AddEffect(Effect, false);
 	}
-	else switch (UseTemplate->UseSubType)
+	else
 	{
-	case EMT2UseSubType::Special: // USE_SPECIAL: toggle a finite automatic HP/MP recovery reservoir.
-	{
-		const UMT2ItemAutoRecoveryTemplate* AutoRecovery =
-			Cast<UMT2ItemAutoRecoveryTemplate>(UseTemplate);
-		return AutoRecovery && ToggleAutoRecoveryItem(InventorySlot, *AutoRecovery);
-	}
-	default:
 		return false;
 	}
 

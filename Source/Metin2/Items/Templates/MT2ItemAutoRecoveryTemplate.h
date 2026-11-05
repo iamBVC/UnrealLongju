@@ -19,6 +19,11 @@ class METIN2_API UMT2ItemAutoRecoveryTemplate : public UMT2ItemUseSpecialTemplat
 	GENERATED_BODY()
 
 public:
+	virtual EMT2ItemUseExecution ExecuteUse(AMT2PlayerCharacter& Character,
+		UMT2InventoryComponent& Inventory, int32 InventorySlot) const override;
+	// Produces a shared recovery-pool update, never an instant heal. Returns reservoir points spent.
+	int32 PrepareRecoveryTransfer(AMT2PlayerCharacter& Character, int32 Available,
+		FMT2StatusEffect& OutPool) const;
 	virtual void InitializeDefaultFamilyState(FMT2ItemInstanceData& Data) const override;
 	virtual void CaptureDefaultFamilyState(const FMT2ItemInstanceData& Data) override;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Initial State")

@@ -180,6 +180,31 @@ Blueprint delta archives. Gameplay and tooltips use the dedicated fields.
 
 Contextual dungeon/war potion accounting and PC-bang eligibility remain tracked system work.
 
+## Automatic recovery reservoirs
+
+`UMT2ItemAutoRecoveryTemplate` owns activation eligibility and the resource-transfer policy.
+Inventory owns each reservoir's remaining capacity, stack splitting, switching and timer.
+Using an item toggles it without consuming it; depletion removes the activated single item.
+A stack requires enough inventory space to split one item, and rejected activation preserves it.
+
+The reservoir supplies `max resource - current resource - queued recovery`, bounded by its
+remaining capacity. It adds this amount to the ordinary queued recovery pool and never heals
+instantly or applies Potion Effect Bonus. The shared affect processor drains the pool at its
+configured HP/MP rates. Toggling off does not cancel recovery already queued.
+
+Processing pauses while dead or stunned. Activation rejects during trade; existing active items
+remain locked against trade, while recovery can continue during an unrelated trade as in legacy.
+`AutoRecoveryProcessIntervalSeconds` in Project Settings controls reservoir checks (default one
+second, minimum 0.1 seconds). The ordinary pool's one-second drain is unchanged.
+
+Restore preserves capacity, rejects malformed active state and keeps one active reservoir per
+resource. Active scheduling resumes without granting capacity. Saved display markers are discarded
+and rebuilt from authoritative inventory state. Generation is the only path that initializes a
+new reservoir. Switching updates its source item and icon; depletion/removal clears the marker.
+
+Special X reservoir max-resource bonuses, arena restrictions, complete legacy alias/resource
+import mapping and the legacy automatic-recovery visual packets remain tracked under OWN-04B.
+
 ## Continuous recovery potions
 
 `UMT2ItemUsePotionContinueTemplate` owns fixed-per-second recovery. It chooses HP when

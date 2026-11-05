@@ -419,6 +419,10 @@ public:
 	UPROPERTY(EditAnywhere, config, Category = "Status Effects", meta = (ClampMin = "1", ClampMax = "100"))
 	int32 ManaRecoveryPercentPerSecond = 7;
 
+	/** How often active reservoirs transfer uncovered deficits into the shared recovery pool. */
+	UPROPERTY(EditAnywhere, config, Category = "Status Effects", meta = (ClampMin = "0.1", Units = "s"))
+	float AutoRecoveryProcessIntervalSeconds = 1.0f;
+
 	/** Maximum total multiplier for queued potions: 200 means at most twice their flat quantity. */
 	UPROPERTY(EditAnywhere, config, Category = "Status Effects|Recovery Potions", meta = (ClampMin = "1"))
 	int32 QueuedPotionMaximumEffectPercent = 200;

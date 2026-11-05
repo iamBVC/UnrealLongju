@@ -140,6 +140,14 @@ unrelated use classes do not. Queued pools use the shared one-second status-effe
 integer max-resource drain; standard settings are 7% HP/MP and YMIR HP is configured at 9%.
 Legacy type/subtype coverage remains 110 pairs.
 
+## Automatic recovery reservoirs
+
+`UMT2ItemAutoRecoveryTemplate` owns use eligibility and pending-aware HP/MP pool transfer.
+Inventory retains finite instance capacity and stack/switch/timer transactions. Generation grants
+initial capacity; processing and restore do not refill it. Restored state is deduplicated and its
+visible status markers rebuilt. OWN-04A covers this core; OWN-04B retains special X max-resource
+bonuses, arena restrictions, full USE_SPECIAL/alias/resource import audit and effect visuals.
+
 ## Damage-addon generation
 
 Addon equipment creation and normal bonus rerolls reuse the shared damage-addon generator.

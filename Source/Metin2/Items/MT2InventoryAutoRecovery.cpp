@@ -1,220 +1,144 @@
 /*
-
 - Copyright © 2026 Castellese Brian Vincenzo.
 - Licensed under the PolyForm Noncommercial License 1.0.0.
 - Commercial use and resale require separate written permission.
 - See LICENSE for the complete terms.
-
 */
 
-#include "Items/Templates/MT2ItemAutoRecoveryTemplate.h"
-
 #include "Items/MT2InventoryComponent.h"
-
 #include "Characters/MT2PlayerCharacter.h"
-#include "Components/MT2HealthComponent.h"
-#include "Components/MT2ManaComponent.h"
 #include "Components/MT2StatusEffectComponent.h"
-#include "Components/MT2StatusEffectDefinition.h"
+#include "Config/MT2GameplaySettings.h"
 #include "Engine/World.h"
-#include "Items/MT2ItemTemplate.h"
 #include "TimerManager.h"
 
 bool UMT2InventoryComponent::ToggleAutoRecoveryItem(
 	int32 InventorySlot, const UMT2ItemAutoRecoveryTemplate& Template)
 {
-	if (!Slots.IsValidIndex(InventorySlot) || Slots[InventorySlot].IsEmpty() ||
-		Template.RecoveryCapacity <= 0)
-	{
-		return false;
-	}
-
+	if (bProcessingAutoRecovery || !GetOwner() || !GetOwner()->HasAuthority() ||
+		!Slots.IsValidIndex(InventorySlot) || Slots[InventorySlot].IsEmpty() ||
+		ResolveTemplate(Slots[InventorySlot].Vnum) != &Template) return false;
+	const auto& State = Slots[InventorySlot].GetAutoRecoveryState();
+	// Existing state is authoritative; activation never initializes or refills capacity.
+	if (State.MaximumAmount <= 0 || State.RemainingAmount <= 0 || State.RemainingAmount > State.MaximumAmount) return false;
+	int32 FreeSlot = INDEX_NONE;
 	if (Slots[InventorySlot].Count > 1)
 	{
-		int32 FreeSlot = INDEX_NONE;
+		if (State.bActive) return false;
 		for (int32 Candidate = 0; Candidate < Slots.Num(); ++Candidate)
-		{
-			if (CanPlaceAt(Candidate, 1))
-			{
-				FreeSlot = Candidate;
-				break;
-			}
-		}
-		if (FreeSlot == INDEX_NONE)
-		{
-			return false;
-		}
-		FMT2ItemSlot Single = Slots[InventorySlot];
-		Single.Count = 1;
-		Slots[InventorySlot].Count--;
-		Slots[FreeSlot] = MoveTemp(Single);
-		InventorySlot = FreeSlot;
+			if (CanPlaceAt(Candidate, GetItemSize(Template.Vnum))) { FreeSlot = Candidate; break; }
+		if (FreeSlot == INDEX_NONE) return false;
 	}
-
-	FMT2ItemSlot& Selected = Slots[InventorySlot];
-	Template.InitializeGeneratedInstance(Selected);
-	if (Selected.GetAutoRecoveryState().RemainingAmount <= 0)
+	if (FreeSlot != INDEX_NONE)
 	{
-		return false;
+		FMT2ItemSlot Single = Slots[InventorySlot]; Single.Count = 1;
+		--Slots[InventorySlot].Count; Slots[FreeSlot] = MoveTemp(Single); InventorySlot = FreeSlot;
 	}
-	if (Selected.GetAutoRecoveryState().bActive)
+	const FMT2ItemSlot Before = Slots[InventorySlot];
+	if (Before.GetAutoRecoveryState().bActive)
 	{
-		StopAutoRecoveryEffectForSlot(Selected);
-		Selected.EditAutoRecoveryState().bActive = false;
-		OnInventoryChanged.Broadcast();
-		StartAutoRecoveryTimerIfNeeded();
-		return true;
+		Slots[InventorySlot].EditAutoRecoveryState().bActive = false;
+		StopAutoRecoveryEffectForSlot(Before);
+		StartAutoRecoveryTimerIfNeeded(); OnInventoryChanged.Broadcast(); return true;
 	}
-
-	for (FMT2ItemSlot& Item : Slots)
+	// Commit selection before notifying listeners; one reservoir per resource remains active.
+	for (auto& Other : Slots)
 	{
-		if (Item.IsEmpty() || !Item.GetAutoRecoveryState().bActive)
-		{
-			continue;
-		}
-		const UMT2ItemAutoRecoveryTemplate* Other =
-			Cast<UMT2ItemAutoRecoveryTemplate>(ResolveTemplate(Item.Vnum));
-		if (Other && Other->Resource == Template.Resource)
-		{
-			StopAutoRecoveryEffectForSlot(Item);
-			Item.EditAutoRecoveryState().bActive = false;
-		}
+		if (Other.IsEmpty() || !Other.GetAutoRecoveryState().bActive) continue;
+		const auto* OtherTemplate = Cast<UMT2ItemAutoRecoveryTemplate>(ResolveTemplate(Other.Vnum));
+		if (OtherTemplate && OtherTemplate->Resource == Template.Resource) Other.EditAutoRecoveryState().bActive = false;
 	}
-	Selected.EditAutoRecoveryState().bActive = true;
-	RefreshAutoRecoveryEffect(Template, Selected.GetAutoRecoveryState().RemainingAmount);
-	StartAutoRecoveryTimerIfNeeded();
-	ProcessAutoRecoveryItems();
-	OnInventoryChanged.Broadcast();
+	Slots[InventorySlot].EditAutoRecoveryState().bActive = true;
+	RefreshAutoRecoveryEffect(Template, Before.GetAutoRecoveryState().RemainingAmount);
+	StartAutoRecoveryTimerIfNeeded(); ProcessAutoRecoveryItems(); OnInventoryChanged.Broadcast();
 	return true;
 }
 
 void UMT2InventoryComponent::RefreshAutoRecoveryEffect(
 	const UMT2ItemAutoRecoveryTemplate& Template, int32 RemainingAmount)
 {
-	AMT2PlayerCharacter* Character = Cast<AMT2PlayerCharacter>(GetOwner());
-	UMT2StatusEffectComponent* Effects = Character ? Character->GetStatusEffectComponent() : nullptr;
-	if (!Effects)
-	{
-		return;
-	}
+	auto* Character = Cast<AMT2PlayerCharacter>(GetOwner());
+	auto* Effects = Character ? Character->GetStatusEffectComponent() : nullptr;
+	if (!Effects || RemainingAmount <= 0) return;
 	const bool bHealth = Template.Resource == EMT2AutoRecoveryResource::Health;
-	const FMT2AffectIdentifier AffectType = bHealth
-		? FMT2AffectIdentifier::FromBuiltin(EMT2BuiltinAffect::AutoHealthRecovery) : FMT2AffectIdentifier::FromBuiltin(EMT2BuiltinAffect::AutoManaRecovery);
-	if (!Effects->UpdateEffectValueByType(AffectType, RemainingAmount))
-	{
-		FMT2StatusEffect Effect;
-		Effect.Kind = bHealth ? EMT2StatusEffectKind::AutoHealthRecovery
-			: EMT2StatusEffectKind::AutoManaRecovery;
-		Effect.Type = AffectType;
-		Effect.SourceItemVnum = Template.Vnum;
-		Effect.ApplyValue = RemainingAmount;
-		Effect.RemainingSeconds = -1;
-		Effect.Icon = Template.Icon;
-		Effects->AddEffect(Effect, true);
-	}
+	FMT2StatusEffect Effect;
+	Effect.Kind = bHealth ? EMT2StatusEffectKind::AutoHealthRecovery : EMT2StatusEffectKind::AutoManaRecovery;
+	Effect.Type = FMT2AffectIdentifier::FromBuiltin(bHealth ? EMT2BuiltinAffect::AutoHealthRecovery : EMT2BuiltinAffect::AutoManaRecovery);
+	Effect.SourceItemVnum = Template.Vnum; Effect.ApplyValue = RemainingAmount;
+	Effect.RemainingSeconds = -1; Effect.Icon = Template.Icon;
+	const auto* Existing = Effects->GetEffects().FindByPredicate([&](const FMT2StatusEffect& Value) { return Value.Type == Effect.Type; });
+	if (Existing && Existing->Kind == Effect.Kind && Existing->SourceItemVnum == Effect.SourceItemVnum &&
+		Existing->ApplyValue == Effect.ApplyValue && Existing->RemainingSeconds == -1 && Existing->Icon == Effect.Icon) return;
+	// Replace complete metadata so switching also updates source and icon.
+	Effects->AddEffect(Effect, true);
 }
 
 void UMT2InventoryComponent::StopAutoRecoveryEffectForSlot(const FMT2ItemSlot& Slot)
 {
-	if (!Slot.GetAutoRecoveryState().bActive)
-	{
-		return;
-	}
-	const UMT2ItemAutoRecoveryTemplate* Template =
-		Cast<UMT2ItemAutoRecoveryTemplate>(ResolveTemplate(Slot.Vnum));
-	AMT2PlayerCharacter* Character = Cast<AMT2PlayerCharacter>(GetOwner());
-	UMT2StatusEffectComponent* Effects = Character ? Character->GetStatusEffectComponent() : nullptr;
+	if (!Slot.GetAutoRecoveryState().bActive) return;
+	const auto* Template = Cast<UMT2ItemAutoRecoveryTemplate>(ResolveTemplate(Slot.Vnum));
+	auto* Character = Cast<AMT2PlayerCharacter>(GetOwner());
+	auto* Effects = Character ? Character->GetStatusEffectComponent() : nullptr;
 	if (Template && Effects)
-	{
-		Effects->RemoveEffectsByType(Template->Resource == EMT2AutoRecoveryResource::Health
-			? FMT2AffectIdentifier::FromBuiltin(EMT2BuiltinAffect::AutoHealthRecovery) : FMT2AffectIdentifier::FromBuiltin(EMT2BuiltinAffect::AutoManaRecovery));
-	}
+		Effects->RemoveEffectsByType(FMT2AffectIdentifier::FromBuiltin(Template->Resource == EMT2AutoRecoveryResource::Health
+			? EMT2BuiltinAffect::AutoHealthRecovery : EMT2BuiltinAffect::AutoManaRecovery));
 }
 
 void UMT2InventoryComponent::StartAutoRecoveryTimerIfNeeded()
 {
-	if (!GetWorld() || !GetOwner() || !GetOwner()->HasAuthority())
+	if (!GetWorld() || !GetOwner() || !GetOwner()->HasAuthority()) return;
+	const bool bActive = Slots.ContainsByPredicate([](const FMT2ItemSlot& Item)
+		{ return !Item.IsEmpty() && Item.GetAutoRecoveryState().bActive; });
+	if (bActive && !GetWorld()->GetTimerManager().IsTimerActive(AutoRecoveryTimer))
 	{
-		return;
+		const float Authored = UMT2GameplaySettings::Get().AutoRecoveryProcessIntervalSeconds;
+		const float Interval = FMath::IsFinite(Authored) ? FMath::Max(0.1f, Authored) : 1.0f;
+		GetWorld()->GetTimerManager().SetTimer(AutoRecoveryTimer, this,
+			&UMT2InventoryComponent::ProcessAutoRecoveryItems, Interval, true);
 	}
-	const bool bHasActive = Slots.ContainsByPredicate([](const FMT2ItemSlot& Item)
-	{
-		return !Item.IsEmpty() && Item.GetAutoRecoveryState().bActive;
-	});
-	if (bHasActive && !GetWorld()->GetTimerManager().IsTimerActive(AutoRecoveryTimer))
-	{
-		GetWorld()->GetTimerManager().SetTimer(
-			AutoRecoveryTimer, this, &UMT2InventoryComponent::ProcessAutoRecoveryItems, 1.0f, true);
-	}
-	else if (!bHasActive)
-	{
-		GetWorld()->GetTimerManager().ClearTimer(AutoRecoveryTimer);
-	}
+	else if (!bActive) GetWorld()->GetTimerManager().ClearTimer(AutoRecoveryTimer);
 }
 
 void UMT2InventoryComponent::ProcessAutoRecoveryItems()
 {
-	AMT2PlayerCharacter* Character = Cast<AMT2PlayerCharacter>(GetOwner());
-	if (!Character || !Character->HasAuthority())
-	{
-		return;
-	}
+	auto* Character = Cast<AMT2PlayerCharacter>(GetOwner());
+	auto* Effects = Character ? Character->GetStatusEffectComponent() : nullptr;
+	if (!Character || !Character->HasAuthority() || !Effects || bProcessingAutoRecovery) return;
+	TGuardValue<bool> Guard(bProcessingAutoRecovery, true);
 	bool bChanged = false;
-	for (FMT2ItemSlot& Item : Slots)
+	for (int32 Index = 0; Index < Slots.Num(); ++Index)
 	{
-		if (Item.IsEmpty() || !Item.GetAutoRecoveryState().bActive)
+		if (Slots[Index].IsEmpty() || !Slots[Index].GetAutoRecoveryState().bActive) continue;
+		const FMT2ItemSlot Before = Slots[Index];
+		const auto* Template = Cast<UMT2ItemAutoRecoveryTemplate>(ResolveTemplate(Before.Vnum));
+		const auto& State = Before.GetAutoRecoveryState();
+		if (!Template || Before.Count != 1 || State.MaximumAmount <= 0 || State.RemainingAmount <= 0 ||
+			State.RemainingAmount > State.MaximumAmount)
 		{
-			continue;
+			Slots[Index].EditAutoRecoveryState().bActive = false;
+			StopAutoRecoveryEffectForSlot(Before); bChanged = true; continue;
 		}
-		const UMT2ItemAutoRecoveryTemplate* Template =
-			Cast<UMT2ItemAutoRecoveryTemplate>(ResolveTemplate(Item.Vnum));
-		if (!Template)
+		FMT2StatusEffect Pool;
+		const int32 Transfer = Template->PrepareRecoveryTransfer(*Character, State.RemainingAmount, Pool);
+		if (Transfer > 0)
 		{
-			Item.EditAutoRecoveryState().bActive = false;
-			bChanged = true;
-			continue;
-		}
-		Template->InitializeGeneratedInstance(Item);
-		int32 Restored = 0;
-		if (Template->Resource == EMT2AutoRecoveryResource::Health)
-		{
-			if (UMT2HealthComponent* Health = Character->GetHealthComponent();
-				Health && Health->GetHealth() > 0.0f)
+			const int32 Remaining = State.RemainingAmount - Transfer;
+			// Reserve before publishing; listeners may remove/move the original slot.
+			Slots[Index].EditAutoRecoveryState().RemainingAmount = Remaining;
+			if (Remaining == 0) Slots[Index] = FMT2ItemSlot();
+			if (!Effects->AddEffect(Pool, true))
 			{
-				const int32 Missing = FMath::Max(
-					0, FMath::FloorToInt(Health->GetMaxHealth() - Health->GetHealth()));
-				Restored = FMath::Min3(Item.GetAutoRecoveryState().RemainingAmount, Missing,
-					FMath::Max(1, FMath::FloorToInt(Health->GetMaxHealth() * 0.03f)));
-				if (Restored > 0) Health->SetCurrentValue(Health->GetHealth() + Restored);
+				// Failed AddEffect has not published callbacks.
+				Slots[Index] = Before;
+				continue;
 			}
-		}
-		else if (UMT2ManaComponent* Mana = Character->GetManaComponent())
-		{
-			const int32 Missing = FMath::Max(
-				0, FMath::FloorToInt(Mana->GetMaxMana() - Mana->GetMana()));
-			Restored = FMath::Min3(Item.GetAutoRecoveryState().RemainingAmount, Missing,
-				FMath::Max(1, FMath::FloorToInt(Mana->GetMaxMana() * 0.03f)));
-			if (Restored > 0) Mana->SetCurrentValue(Mana->GetMana() + Restored);
-		}
-		if (Restored > 0)
-		{
-			Item.EditAutoRecoveryState().RemainingAmount -= Restored;
 			bChanged = true;
+			if (Remaining == 0) { StopAutoRecoveryEffectForSlot(Before); continue; }
 		}
-		if (Item.GetAutoRecoveryState().RemainingAmount <= 0)
-		{
-			StopAutoRecoveryEffectForSlot(Item);
-			Item = FMT2ItemSlot();
-			bChanged = true;
-		}
-		else
-		{
-			RefreshAutoRecoveryEffect(*Template, Item.GetAutoRecoveryState().RemainingAmount);
-		}
-	}
-	if (bChanged)
-	{
-		OnInventoryChanged.Broadcast();
+		if (Slots.IsValidIndex(Index) && Slots[Index].Vnum == Before.Vnum &&
+			Slots[Index].GetAutoRecoveryState().bActive)
+			RefreshAutoRecoveryEffect(*Template, Slots[Index].GetAutoRecoveryState().RemainingAmount);
 	}
 	StartAutoRecoveryTimerIfNeeded();
+	if (bChanged) OnInventoryChanged.Broadcast();
 }
