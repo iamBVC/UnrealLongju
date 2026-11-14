@@ -4,6 +4,7 @@
 #include "Items/Templates/MT2ItemUseAffectTemplate.h"
 #include "Items/Templates/MT2ItemUseDewTemplate.h"
 #include "Items/Templates/MT2ItemUseClearTemplate.h"
+#include "Items/Templates/MT2ItemAutoRecoveryTemplate.h"
 
 #include "Config/MT2PathSettings.h"
 #include "Importers/MT2ItemImporter.h"
@@ -14,6 +15,97 @@
 #include "Misc/Paths.h"
 #include "HAL/FileManager.h"
 #include "UObject/SavePackage.h"
+
+namespace
+{
+	int32 UpdateAutoRecoveryResources(const TArray<FMT2ItemImportRecord>& Records,
+		const FString& DestinationRoot, const FString& Params)
+	{
+		struct FUpdate
+		{
+			UMT2ItemAutoRecoveryTemplate* Defaults;
+			UBlueprint* Blueprint;
+			FString Filename;
+			EMT2AutoRecoveryResource Resource;
+		};
+
+		TArray<FUpdate> Updates;
+		int32 Checked = 0;
+		for (const FMT2ItemImportRecord& Record : Records)
+		{
+			const auto Resource = FMT2ItemImporter::ResolveLegacyAutoRecoveryResource(Record.Definition);
+			if (!Resource.IsSet())
+			{
+				continue;
+			}
+
+			const FString ObjectPath = FMT2ItemImporter::BuildBlueprintObjectPath(DestinationRoot, Record.Definition);
+			const FString PackageName = FPackageName::ObjectPathToPackageName(ObjectPath);
+			FString Filename;
+			if (!FPackageName::DoesPackageExist(PackageName, &Filename))
+			{
+				continue;
+			}
+
+			UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *ObjectPath);
+			auto* Defaults = Blueprint && Blueprint->GeneratedClass
+				? Cast<UMT2ItemAutoRecoveryTemplate>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+			if (!Defaults || Defaults->Vnum != Record.Definition.Vnum || Blueprint->GetOutermost()->IsDirty())
+			{
+				UE_LOG(LogTemp, Error, TEXT("Unexpected or dirty reservoir package: %s"), *ObjectPath);
+				return 1;
+			}
+
+			++Checked;
+			if (Defaults->Resource != Resource.GetValue())
+			{
+				Updates.Add({Defaults, Blueprint, MoveTemp(Filename), Resource.GetValue()});
+				UE_LOG(LogTemp, Display, TEXT("Reservoir %d: %s -> %s"), Defaults->Vnum,
+					*StaticEnum<EMT2AutoRecoveryResource>()->GetNameStringByValue(static_cast<int64>(Defaults->Resource)),
+					*StaticEnum<EMT2AutoRecoveryResource>()->GetNameStringByValue(static_cast<int64>(Resource.GetValue())));
+			}
+		}
+
+		UE_LOG(LogTemp, Display, TEXT("Reservoir packages checked: %d; resource changes needed: %d"), Checked, Updates.Num());
+		if (Checked == 0)
+		{
+			return 1;
+		}
+		if (Updates.IsEmpty() || FParse::Param(*Params, TEXT("Preview")))
+		{
+			return 0;
+		}
+
+		FString BackupRoot = FPaths::ProjectSavedDir() / TEXT("ItemMigrations/AutoRecoveryResources")
+			/ FDateTime::UtcNow().ToString(TEXT("%Y%m%d-%H%M%S"));
+		FParse::Value(*Params, TEXT("BackupRoot="), BackupRoot);
+		IFileManager& Files = IFileManager::Get();
+		Files.MakeDirectory(*BackupRoot, true);
+		for (const FUpdate& Update : Updates)
+		{
+			const FString Backup = BackupRoot / FPaths::GetCleanFilename(Update.Filename);
+			if (Files.Copy(*Backup, *Update.Filename, false) != COPY_OK)
+			{
+				UE_LOG(LogTemp, Error, TEXT("Cannot create original package backup: %s"), *Backup);
+				return 1;
+			}
+		}
+		UE_LOG(LogTemp, Display, TEXT("Original reservoir packages backed up to %s"), *BackupRoot);
+
+		for (const FUpdate& Update : Updates)
+		{
+			Update.Defaults->Resource = Update.Resource;
+			FSavePackageArgs Args;
+			Args.TopLevelFlags = RF_Public | RF_Standalone;
+			if (!UPackage::SavePackage(Update.Blueprint->GetOutermost(), Update.Blueprint, *Update.Filename, Args))
+			{
+				UE_LOG(LogTemp, Error, TEXT("Cannot save reservoir package: %s"), *Update.Filename);
+				return 1;
+			}
+		}
+		return 0;
+	}
+}
 
 UMT2ConfigureItemBehaviorsCommandlet::UMT2ConfigureItemBehaviorsCommandlet()
 {
@@ -42,10 +134,15 @@ int32 UMT2ConfigureItemBehaviorsCommandlet::Main(const FString& Params)
 	const bool bInstantPotionsOnly = FParse::Param(*Params, TEXT("InstantPotionsOnly"));
 	const bool bRecoveryPotionsOnly = FParse::Param(*Params, TEXT("RecoveryPotionsOnly"));
 	const bool bTimedConsumablesOnly = FParse::Param(*Params, TEXT("TimedConsumablesOnly"));
-	if (static_cast<int32>(bBeginnerBonusesOnly) + static_cast<int32>(bInstantPotionsOnly) + static_cast<int32>(bRecoveryPotionsOnly) + static_cast<int32>(bTimedConsumablesOnly) > 1)
+	const bool bAutoRecoveryResourcesOnly = FParse::Param(*Params, TEXT("AutoRecoveryResourcesOnly"));
+	if (static_cast<int32>(bBeginnerBonusesOnly) + static_cast<int32>(bInstantPotionsOnly) + static_cast<int32>(bRecoveryPotionsOnly) + static_cast<int32>(bTimedConsumablesOnly) + static_cast<int32>(bAutoRecoveryResourcesOnly) > 1)
 	{
 		UE_LOG(LogTemp, Error, TEXT("Choose only one item behavior filter."));
 		return 1;
+	}
+	if (bAutoRecoveryResourcesOnly)
+	{
+		return UpdateAutoRecoveryResources(Records, DestinationRoot, Params);
 	}
 	Records.RemoveAll([bBeginnerBonusesOnly, bInstantPotionsOnly, bRecoveryPotionsOnly, bTimedConsumablesOnly](const FMT2ItemImportRecord& Record)
 	{

@@ -1123,6 +1123,7 @@ namespace
 		}
 	}
 
+
 	UBlueprint* CreateItemBlueprint(
 		const FString& DestinationRoot,
 		const FMT2ItemImportRecord& Record,
@@ -1163,6 +1164,7 @@ namespace
 		}
 
 		UClass* ContentBonusBehaviorClass = ResolveContentBonusParentClass(Definition);
+		const TOptional<EMT2AutoRecoveryResource> AutoRecoveryResource = FMT2ItemImporter::ResolveLegacyAutoRecoveryResource(Definition);
 		UClass* ParentClass = ContentBonusBehaviorClass
 			? ContentBonusBehaviorClass
 			: Definition.Vnum >= 50051 && Definition.Vnum <= 50053
@@ -1183,8 +1185,7 @@ namespace
 			? UMT2ItemMetinRemovalTemplate::StaticClass()
 			: RareBonusBehaviorClass
 			? RareBonusBehaviorClass
-			: Definition.ItemType == EMT2ItemType::Use &&
-				Definition.SubType.ToLegacy() == static_cast<int32>(EMT2UseSubType::Special)
+			: AutoRecoveryResource.IsSet()
 			? UMT2ItemAutoRecoveryTemplate::StaticClass()
 			: Definition.Vnum == 25040
 			? UMT2ItemRefinementScrollTemplate::StaticClass()
@@ -1413,8 +1414,7 @@ namespace
 			{
 				AutoRecovery->RecoveryCapacity =
 					Definition.Values.IsValidIndex(0) ? FMath::Max(Definition.Values[0], 0) : 0;
-				AutoRecovery->Resource = Definition.Vnum >= 72727 && Definition.Vnum <= 72730
-					? EMT2AutoRecoveryResource::Mana : EMT2AutoRecoveryResource::Health;
+				AutoRecovery->Resource = AutoRecoveryResource.GetValue();
 				Defaults->DefaultInstanceData.EditAutoRecoveryState().MaximumAmount = AutoRecovery->RecoveryCapacity;
 				Defaults->DefaultInstanceData.EditAutoRecoveryState().RemainingAmount = AutoRecovery->RecoveryCapacity;
 				Defaults->DefaultInstanceData.EditAutoRecoveryState().bActive = false;
@@ -2261,6 +2261,29 @@ FString FMT2ItemImportResult::BuildSummary() const
 	return FString::Printf(
 		TEXT("Item Blueprints: %d created, %d updated | Skipped: %d | Errors: %d"),
 		ItemBlueprintsCreated, ItemBlueprintsUpdated, Skipped, Errors.Num());
+}
+
+// Legacy char_item.cpp identifies reservoirs explicitly inside USE_SPECIAL.
+TOptional<EMT2AutoRecoveryResource> FMT2ItemImporter::ResolveLegacyAutoRecoveryResource(const FMT2ItemDefinition& Definition)
+{
+	if (Definition.ItemType != EMT2ItemType::Use || Definition.SubType.Use != EMT2UseSubType::Special)
+	{
+		return {};
+	}
+
+	switch (Definition.Vnum)
+	{
+	case 72723: case 72724: case 72725: case 72726: // Standard HP reservoirs.
+	case 76021: case 76022: // Reward box HP aliases.
+	case 79012: // Brazil HP alias.
+		return EMT2AutoRecoveryResource::Health;
+	case 72727: case 72728: case 72729: case 72730: // Standard MP reservoirs.
+	case 76004: case 76005: // Reward box MP aliases.
+	case 79013: // Brazil MP alias.
+		return EMT2AutoRecoveryResource::Mana;
+	default:
+		return {};
+	}
 }
 
 FString FMT2ItemImporter::BuildBlueprintObjectPath(const FString& DestinationRoot, const FMT2ItemDefinition& Definition)

@@ -146,7 +146,8 @@ Legacy type/subtype coverage remains 110 pairs.
 Inventory retains finite instance capacity and stack/switch/timer transactions. Generation grants
 initial capacity; processing and restore do not refill it. Restored state is deduplicated and its
 visible status markers rebuilt. OWN-04A covers this core; OWN-04B retains special X max-resource
-bonuses, arena restrictions, full USE_SPECIAL/alias/resource import audit and effect visuals.
+bonuses, arena restrictions and effect visuals. Import routing recognizes the 14 legacy reservoir
+IDs and assigns HP or MP explicitly. The existing MP aliases 76004 and 76005 have been migrated.
 
 ## Damage-addon generation
 

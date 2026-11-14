@@ -11,6 +11,7 @@
 
 #include "CoreMinimal.h"
 #include "Items/MT2ItemTypes.h"
+#include "Items/Types/MT2AutoRecoveryTypes.h"
 
 struct FMT2ImportedLootCrateReward
 {
@@ -65,4 +66,5 @@ public:
 		FMT2ItemImportResult& OutResult);
 
 	static FString BuildBlueprintObjectPath(const FString& DestinationRoot, const FMT2ItemDefinition& Definition);
+	static TOptional<EMT2AutoRecoveryResource> ResolveLegacyAutoRecoveryResource(const FMT2ItemDefinition& Definition);
 };

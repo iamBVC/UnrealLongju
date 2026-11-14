@@ -202,8 +202,12 @@ resource. Active scheduling resumes without granting capacity. Saved display mar
 and rebuilt from authoritative inventory state. Generation is the only path that initializes a
 new reservoir. Switching updates its source item and icon; depletion/removal clears the marker.
 
-Special X reservoir max-resource bonuses, arena restrictions, complete legacy alias/resource
-import mapping and the legacy automatic-recovery visual packets remain tracked under OWN-04B.
+The importer recognizes the 14 reservoir IDs in the legacy server's `USE_SPECIAL` handler,
+including reward-box and Brazil aliases. Other `USE_SPECIAL` records follow their own template
+routing. The existing reward-box reservoirs 76004 and 76005 use MP. The editor commandlet
+`-run=MT2ConfigureItemBehaviors -AutoRecoveryResourcesOnly` updates the resource on existing
+reservoir Blueprints and backs up the affected packages. Add `-Preview` to list changes.
+Special X reservoir bonuses, arena restrictions and recovery visuals remain tracked under OWN-04B.
 
 ## Continuous recovery potions
 
